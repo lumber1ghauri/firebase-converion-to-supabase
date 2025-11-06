@@ -42,6 +42,13 @@ export type Quote = {
   total: number;
 };
 
+export type Address = {
+    street: string;
+    city: string;
+    province: 'ON';
+    postalCode: string;
+};
+
 export type FinalQuote = {
   contact: { name: string; email: string };
   booking: {
@@ -53,6 +60,7 @@ export type FinalQuote = {
         addOns: string[];
     }[];
     location: string;
+    address?: Address;
     trial?: {
         date: string;
         time: string;

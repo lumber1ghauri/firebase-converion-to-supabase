@@ -8,11 +8,22 @@ import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption } from '@
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
 
+const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
+const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
+
+
 const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
-  phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
+  phone: z.string().regex(phoneRegex, { message: 'Please enter a valid phone number.' }),
   location: z.enum(['toronto', 'outside-toronto'], { required_error: 'Please select a location.' }),
+});
+
+const AddressSchema = z.object({
+    street: z.string().min(5, { message: 'Please enter a valid street address.'}),
+    city: z.string().min(2, { message: 'Please enter a city.'}),
+    province: z.literal('ON', { required_error: 'Province must be Ontario.'}),
+    postalCode: z.string().regex(postalCodeRegex, { message: 'Please enter a valid Canadian postal code.'}),
 });
 
 function parseDaysFromFormData(formData: FormData): Omit<Day, 'id'>[] {
@@ -240,6 +251,60 @@ export async function generateQuoteAction(
         status: 'success',
         message: emailSent ? 'Success' : 'Quote generated, but failed to send email.',
         quote: finalQuote,
+        errors: null,
+    };
+}
+
+
+export async function confirmBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
+
+    const finalQuoteString = formData.get('finalQuote') as string;
+    if (!finalQuoteString) {
+        return {
+            status: 'error',
+            message: 'Quote data is missing. Please generate a quote first.',
+            quote: null,
+            errors: { form: ['Quote data is missing.'] },
+        }
+    }
+    const finalQuote: FinalQuote = JSON.parse(finalQuoteString);
+
+    const addressData = {
+        street: formData.get('street'),
+        city: formData.get('city'),
+        province: formData.get('province'),
+        postalCode: formData.get('postalCode'),
+    };
+    
+    const validatedAddress = AddressSchema.safeParse(addressData);
+    if (!validatedAddress.success) {
+        return {
+            status: 'success', // Keep rendering the confirmation page
+            message: 'Please correct the address errors.',
+            quote: finalQuote,
+            errors: validatedAddress.error.flatten().fieldErrors,
+        }
+    }
+
+    finalQuote.booking.address = validatedAddress.data;
+    
+    let emailSent = true;
+    try {
+      await sendQuoteEmail(finalQuote);
+    } catch (error) {
+      console.error("Failed to send updated quote email:", error);
+      emailSent = false;
+    }
+
+    // This is where you would redirect to Stripe
+    console.log("Redirecting to Stripe with quote:", finalQuote);
+
+
+    // For now, we'll just return a success state with a different message
+     return {
+        status: 'success',
+        message: `Booking Confirmed! ${emailSent ? 'A confirmation email with the address has been sent.' : 'Failed to send updated email.'}`,
+        quote: finalQuote, // Return the updated quote
         errors: null,
     };
 }
