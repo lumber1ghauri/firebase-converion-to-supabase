@@ -165,7 +165,7 @@ export default function BookingFlow() {
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={day.date} onSelect={(date) => updateDay(day.id, { date: date as Date })} initialFocus /></PopoverContent>
                         </Popover>
-                        <input type="hidden" name={`date_${index}`} value={day.date?.toISOString()} />
+                        <input type="hidden" name={`date_${index}`} value={day.date?.toISOString() || ''} />
                     </div>
                     <div>
                         <Label htmlFor={`getReadyTime-${index}`}>Get Ready Time *</Label>
@@ -283,7 +283,7 @@ export default function BookingFlow() {
                                       }} initialFocus/>
                                     </PopoverContent>
                                   </Popover>
-                                <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString()} />
+                                <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString() || ''} />
                             </div>
                             <div>
                                 <Label htmlFor="trialTime">Trial Time *</Label>
