@@ -36,26 +36,7 @@ const initialState: ActionState = {
   fieldValues: {},
 };
 
-const getInitialDays = (fieldValues: Record<string, any> | undefined): Day[] => {
-    if (fieldValues && Object.keys(fieldValues).length > 0 && fieldValues['date_0']) {
-        const days: Day[] = [];
-        let i = 0;
-        while (fieldValues[`date_${i}`]) {
-            days.push({
-                id: parseInt(fieldValues[`day_id_${i}`] || Date.now() + i, 10),
-                date: new Date(fieldValues[`date_${i}`]),
-                getReadyTime: fieldValues[`getReadyTime_${i}`],
-                serviceId: fieldValues[`service_${i}`],
-                serviceOption: fieldValues[`serviceOption_${i}`],
-                hairExtensions: parseInt(fieldValues[`hairExtensions_${i}`] || '0', 10),
-                jewellerySetting: fieldValues[`jewellerySetting_${i}`] === 'on',
-                sareeDraping: fieldValues[`sareeDraping_${i}`] === 'on',
-                hijabSetting: fieldValues[`hijabSetting_${i}`] === 'on',
-            });
-            i++;
-        }
-        return days;
-    }
+const getInitialDays = (): Day[] => {
     return [{ 
         id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
         hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false
@@ -120,7 +101,7 @@ export default function BookingFlow() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [showQuote, setShowQuote] = useState(false);
-  const [days, setDays] = useState<Day[]>(() => getInitialDays(state.fieldValues));
+  const [days, setDays] = useState<Day[]>(() => getInitialDays());
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
   const [location, setLocation] = useState<keyof typeof LOCATION_OPTIONS>((state.fieldValues?.location as keyof typeof LOCATION_OPTIONS) || 'toronto');
