@@ -10,12 +10,13 @@ if (process.env.RESEND_API_KEY) {
     resend = new Resend(process.env.RESEND_API_KEY);
 }
 
-const FROM_EMAIL = 'hello@sellaya.com';
+const FROM_EMAIL = 'onboarding@resend.dev';
 
 export async function sendQuoteEmail(quote: FinalQuote) {
     if (!resend) {
         console.warn('RESEND_API_KEY is not set. Skipping email sending.');
-        return;
+        // Still resolve the promise so Promise.all doesn't fail
+        return Promise.resolve();
     }
 
   try {
