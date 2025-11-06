@@ -227,6 +227,20 @@ export async function generateQuoteAction(
         }
     };
 
+    // TODO: Implement email sending functionality
+    // This is where you would integrate an email service like Resend, SendGrid, or Nodemailer.
+    // Example using a hypothetical sendEmail function:
+    // try {
+    //   await sendEmail({
+    //     to: finalQuote.contact.email,
+    //     subject: 'Your Makeup Quote from GlamBook Pro',
+    //     react: <QuoteEmailTemplate quote={finalQuote} />,
+    //   });
+    // } catch (error) {
+    //   console.error("Failed to send quote email:", error);
+    //   // You might want to handle this error, but for now we'll proceed
+    // }
+
     return {
         status: 'success',
         message: 'Success',
