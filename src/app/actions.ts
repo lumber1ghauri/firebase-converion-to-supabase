@@ -294,7 +294,7 @@ export async function generateQuoteAction(
         id: bookingId,
         contact: {
             name: validatedFields.data.name,
-            email: 'shaneali720@gmail.com', // TEST EMAIL
+            email: validatedFields.data.email,
         },
         booking: {
             days: bookingDays,
