@@ -6,6 +6,7 @@ import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES } from '@/lib/services';
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
+import { sendQuoteEmail } from '@/lib/email';
 
 const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
@@ -227,19 +228,13 @@ export async function generateQuoteAction(
         }
     };
 
-    // TODO: Implement email sending functionality
-    // This is where you would integrate an email service like Resend, SendGrid, or Nodemailer.
-    // Example using a hypothetical sendEmail function:
-    // try {
-    //   await sendEmail({
-    //     to: finalQuote.contact.email,
-    //     subject: 'Your Makeup Quote from GlamBook Pro',
-    //     react: <QuoteEmailTemplate quote={finalQuote} />,
-    //   });
-    // } catch (error) {
-    //   console.error("Failed to send quote email:", error);
-    //   // You might want to handle this error, but for now we'll proceed
-    // }
+    try {
+      await sendQuoteEmail(finalQuote);
+    } catch (error) {
+      console.error("Failed to send quote email:", error);
+      // Even if email fails, we don't want to block the user from seeing the quote.
+      // We can add more robust error handling/logging here.
+    }
 
     return {
         status: 'success',

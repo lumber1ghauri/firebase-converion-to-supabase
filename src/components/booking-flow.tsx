@@ -103,6 +103,9 @@ export default function BookingFlow() {
     } else {
         setShowQuote(false);
     }
+    if (state.status === 'error' || (state.status === 'success' && !state.quote)) {
+        setShowQuote(false);
+    }
   }, [state, toast]);
 
   const handleFormChange = () => {
