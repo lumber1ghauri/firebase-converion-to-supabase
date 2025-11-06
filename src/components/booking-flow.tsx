@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef, useActionState } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info } from 'lucide-react';
@@ -36,6 +37,12 @@ const initialState: ActionState = {
 };
 
 const getInitialDays = (fieldValues: any): Day[] => {
+    if (!fieldValues) {
+        return [{ 
+            id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
+            hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false
+        }];
+    }
     const days: Day[] = [];
     let i = 0;
     while (fieldValues[`date_${i}`]) {
@@ -59,6 +66,13 @@ const getInitialDays = (fieldValues: any): Day[] => {
 };
 
 const getInitialBridalTrial = (fieldValues: any): BridalTrial => {
+    if (!fieldValues) {
+        return {
+            addTrial: false,
+            date: undefined,
+            time: '11:00'
+        };
+    }
     return {
         addTrial: fieldValues.addTrial === 'on',
         date: fieldValues.trialDate ? new Date(fieldValues.trialDate) : undefined,
