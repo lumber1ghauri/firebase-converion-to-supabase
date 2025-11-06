@@ -99,6 +99,21 @@ const getInitialBridalParty = (fieldValues: Record<string, any> | undefined): Br
 }
 
 
+function generateTimeSlots() {
+    const slots = [];
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+            const h = hour.toString().padStart(2, '0');
+            const m = minute.toString().padStart(2, '0');
+            slots.push(`${h}:${m}`);
+        }
+    }
+    return slots;
+}
+
+const timeSlots = generateTimeSlots();
+
+
 export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
   const { toast } = useToast();
@@ -110,6 +125,11 @@ export default function BookingFlow() {
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
   const [location, setLocation] = useState<keyof typeof LOCATION_OPTIONS>((state.fieldValues?.location as keyof typeof LOCATION_OPTIONS) || 'toronto');
   
+  // Refs for popovers
+  const dayPopoverRefs = useRef<{[key: number]: { open: boolean, setOpen: (open: boolean) => void} }>({});
+  const trialPopoverRef = useRef<{ open: boolean, setOpen: (open: boolean) => void}>();
+
+
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
 
   useEffect(() => {
@@ -206,6 +226,7 @@ export default function BookingFlow() {
             {days.map((day, index) => {
               const service = SERVICES.find(s => s.id === day.serviceId);
               const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
+              const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
               return (
               <div key={day.id} className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
@@ -213,20 +234,25 @@ export default function BookingFlow() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <Label htmlFor={`date-${index}`}>Day {index + 1} - Date *</Label>
-                        <Popover>
+                        <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                             <PopoverTrigger asChild>
                             <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!day.date && "text-muted-foreground")}>
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {day.date ? format(day.date, "PPP") : <span>Pick a date</span>}
                             </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={day.date} onSelect={(date) => updateDay(day.id, { date: date as Date })} initialFocus /></PopoverContent>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={day.date} onSelect={(date) => { updateDay(day.id, { date: date as Date }); setIsPopoverOpen(false); }} initialFocus /></PopoverContent>
                         </Popover>
                         <input type="hidden" name={`date_${index}`} value={day.date?.toISOString() || ''} />
                     </div>
                     <div>
                         <Label htmlFor={`getReadyTime-${index}`}>Get Ready Time *</Label>
-                        <Input id={`getReadyTime-${index}`} name={`getReadyTime_${index}`} type="time" value={day.getReadyTime} onChange={(e) => updateDay(day.id, { getReadyTime: e.target.value })} required />
+                        <Select name={`getReadyTime_${index}`} value={day.getReadyTime} onValueChange={(value) => updateDay(day.id, { getReadyTime: value })} required>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {timeSlots.map(slot => <SelectItem key={slot} value={slot}>{format(new Date(`1970-01-01T${slot}`), 'p')}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                      <div>
                         <Label htmlFor={`service-${index}`}>Service *</Label>
@@ -310,133 +336,15 @@ export default function BookingFlow() {
         </Card>
 
         {hasBridalService && (
-            <>
-                <Card className="shadow-md animate-in fade-in-50 duration-700">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <CardTitle className="font-headline text-2xl">Bridal Trial</CardTitle>
-                                <CardDescription>Add a trial session before your big day. Price revealed in quote.</CardDescription>
-                            </div>
-                            <Switch name="addTrial" checked={bridalTrial.addTrial} onCheckedChange={(checked) => updateBridalTrial({ addTrial: checked })} />
-                        </div>
-                    </CardHeader>
-                    {bridalTrial.addTrial && (
-                        <CardContent className="space-y-4 animate-in fade-in-0 slide-in-from-top-5 duration-300">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <Label htmlFor="trialDate">Trial Date *</Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !bridalTrial.date && "text-muted-foreground")}>
-                                            <CalendarIcon className="mr-2 h-4 w-4" />
-                                            {bridalTrial.date ? format(bridalTrial.date, "PPP") : <span>Pick a date</span>}
-                                        </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto p-0">
-                                        <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => updateBridalTrial({ date: date as Date })} disabled={(date) => {
-                                            const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
-                                            if (!bridalDay) return false;
-                                            return date >= bridalDay;
-                                        }} initialFocus/>
-                                        </PopoverContent>
-                                    </Popover>
-                                    <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString() || ''} />
-                                </div>
-                                <div>
-                                    <Label htmlFor="trialTime">Trial Time *</Label>
-                                    <Input id="trialTime" name="trialTime" type="time" value={bridalTrial.time} onChange={(e) => updateBridalTrial({ time: e.target.value })} required={bridalTrial.addTrial} />
-                                </div>
-                            </div>
-                            {state.errors?.trialDate && <p className="text-sm text-destructive mt-1">{state.errors.trialDate[0]}</p>}
-                        </CardContent>
-                    )}
-                </Card>
-
-                <Card className="shadow-md animate-in fade-in-50 duration-800">
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className='flex items-center gap-4'>
-                                <Users className='w-6 h-6 text-primary'/>
-                                <div>
-                                    <CardTitle className="font-headline text-2xl">Bridal Party Services</CardTitle>
-                                    <CardDescription>Aside from the bride, are there other members requiring services?</CardDescription>
-                                </div>
-                            </div>
-                            <Switch name="addPartyServices" checked={bridalParty.addServices} onCheckedChange={(checked) => updateBridalParty({ addServices: checked })} />
-                        </div>
-                    </CardHeader>
-                    {bridalParty.addServices && (
-                        <CardContent className="space-y-6 pt-2 animate-in fade-in-0 slide-in-from-top-5 duration-300">
-                            <PartyServiceInput
-                                name="hairAndMakeup"
-                                label="Both Hair & Makeup"
-                                description="Complete styling package. This does not include the bride."
-                                value={bridalParty.hairAndMakeup}
-                                onValueChange={(val) => updateBridalParty({ hairAndMakeup: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <PartyServiceInput
-                                name="makeupOnly"
-                                label="Makeup Only"
-                                description="These people do not need hair done. This does not include the bride."
-                                value={bridalParty.makeupOnly}
-                                onValueChange={(val) => updateBridalParty({ makeupOnly: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                             <PartyServiceInput
-                                name="hairOnly"
-                                label="Hair Only"
-                                description="These people do not need makeup done. This does not include the bride."
-                                value={bridalParty.hairOnly}
-                                onValueChange={(val) => updateBridalParty({ hairOnly: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <Separator/>
-                            <PartyServiceInput
-                                name="dupattaSetting"
-                                label="Dupatta/Veil Setting"
-                                description="Professional assistance with dupatta or veil arrangement."
-                                value={bridalParty.dupattaSetting}
-                                onValue-change={(val) => updateBridalParty({ dupattaSetting: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <PartyServiceInput
-                                name="hairExtensionInstallation"
-                                label="Hair Extensions Installation"
-                                description="*Note: We do not provide the hair extensions. Each person must have their own."
-                                value={bridalParty.hairExtensionInstallation}
-                                onValueChange={(val) => updateBridalParty({ hairExtensionInstallation: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <PartyServiceInput
-                                name="partySareeDraping"
-                                label="Saree Draping"
-                                description="Traditional technique creating beautiful draping effect for dupatta or veil."
-                                value={bridalParty.partySareeDraping}
-                                onValueChange={(val) => updateBridalParty({ partySareeDraping: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <PartyServiceInput
-                                name="partyHijabSetting"
-                                label="Hijab Setting"
-                                description="Professional assistance with hijab styling and arrangement."
-                                value={bridalParty.partyHijabSetting}
-                                onValueChange={(val) => updateBridalParty({ partyHijabSetting: val })}
-                                onButtonClick={updateBridalPartyQty}
-                            />
-                            <Separator/>
-                             <div className="flex items-center justify-between">
-                                <Label htmlFor="party-airbrush" className="flex flex-col gap-1 cursor-pointer">
-                                    <span>Air Brush Service</span>
-                                    <span className='text-xs text-muted-foreground'>Add airbrushing for a flawless finish.</span>
-                                </Label>
-                                <Switch id="party-airbrush" name="party_airbrush" checked={bridalParty.airbrush} onCheckedChange={(checked) => updateBridalParty({ airbrush: checked })} />
-                            </div>
-                        </CardContent>
-                    )}
-                </Card>
-            </>
+            <BridalServiceOptions
+              bridalTrial={bridalTrial}
+              updateBridalTrial={updateBridalTrial}
+              days={days}
+              errors={state.errors}
+              bridalParty={bridalParty}
+              updateBridalParty={updateBridalParty}
+              updateBridalPartyQty={updateBridalPartyQty}
+            />
         )}
 
         <Card className="shadow-md animate-in fade-in-50 duration-1000">
@@ -465,17 +373,17 @@ export default function BookingFlow() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="name">Full Name *</Label>
-              <Input id="name" name="name" placeholder="Jane Doe" required defaultValue={state.fieldValues?.name || ''} />
+              <Input id="name" name="name" placeholder="Jane Doe" required defaultValue={state.fieldValues?.name as string || ''} />
                {state.errors?.name && <p className="text-sm text-destructive mt-1">{state.errors.name[0]}</p>}
             </div>
             <div>
               <Label htmlFor="email">Email Address *</Label>
-              <Input id="email" name="email" type="email" placeholder="jane.doe@example.com" required defaultValue={state.fieldValues?.email || ''} />
+              <Input id="email" name="email" type="email" placeholder="jane.doe@example.com" required defaultValue={state.fieldValues?.email as string || ''} />
               {state.errors?.email && <p className="text-sm text-destructive mt-1">{state.errors.email[0]}</p>}
             </div>
             <div>
               <Label htmlFor="phone">Phone Number *</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="(416) 555-1234" required defaultValue={state.fieldValues?.phone || ''}/>
+              <Input id="phone" name="phone" type="tel" placeholder="(416) 555-1234" required defaultValue={state.fieldValues?.phone as string || ''}/>
                {state.errors?.phone && <p className="text-sm text-destructive mt-1">{state.errors.phone[0]}</p>}
             </div>
           </CardContent>
@@ -526,6 +434,153 @@ export default function BookingFlow() {
     </div>
   );
 }
+
+function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, bridalParty, updateBridalParty, updateBridalPartyQty }: {
+  bridalTrial: BridalTrial;
+  updateBridalTrial: (data: Partial<BridalTrial>) => void;
+  days: Day[];
+  errors: ActionState['errors'];
+  bridalParty: BridalPartyServices;
+  updateBridalParty: (data: Partial<BridalPartyServices>) => void;
+  updateBridalPartyQty: (field: keyof BridalPartyServices, increase: boolean) => void;
+}) {
+  const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
+  return (
+    <>
+      <Card className="shadow-md animate-in fade-in-50 duration-700">
+          <CardHeader>
+              <div className="flex items-center justify-between">
+                  <div>
+                      <CardTitle className="font-headline text-2xl">Bridal Trial</CardTitle>
+                      <CardDescription>Add a trial session before your big day. Price revealed in quote.</CardDescription>
+                  </div>
+                  <Switch name="addTrial" checked={bridalTrial.addTrial} onCheckedChange={(checked) => updateBridalTrial({ addTrial: checked })} />
+              </div>
+          </CardHeader>
+          {bridalTrial.addTrial && (
+              <CardContent className="space-y-4 animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                          <Label htmlFor="trialDate">Trial Date *</Label>
+                          <Popover open={isTrialPopoverOpen} onOpenChange={setIsTrialPopoverOpen}>
+                              <PopoverTrigger asChild>
+                              <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !bridalTrial.date && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {bridalTrial.date ? format(bridalTrial.date, "PPP") : <span>Pick a date</span>}
+                              </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => { updateBridalTrial({ date: date as Date }); setIsTrialPopoverOpen(false); }} disabled={(date) => {
+                                  const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
+                                  if (!bridalDay) return false;
+                                  return date >= bridalDay;
+                              }} initialFocus/>
+                              </PopoverContent>
+                          </Popover>
+                          <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString() || ''} />
+                      </div>
+                      <div>
+                          <Label htmlFor="trialTime">Trial Time *</Label>
+                          <Select name="trialTime" value={bridalTrial.time} onValueChange={(value) => updateBridalTrial({ time: value })} required={bridalTrial.addTrial}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {timeSlots.map(slot => <SelectItem key={slot} value={slot}>{format(new Date(`1970-01-01T${slot}`), 'p')}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                      </div>
+                  </div>
+                  {errors?.trialDate && <p className="text-sm text-destructive mt-1">{errors.trialDate[0]}</p>}
+              </CardContent>
+          )}
+      </Card>
+
+      <Card className="shadow-md animate-in fade-in-50 duration-800">
+          <CardHeader>
+              <div className="flex items-center justify-between">
+                  <div className='flex items-center gap-4'>
+                      <Users className='w-6 h-6 text-primary'/>
+                      <div>
+                          <CardTitle className="font-headline text-2xl">Bridal Party Services</CardTitle>
+                          <CardDescription>Aside from the bride, are there other members requiring services?</CardDescription>
+                      </div>
+                  </div>
+                  <Switch name="addPartyServices" checked={bridalParty.addServices} onCheckedChange={(checked) => updateBridalParty({ addServices: checked })} />
+              </div>
+          </CardHeader>
+          {bridalParty.addServices && (
+              <CardContent className="space-y-6 pt-2 animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                  <PartyServiceInput
+                      name="hairAndMakeup"
+                      label="Both Hair & Makeup"
+                      description="Complete styling package. This does not include the bride."
+                      value={bridalParty.hairAndMakeup}
+                      onValueChange={(val) => updateBridalParty({ hairAndMakeup: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <PartyServiceInput
+                      name="makeupOnly"
+                      label="Makeup Only"
+                      description="These people do not need hair done. This does not include the bride."
+                      value={bridalParty.makeupOnly}
+                      onValueChange={(val) => updateBridalParty({ makeupOnly: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                    <PartyServiceInput
+                      name="hairOnly"
+                      label="Hair Only"
+                      description="These people do not need makeup done. This does not include the bride."
+                      value={bridalParty.hairOnly}
+                      onValueChange={(val) => updateBridalParty({ hairOnly: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <Separator/>
+                  <PartyServiceInput
+                      name="dupattaSetting"
+                      label="Dupatta/Veil Setting"
+                      description="Professional assistance with dupatta or veil arrangement."
+                      value={bridalParty.dupattaSetting}
+                      onValueChange={(val) => updateBridalParty({ dupattaSetting: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <PartyServiceInput
+                      name="hairExtensionInstallation"
+                      label="Hair Extensions Installation"
+                      description="*Note: We do not provide the hair extensions. Each person must have their own."
+                      value={bridalParty.hairExtensionInstallation}
+                      onValueChange={(val) => updateBridalParty({ hairExtensionInstallation: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <PartyServiceInput
+                      name="partySareeDraping"
+                      label="Saree Draping"
+                      description="Traditional technique creating beautiful draping effect for dupatta or veil."
+                      value={bridalParty.partySareeDraping}
+                      onValueChange={(val) => updateBridalParty({ partySareeDraping: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <PartyServiceInput
+                      name="partyHijabSetting"
+                      label="Hijab Setting"
+                      description="Professional assistance with hijab styling and arrangement."
+                      value={bridalParty.partyHijabSetting}
+                      onValueChange={(val) => updateBridalParty({ partyHijabSetting: val })}
+                      onButtonClick={updateBridalPartyQty}
+                  />
+                  <Separator/>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="party-airbrush" className="flex flex-col gap-1 cursor-pointer">
+                          <span>Air Brush Service</span>
+                          <span className='text-xs text-muted-foreground'>Add airbrushing for a flawless finish.</span>
+                      </Label>
+                      <Switch id="party-airbrush" name="party_airbrush" checked={bridalParty.airbrush} onCheckedChange={(checked) => updateBridalParty({ airbrush: checked })} />
+                  </div>
+              </CardContent>
+          )}
+      </Card>
+    </>
+  )
+}
+
 
 function PartyServiceInput({ name, label, description, value, onValueChange, onButtonClick }: {
     name: keyof BridalPartyServices,
