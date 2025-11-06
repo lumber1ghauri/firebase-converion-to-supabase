@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useFormState, useFormStatus } from 'react-dom';
+import { useState, useMemo, useEffect, useRef, useActionState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -68,7 +68,7 @@ const getInitialBridalTrial = (fieldValues: any): BridalTrial => {
 
 
 export default function BookingFlow() {
-  const [state, formAction] = useFormState(generateQuoteAction, initialState);
+  const [state, formAction] = useActionState(generateQuoteAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
 
