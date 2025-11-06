@@ -109,7 +109,7 @@ export default function BookingFlow() {
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
 
   useEffect(() => {
-    if (state.status === 'error' && state.message && !state.errors) {
+    if (state.status === 'error' && state.message) {
       toast({
         variant: 'destructive',
         title: 'Booking Error',
@@ -117,13 +117,6 @@ export default function BookingFlow() {
       });
     }
     if (state.status === 'success' && state.quote) {
-        if(state.message && state.message.includes('failed to send email')){
-             toast({
-                variant: 'destructive',
-                title: 'Quote Generated',
-                description: "Your quote is ready, but we couldn't send the confirmation email. Please check your API key.",
-            });
-        }
         setShowQuote(true);
     } else {
         setShowQuote(false);

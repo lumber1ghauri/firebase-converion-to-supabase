@@ -312,20 +312,16 @@ export async function generateQuoteAction(
         status: 'quoted'
     };
     
-    let emailSent = true;
-    try {
-      await Promise.all([
-        sendQuoteEmail(finalQuote),
-        saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
-      ]);
-    } catch (error) {
-      console.error("Failed to send quote email or save booking:", error);
-      emailSent = false;
-    }
-
+    // The 'try...catch' block is removed to allow errors to be thrown.
+    // The calling component will handle the error and display a message.
+    await Promise.all([
+      sendQuoteEmail(finalQuote),
+      saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
+    ]);
+    
     return {
         status: 'success',
-        message: emailSent ? 'Success' : 'Quote generated, but failed to send email or save booking.',
+        message: 'Success',
         quote: finalQuote,
         errors: null,
     };
@@ -371,16 +367,11 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         status: 'confirmed'
     };
     
-    let emailSent = true;
-    try {
-        await Promise.all([
-            sendQuoteEmail(updatedQuote),
-            saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
-        ]);
-    } catch (error) {
-      console.error("Failed to send updated quote email or save booking:", error);
-      emailSent = false;
-    }
+    // The 'try...catch' block is removed to allow errors to be thrown.
+    await Promise.all([
+        sendQuoteEmail(updatedQuote),
+        saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
+    ]);
 
     // This is where you would redirect to Stripe
     console.log("Redirecting to Stripe with quote:", updatedQuote);
@@ -389,7 +380,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     // For now, we'll just return a success state with a different message
      return {
         status: 'success',
-        message: `Booking Confirmed! ${emailSent ? 'A confirmation email with the address has been sent.' : 'Failed to send updated email.'}`,
+        message: 'Booking Confirmed! A confirmation email with the address has been sent.',
         quote: updatedQuote, // Return the updated quote
         errors: null,
     };
