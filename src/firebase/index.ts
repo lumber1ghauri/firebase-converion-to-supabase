@@ -17,7 +17,12 @@ let auth: Auth | null = null;
 let db: Firestore | null = null;
 
 function initializeFirebase() {
-  if (getApps().length === 0 && firebaseConfig.projectId) {
+  if (!firebaseConfig.projectId) {
+    console.warn("Firebase config not found, skipping initialization.");
+    return { app: null, auth: null, db: null };
+  }
+
+  if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
     db = getFirestoreSdk(app);
