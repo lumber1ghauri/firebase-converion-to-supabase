@@ -131,21 +131,6 @@ export default function BookingFlow() {
         setShowQuote(false);
     }
   }
-  
-  const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    try {
-        // @ts-ignore
-        await formAction(formData);
-    } catch (error: any) {
-        toast({
-            variant: "destructive",
-            title: "An unexpected error occurred.",
-            description: error.message || "Could not generate the quote. Please try again.",
-        });
-    }
-  };
 
 
   const addDay = () => {
@@ -193,7 +178,7 @@ export default function BookingFlow() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-      <form ref={formRef} onSubmit={handleFormSubmit} onChange={handleFormChange} className="lg:col-span-3 space-y-8">
+      <form ref={formRef} action={formAction} onChange={handleFormChange} className="lg:col-span-3 space-y-8">
         {state.status === 'error' && state.message && state.errors && (
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -633,4 +618,5 @@ function SubmitButton({ isInvalid, showQuote }: { isInvalid: boolean, showQuote:
     )
 }
 
+    
     
