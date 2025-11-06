@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES } from '@/lib/services';
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption } from '@/lib/types';
@@ -228,17 +228,17 @@ export async function generateQuoteAction(
         }
     };
 
+    let emailSent = true;
     try {
       await sendQuoteEmail(finalQuote);
     } catch (error) {
       console.error("Failed to send quote email:", error);
-      // Even if email fails, we don't want to block the user from seeing the quote.
-      // We can add more robust error handling/logging here.
+      emailSent = false;
     }
 
     return {
         status: 'success',
-        message: 'Success',
+        message: emailSent ? 'Success' : 'Quote generated, but failed to send email.',
         quote: finalQuote,
         errors: null,
     };

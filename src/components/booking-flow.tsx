@@ -37,7 +37,7 @@ const initialState: ActionState = {
 };
 
 const getInitialDays = (fieldValues: Record<string, any> | undefined): Day[] => {
-    if (fieldValues && fieldValues['date_0']) {
+    if (fieldValues && Object.keys(fieldValues).length > 0 && fieldValues['date_0']) {
         const days: Day[] = [];
         let i = 0;
         while (fieldValues[`date_${i}`]) {
@@ -63,7 +63,7 @@ const getInitialDays = (fieldValues: Record<string, any> | undefined): Day[] => 
 };
 
 const getInitialBridalTrial = (fieldValues: Record<string, any> | undefined): BridalTrial => {
-    if (fieldValues && fieldValues.addTrial) {
+    if (fieldValues && Object.keys(fieldValues).length > 0 && fieldValues.addTrial) {
         return {
             addTrial: fieldValues.addTrial === 'on',
             date: fieldValues.trialDate ? new Date(fieldValues.trialDate) : undefined,
@@ -99,6 +99,13 @@ export default function BookingFlow() {
       });
     }
     if (state.status === 'success' && state.quote) {
+        if(state.message && state.message.includes('failed to send email')){
+             toast({
+                variant: 'destructive',
+                title: 'Quote Generated',
+                description: "Your quote is ready, but we couldn't send the confirmation email. Please check your API key.",
+            });
+        }
         setShowQuote(true);
     } else {
         setShowQuote(false);
