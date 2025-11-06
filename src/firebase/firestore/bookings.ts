@@ -3,6 +3,7 @@
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '../hooks';
 import type { FinalQuote } from '@/lib/types';
+import { getFirestoreInstance } from '..';
 
 export type BookingDocument = {
     id: string;
@@ -30,7 +31,6 @@ export function useBookings() {
 
 // Server-side action helper
 export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
-    const { getFirestoreInstance } = await import('@/firebase');
     const db = getFirestoreInstance();
     const bookingRef = doc(db, 'bookings', booking.id);
     await setDoc(bookingRef, {
@@ -41,7 +41,6 @@ export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
 
 
 export async function getBooking(bookingId: string): Promise<BookingDocument | null> {
-    const { getFirestoreInstance } = await import('@/firebase');
     const db = getFirestoreInstance();
     const bookingRef = doc(db, 'bookings', bookingId);
     const docSnap = await getDoc(bookingRef);

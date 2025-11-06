@@ -7,7 +7,7 @@ import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
-import { saveBooking } from '@/firebase/firestore/bookings';
+import { saveBooking as saveBookingToDb } from '@/firebase/firestore/bookings';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -316,7 +316,7 @@ export async function generateQuoteAction(
     try {
       await Promise.all([
         sendQuoteEmail(finalQuote),
-        saveBooking({ id: bookingId, finalQuote, createdAt: new Date() })
+        saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
       ]);
     } catch (error) {
       console.error("Failed to send quote email or save booking:", error);
@@ -375,7 +375,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     try {
         await Promise.all([
             sendQuoteEmail(updatedQuote),
-            saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
+            saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
         ]);
     } catch (error) {
       console.error("Failed to send updated quote email or save booking:", error);
