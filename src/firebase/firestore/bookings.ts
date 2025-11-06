@@ -1,7 +1,6 @@
-'use client';
+'use server';
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useFirestore } from '../hooks';
 import type { FinalQuote } from '@/lib/types';
 import { getFirestoreInstance } from '..';
 
@@ -10,23 +9,6 @@ export type BookingDocument = {
     finalQuote: FinalQuote;
     createdAt: Date;
     updatedAt?: Date;
-}
-
-export function useBookings() {
-    const db = useFirestore();
-
-    const saveBooking = async (booking: Omit<BookingDocument, 'updatedAt'>) => {
-        if (!db) {
-            throw new Error('Firestore is not initialized');
-        }
-        const bookingRef = doc(db, 'bookings', booking.id);
-        await setDoc(bookingRef, {
-            ...booking,
-            updatedAt: serverTimestamp(),
-        }, { merge: true });
-    };
-
-    return { saveBooking };
 }
 
 // Server-side action helper

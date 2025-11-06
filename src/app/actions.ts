@@ -312,12 +312,20 @@ export async function generateQuoteAction(
         status: 'quoted'
     };
     
-    // The 'try...catch' block is removed to allow errors to be thrown.
-    // The calling component will handle the error and display a message.
-    await Promise.all([
-      sendQuoteEmail(finalQuote),
-      saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
-    ]);
+    try {
+        await Promise.all([
+          sendQuoteEmail(finalQuote),
+          saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
+        ]);
+    } catch (error: any) {
+         return {
+            status: 'error',
+            message: `Failed to finalize booking: ${error.message}`,
+            quote: null,
+            errors: null,
+            fieldValues,
+        };
+    }
     
     return {
         status: 'success',
@@ -367,11 +375,19 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         status: 'confirmed'
     };
     
-    // The 'try...catch' block is removed to allow errors to be thrown.
-    await Promise.all([
-        sendQuoteEmail(updatedQuote),
-        saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
-    ]);
+    try {
+        await Promise.all([
+            sendQuoteEmail(updatedQuote),
+            saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
+        ]);
+    } catch (error: any) {
+        return {
+            status: 'success', // Keep rendering confirmation page
+            message: `Failed to send confirmation: ${error.message}`,
+            quote: finalQuote, // Return original quote
+            errors: { form: [`Failed to send confirmation: ${error.message}`] },
+        }
+    }
 
     // This is where you would redirect to Stripe
     console.log("Redirecting to Stripe with quote:", updatedQuote);

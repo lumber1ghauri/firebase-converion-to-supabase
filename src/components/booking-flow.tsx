@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, PartyPopper, Gem, Sparkles, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
@@ -178,7 +178,12 @@ export default function BookingFlow() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
-      <form ref={formRef} action={formAction} onChange={handleFormChange} className="lg:col-span-3 space-y-8">
+       <form
+        ref={formRef}
+        action={formAction}
+        onChange={handleFormChange}
+        className="lg:col-span-3 space-y-8"
+      >
         {state.status === 'error' && state.message && state.errors && (
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -617,6 +622,3 @@ function SubmitButton({ isInvalid, showQuote }: { isInvalid: boolean, showQuote:
         </Button>
     )
 }
-
-    
-    
