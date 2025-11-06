@@ -82,6 +82,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
       </p>
       <p style={paragraph}>
         Thank you for your interest! Here is the personalized quote you requested.
+        {quote.booking.address && " Your service address has been confirmed."}
       </p>
 
       <div style={section}>
@@ -105,17 +106,34 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
                 </p>
              </div>
          )}
+         {quote.booking.bridalParty && (
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #eee' }}>
+                <p style={{...item, fontWeight: 500, marginBottom: '5px'}}>
+                    <span>Bridal Party Services</span>
+                </p>
+                {quote.booking.bridalParty.services.map((partySvc, i) => (
+                    <p key={i} style={{...itemDescription, marginLeft: '10px'}}>- {partySvc.service} (x{partySvc.quantity})</p>
+                ))}
+                {quote.booking.bridalParty.airbrush && <p style={{...itemDescription, marginLeft: '10px'}}>- Airbrush Service</p>}
+            </div>
+         )}
          <div style={{...item, marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #e5e5e5'}}>
              <span style={{...itemDescription, color: '#777'}}>Location:</span>
              <span style={{...itemPrice, color: '#777'}}>{quote.booking.location}</span>
          </div>
+         {quote.booking.address && (
+              <div style={{...item, marginTop: '5px' }}>
+                 <span style={{...itemDescription, color: '#777'}}>Service Address:</span>
+                 <span style={{...itemPrice, color: '#777', textAlign: 'right'}}>{quote.booking.address.street},<br/>{quote.booking.address.city}, {quote.booking.address.province}, {quote.booking.address.postalCode}</span>
+             </div>
+         )}
       </div>
       
       <div style={section}>
         <h2 style={{ ...heading, fontSize: '20px', marginBottom: '15px' }}>Price Breakdown</h2>
         {quote.quote.lineItems.map((item, index) => (
           <div key={index} style={item}>
-            <p style={{ ...itemDescription, paddingLeft: item.description.startsWith('  -') ? '15px' : '0' }}>{item.description}</p>
+            <p style={{ ...itemDescription, paddingLeft: item.description.startsWith('  -') || item.description.startsWith('Party:') ? '15px' : '0' }}>{item.description}</p>
             <p style={itemPrice}>${item.price.toFixed(2)}</p>
           </div>
         ))}

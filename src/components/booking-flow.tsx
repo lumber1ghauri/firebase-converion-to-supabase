@@ -4,11 +4,11 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
-import type { ActionState, Day, ServiceOption, BridalTrial } from '@/lib/types';
+import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices } from '@/lib/types';
 import { SERVICES, LOCATION_OPTIONS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 
@@ -63,7 +63,7 @@ const getInitialDays = (fieldValues: Record<string, any> | undefined): Day[] => 
 };
 
 const getInitialBridalTrial = (fieldValues: Record<string, any> | undefined): BridalTrial => {
-    if (fieldValues && Object.keys(fieldValues).length > 0 && fieldValues.addTrial) {
+    if (fieldValues && Object.keys(fieldValues).length > 0 && 'addTrial' in fieldValues) {
         return {
             addTrial: fieldValues.addTrial === 'on',
             date: fieldValues.trialDate ? new Date(fieldValues.trialDate) : undefined,
@@ -77,6 +77,27 @@ const getInitialBridalTrial = (fieldValues: Record<string, any> | undefined): Br
     };
 };
 
+const getInitialBridalParty = (fieldValues: Record<string, any> | undefined): BridalPartyServices => {
+    const defaults = {
+        addServices: false, hairAndMakeup: 0, makeupOnly: 0, hairOnly: 0, dupattaSetting: 0,
+        hairExtensionInstallation: 0, partySareeDraping: 0, partyHijabSetting: 0, airbrush: false,
+    };
+    if (fieldValues && Object.keys(fieldValues).length > 0 && 'addPartyServices' in fieldValues) {
+        return {
+            addServices: fieldValues.addPartyServices === 'on',
+            hairAndMakeup: parseInt(fieldValues.party_hairAndMakeup || '0', 10),
+            makeupOnly: parseInt(fieldValues.party_makeupOnly || '0', 10),
+            hairOnly: parseInt(fieldValues.party_hairOnly || '0', 10),
+            dupattaSetting: parseInt(fieldValues.party_dupattaSetting || '0', 10),
+            hairExtensionInstallation: parseInt(fieldValues.party_hairExtensionInstallation || '0', 10),
+            partySareeDraping: parseInt(fieldValues.party_sareeDraping || '0', 10),
+            partyHijabSetting: parseInt(fieldValues.party_hijabSetting || '0', 10),
+            airbrush: fieldValues.party_airbrush === 'on',
+        };
+    }
+    return defaults;
+}
+
 
 export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
@@ -86,6 +107,7 @@ export default function BookingFlow() {
   const [showQuote, setShowQuote] = useState(false);
   const [days, setDays] = useState<Day[]>(() => getInitialDays(state.fieldValues));
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
+  const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
   const [location, setLocation] = useState<keyof typeof LOCATION_OPTIONS>((state.fieldValues?.location as keyof typeof LOCATION_OPTIONS) || 'toronto');
   
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
@@ -142,11 +164,23 @@ export default function BookingFlow() {
     handleFormChange();
     setBridalTrial(prev => ({ ...prev, ...newTrialData }));
   };
+  
+   const updateBridalParty = (newPartyData: Partial<BridalPartyServices>) => {
+    handleFormChange();
+    setBridalParty(prev => ({ ...prev, ...newPartyData }));
+  }
+   const updateBridalPartyQty = (field: keyof BridalPartyServices, increase: boolean) => {
+    handleFormChange();
+    setBridalParty(prev => ({
+        ...prev,
+        [field]: Math.max(0, (prev[field] as number) + (increase ? 1 : -1))
+    }))
+  }
 
   const isFormInvalid = useMemo(() => {
     return days.some(day => !day.date || !day.serviceId || !day.getReadyTime) ||
-           (bridalTrial.addTrial && (!bridalTrial.date || !bridalTrial.time));
-  }, [days, bridalTrial]);
+           (hasBridalService && bridalTrial.addTrial && (!bridalTrial.date || !bridalTrial.time));
+  }, [days, bridalTrial, hasBridalService]);
 
   if (state.status === 'success' && state.quote) {
     return <QuoteConfirmation quote={state.quote} />;
@@ -220,7 +254,7 @@ export default function BookingFlow() {
                 {service && (
                     <Card className='mt-4 bg-background/50'>
                         <CardHeader className='p-4'>
-                            <CardTitle className='text-lg'>Add-ons</CardTitle>
+                            <CardTitle className='text-lg'>Bride's Add-ons</CardTitle>
                         </CardHeader>
                         <CardContent className='p-4 pt-0 space-y-4'>
                              <div className="flex items-center justify-between">
@@ -276,47 +310,133 @@ export default function BookingFlow() {
         </Card>
 
         {hasBridalService && (
-            <Card className="shadow-md animate-in fade-in-50 duration-700">
-                <CardHeader>
-                     <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="font-headline text-2xl">Bridal Trial</CardTitle>
-                            <CardDescription>Add a trial session before your big day. Price revealed in quote.</CardDescription>
-                        </div>
-                        <Switch name="addTrial" checked={bridalTrial.addTrial} onCheckedChange={(checked) => updateBridalTrial({ addTrial: checked })} />
-                     </div>
-                </CardHeader>
-                {bridalTrial.addTrial && (
-                    <CardContent className="space-y-4 animate-in fade-in-0 slide-in-from-top-5 duration-300">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <>
+                <Card className="shadow-md animate-in fade-in-50 duration-700">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
                             <div>
-                                <Label htmlFor="trialDate">Trial Date *</Label>
-                                 <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !bridalTrial.date && "text-muted-foreground")}>
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {bridalTrial.date ? format(bridalTrial.date, "PPP") : <span>Pick a date</span>}
-                                      </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                      <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => updateBridalTrial({ date: date as Date })} disabled={(date) => {
-                                          const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
-                                          if (!bridalDay) return false;
-                                          return date >= bridalDay;
-                                      }} initialFocus/>
-                                    </PopoverContent>
-                                  </Popover>
-                                <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString() || ''} />
+                                <CardTitle className="font-headline text-2xl">Bridal Trial</CardTitle>
+                                <CardDescription>Add a trial session before your big day. Price revealed in quote.</CardDescription>
                             </div>
-                            <div>
-                                <Label htmlFor="trialTime">Trial Time *</Label>
-                                <Input id="trialTime" name="trialTime" type="time" value={bridalTrial.time} onChange={(e) => updateBridalTrial({ time: e.target.value })} required={bridalTrial.addTrial} />
-                            </div>
+                            <Switch name="addTrial" checked={bridalTrial.addTrial} onCheckedChange={(checked) => updateBridalTrial({ addTrial: checked })} />
                         </div>
-                        {state.errors?.trialDate && <p className="text-sm text-destructive mt-1">{state.errors.trialDate[0]}</p>}
-                    </CardContent>
-                )}
-            </Card>
+                    </CardHeader>
+                    {bridalTrial.addTrial && (
+                        <CardContent className="space-y-4 animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="trialDate">Trial Date *</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !bridalTrial.date && "text-muted-foreground")}>
+                                            <CalendarIcon className="mr-2 h-4 w-4" />
+                                            {bridalTrial.date ? format(bridalTrial.date, "PPP") : <span>Pick a date</span>}
+                                        </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0">
+                                        <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => updateBridalTrial({ date: date as Date })} disabled={(date) => {
+                                            const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
+                                            if (!bridalDay) return false;
+                                            return date >= bridalDay;
+                                        }} initialFocus/>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <input type="hidden" name="trialDate" value={bridalTrial.date?.toISOString() || ''} />
+                                </div>
+                                <div>
+                                    <Label htmlFor="trialTime">Trial Time *</Label>
+                                    <Input id="trialTime" name="trialTime" type="time" value={bridalTrial.time} onChange={(e) => updateBridalTrial({ time: e.target.value })} required={bridalTrial.addTrial} />
+                                </div>
+                            </div>
+                            {state.errors?.trialDate && <p className="text-sm text-destructive mt-1">{state.errors.trialDate[0]}</p>}
+                        </CardContent>
+                    )}
+                </Card>
+
+                <Card className="shadow-md animate-in fade-in-50 duration-800">
+                    <CardHeader>
+                        <div className="flex items-center justify-between">
+                            <div className='flex items-center gap-4'>
+                                <Users className='w-6 h-6 text-primary'/>
+                                <div>
+                                    <CardTitle className="font-headline text-2xl">Bridal Party Services</CardTitle>
+                                    <CardDescription>Aside from the bride, are there other members requiring services?</CardDescription>
+                                </div>
+                            </div>
+                            <Switch name="addPartyServices" checked={bridalParty.addServices} onCheckedChange={(checked) => updateBridalParty({ addServices: checked })} />
+                        </div>
+                    </CardHeader>
+                    {bridalParty.addServices && (
+                        <CardContent className="space-y-6 pt-2 animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                            <PartyServiceInput
+                                name="hairAndMakeup"
+                                label="Both Hair & Makeup"
+                                description="Complete styling package. This does not include the bride."
+                                value={bridalParty.hairAndMakeup}
+                                onValueChange={(val) => updateBridalParty({ hairAndMakeup: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <PartyServiceInput
+                                name="makeupOnly"
+                                label="Makeup Only"
+                                description="These people do not need hair done. This does not include the bride."
+                                value={bridalParty.makeupOnly}
+                                onValueChange={(val) => updateBridalParty({ makeupOnly: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                             <PartyServiceInput
+                                name="hairOnly"
+                                label="Hair Only"
+                                description="These people do not need makeup done. This does not include the bride."
+                                value={bridalParty.hairOnly}
+                                onValueChange={(val) => updateBridalParty({ hairOnly: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <Separator/>
+                            <PartyServiceInput
+                                name="dupattaSetting"
+                                label="Dupatta/Veil Setting"
+                                description="Professional assistance with dupatta or veil arrangement."
+                                value={bridalParty.dupattaSetting}
+                                onValue-change={(val) => updateBridalParty({ dupattaSetting: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <PartyServiceInput
+                                name="hairExtensionInstallation"
+                                label="Hair Extensions Installation"
+                                description="*Note: We do not provide the hair extensions. Each person must have their own."
+                                value={bridalParty.hairExtensionInstallation}
+                                onValueChange={(val) => updateBridalParty({ hairExtensionInstallation: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <PartyServiceInput
+                                name="partySareeDraping"
+                                label="Saree Draping"
+                                description="Traditional technique creating beautiful draping effect for dupatta or veil."
+                                value={bridalParty.partySareeDraping}
+                                onValueChange={(val) => updateBridalParty({ partySareeDraping: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <PartyServiceInput
+                                name="partyHijabSetting"
+                                label="Hijab Setting"
+                                description="Professional assistance with hijab styling and arrangement."
+                                value={bridalParty.partyHijabSetting}
+                                onValueChange={(val) => updateBridalParty({ partyHijabSetting: val })}
+                                onButtonClick={updateBridalPartyQty}
+                            />
+                            <Separator/>
+                             <div className="flex items-center justify-between">
+                                <Label htmlFor="party-airbrush" className="flex flex-col gap-1 cursor-pointer">
+                                    <span>Air Brush Service</span>
+                                    <span className='text-xs text-muted-foreground'>Add airbrushing for a flawless finish.</span>
+                                </Label>
+                                <Switch id="party-airbrush" name="party_airbrush" checked={bridalParty.airbrush} onCheckedChange={(checked) => updateBridalParty({ airbrush: checked })} />
+                            </div>
+                        </CardContent>
+                    )}
+                </Card>
+            </>
         )}
 
         <Card className="shadow-md animate-in fade-in-50 duration-1000">
@@ -363,7 +483,7 @@ export default function BookingFlow() {
         
         <div className="lg:hidden">
             {showQuote ? (
-                 <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} />
+                 <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} bridalParty={bridalParty} />
             ) : (
                 <Alert>
                     <Info className="h-4 w-4" />
@@ -389,7 +509,7 @@ export default function BookingFlow() {
                         Changing any options will require you to generate a new quote.
                     </AlertDescription>
                 </Alert>
-                <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} />
+                <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} bridalParty={bridalParty} />
             </div>
         ) : (
             <Card className="animate-in fade-in-50">
@@ -405,6 +525,32 @@ export default function BookingFlow() {
       </div>
     </div>
   );
+}
+
+function PartyServiceInput({ name, label, description, value, onValueChange, onButtonClick }: {
+    name: keyof BridalPartyServices,
+    label: string,
+    description: string,
+    value: number,
+    onValueChange: (value: number) => void,
+    onButtonClick: (field: keyof BridalPartyServices, increase: boolean) => void
+}) {
+    const id = `party-${name}`;
+    return (
+        <div>
+            <div className="flex items-center justify-between">
+                <Label htmlFor={id} className="flex flex-col gap-1">
+                    <span>{label}</span>
+                    <span className='text-xs text-muted-foreground font-normal'>{description}</span>
+                </Label>
+                <div className="flex items-center gap-2">
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => onButtonClick(name, false)}><Minus className="h-4 w-4" /></Button>
+                    <Input id={id} name={`party_${name}`} type="number" min="0" className="w-16 text-center" value={value} onChange={(e) => onValueChange(parseInt(e.target.value, 10) || 0)} />
+                    <Button type="button" variant="outline" size="icon" className="h-8 w-8" onClick={() => onButtonClick(name, true)}><Plus className="h-4 w-4" /></Button>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 

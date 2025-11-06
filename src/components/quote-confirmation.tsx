@@ -23,13 +23,13 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const [state, formAction] = useActionState(confirmBookingAction, { ...initialState, quote });
 
   const bookingConfirmed = useMemo(() => state.message?.startsWith('Booking Confirmed!'), [state.message]);
-
+  const currentQuote = state.quote || quote;
 
   return (
     <div className="w-full max-w-3xl mx-auto py-8">
       <Card className="shadow-xl border-primary/20 animate-in fade-in-50 duration-500">
         <form action={formAction}>
-          <input type="hidden" name="finalQuote" value={JSON.stringify(state.quote || quote)} />
+          <input type="hidden" name="finalQuote" value={JSON.stringify(currentQuote)} />
           <CardHeader className="text-center items-center">
             <CheckCircle2 className="h-16 w-16 text-primary" />
             <CardTitle className="font-headline text-4xl mt-4">
@@ -37,8 +37,8 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             </CardTitle>
             <CardDescription className="text-lg max-w-prose">
               {bookingConfirmed 
-                ? `Thank you, ${state.quote?.contact.name}. Your booking details are below.`
-                : `Thank you, ${quote.contact.name}. Your quote is ready. A summary has been sent to ${quote.contact.email}.`
+                ? `Thank you, ${currentQuote.contact.name}. Your booking details are below.`
+                : `Thank you, ${currentQuote.contact.name}. Your quote is ready. A summary has been sent to ${currentQuote.contact.email}.`
               }
             </CardDescription>
              {state.message && state.message.startsWith('Booking Confirmed!') && (
@@ -53,7 +53,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             <div className="p-4 border rounded-lg">
               <h3 className="font-headline text-xl mb-3">Booking Summary</h3>
               <ul className="space-y-3">
-                {(state.quote || quote).booking.days.map((day, index) => (
+                {currentQuote.booking.days.map((day, index) => (
                   <li key={index} className="text-sm">
                     <div className="flex justify-between font-medium">
                       <span>{day.date} at {day.getReadyTime}</span>
@@ -65,33 +65,42 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                     ))}
                   </li>
                 ))}
-                {(state.quote || quote).booking.trial && (
+                {currentQuote.booking.trial && (
                   <li className="text-sm">
                     <div className="flex justify-between font-medium">
-                      <span>Bridal Trial: {(state.quote || quote).booking.trial!.date} at {(state.quote || quote).booking.trial!.time}</span>
+                      <span>Bridal Trial: {currentQuote.booking.trial!.date} at {currentQuote.booking.trial!.time}</span>
                     </div>
                   </li>
                 )}
+                 {currentQuote.booking.bridalParty && currentQuote.booking.bridalParty.services.length > 0 && (
+                    <li className="text-sm">
+                        <div className="font-medium pt-2">Bridal Party Services:</div>
+                        {currentQuote.booking.bridalParty.services.map((partySvc, i) => (
+                             <div key={i} className="text-muted-foreground ml-2">- {partySvc.service} (x{partySvc.quantity})</div>
+                        ))}
+                        {currentQuote.booking.bridalParty.airbrush && <div className="text-muted-foreground ml-2">- Airbrush Service</div>}
+                    </li>
+                 )}
               </ul>
               <Separator className="my-3" />
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Location:</span>
-                <span className="font-medium">{(state.quote || quote).booking.location}</span>
+                <span className="font-medium">{currentQuote.booking.location}</span>
               </div>
             </div>
 
             <div className="p-4 border rounded-lg">
                 <h3 className="font-headline text-xl mb-4">Service Address</h3>
-                {bookingConfirmed && state.quote?.booking.address ? (
+                {bookingConfirmed && currentQuote.booking.address ? (
                     <div className='text-sm space-y-1'>
-                        <p className='font-medium'>{state.quote.booking.address.street}</p>
-                        <p className='text-muted-foreground'>{state.quote.booking.address.city}, {state.quote.booking.address.province} {state.quote.booking.address.postalCode}</p>
+                        <p className='font-medium'>{currentQuote.booking.address.street}</p>
+                        <p className='text-muted-foreground'>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>
                     </div>
                 ) : (
                     <div className='space-y-4'>
-                         {state.status === 'error' && state.message && (
+                         {state.status !== 'idle' && state.errors && (
                             <Alert variant="destructive">
-                                <AlertDescription>{state.message}</AlertDescription>
+                                <AlertDescription>{state.message || "Please correct the errors below."}</AlertDescription>
                             </Alert>
                          )}
                         <div>
@@ -123,18 +132,18 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             <div className="p-4 border rounded-lg">
               <h3 className="font-headline text-xl mb-3">Price Breakdown</h3>
               <ul className="space-y-1 text-sm">
-                {(state.quote || quote).quote.lineItems.map((item, index) => (
+                {currentQuote.quote.lineItems.map((item, index) => (
                   <li key={index} className="flex justify-between">
                     <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
                     <span className="font-medium">${item.price.toFixed(2)}</span>
                   </li>
                 ))}
-                {(state.quote || quote).quote.surcharge && (
+                {currentQuote.quote.surcharge && (
                   <>
                     <Separator className="my-2" />
                     <li className="flex justify-between font-medium">
-                      <span>{(state.quote || quote).quote.surcharge!.description}</span>
-                      <span>${(state.quote || quote).quote.surcharge!.price.toFixed(2)}</span>
+                      <span>{currentQuote.quote.surcharge!.description}</span>
+                      <span>${currentQuote.quote.surcharge!.price.toFixed(2)}</span>
                     </li>
                   </>
                 )}
@@ -144,7 +153,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
           <CardFooter className="flex-col gap-4 bg-primary/10 p-6 rounded-b-lg">
             <div className="w-full flex justify-between items-baseline">
               <span className="text-xl font-bold font-headline">Grand Total</span>
-              <span className="text-4xl font-bold text-primary">${(state.quote || quote).quote.total.toFixed(2)}</span>
+              <span className="text-4xl font-bold text-primary">${currentQuote.quote.total.toFixed(2)}</span>
             </div>
             <SubmitButton disabled={bookingConfirmed} />
           </CardFooter>

@@ -60,3 +60,14 @@ export const ADDON_PRICES = {
     hijabSetting: 25,
     bridalTrial: 100,
 };
+
+export const BRIDAL_PARTY_PRICES = {
+    hairAndMakeup: 180,
+    makeupOnly: 100,
+    hairOnly: 100,
+    dupattaSetting: 15,
+    hairExtensionInstallation: 20,
+    partySareeDraping: 25,
+    partyHijabSetting: 25,
+    airbrush: 50,
+};

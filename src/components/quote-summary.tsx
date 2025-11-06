@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Day, BridalTrial } from '@/lib/types';
-import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES } from '@/lib/services';
+import type { Day, BridalTrial, BridalPartyServices } from '@/lib/types';
+import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -11,9 +11,10 @@ interface QuoteSummaryProps {
   days: Day[];
   location: keyof typeof LOCATION_OPTIONS;
   bridalTrial: BridalTrial;
+  bridalParty: BridalPartyServices;
 }
 
-export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps) {
+export function QuoteSummary({ days, location, bridalTrial, bridalParty }: QuoteSummaryProps) {
   const quote = useMemo(() => {
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
@@ -33,19 +34,19 @@ export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps)
 
           if (day.hairExtensions > 0) {
               const extensionPrice = day.hairExtensions * ADDON_PRICES.hairExtension;
-              lineItems.push({ description: `  - Hair Extensions (x${day.hairExtensions})`, price: extensionPrice });
+              lineItems.push({ description: `  - Bride's Hair Extensions (x${day.hairExtensions})`, price: extensionPrice });
               subtotal += extensionPrice;
           }
           if (day.jewellerySetting) {
-              lineItems.push({ description: `  - Jewellery Setting`, price: ADDON_PRICES.jewellerySetting });
+              lineItems.push({ description: `  - Bride's Jewellery Setting`, price: ADDON_PRICES.jewellerySetting });
               subtotal += ADDON_PRICES.jewellerySetting;
           }
           if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.sareeDraping) {
-              lineItems.push({ description: `  - Saree Draping`, price: ADDON_PRICES.sareeDraping });
+              lineItems.push({ description: `  - Bride's Saree Draping`, price: ADDON_PRICES.sareeDraping });
               subtotal += ADDON_PRICES.sareeDraping;
           }
            if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.hijabSetting) {
-              lineItems.push({ description: `  - Hijab Setting`, price: ADDON_PRICES.hijabSetting });
+              lineItems.push({ description: `  - Bride's Hijab Setting`, price: ADDON_PRICES.hijabSetting });
               subtotal += ADDON_PRICES.hijabSetting;
           }
         }
@@ -57,11 +58,54 @@ export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps)
         subtotal += ADDON_PRICES.bridalTrial;
     }
 
+    if (bridalParty.addServices) {
+        if(bridalParty.hairAndMakeup > 0) {
+            const price = bridalParty.hairAndMakeup * BRIDAL_PARTY_PRICES.hairAndMakeup;
+            lineItems.push({ description: `Party: Hair & Makeup (x${bridalParty.hairAndMakeup})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.makeupOnly > 0) {
+            const price = bridalParty.makeupOnly * BRIDAL_PARTY_PRICES.makeupOnly;
+            lineItems.push({ description: `Party: Makeup Only (x${bridalParty.makeupOnly})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.hairOnly > 0) {
+            const price = bridalParty.hairOnly * BRIDAL_PARTY_PRICES.hairOnly;
+            lineItems.push({ description: `Party: Hair Only (x${bridalParty.hairOnly})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.dupattaSetting > 0) {
+            const price = bridalParty.dupattaSetting * BRIDAL_PARTY_PRICES.dupattaSetting;
+            lineItems.push({ description: `Party: Dupatta Setting (x${bridalParty.dupattaSetting})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.hairExtensionInstallation > 0) {
+            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRICES.hairExtensionInstallation;
+            lineItems.push({ description: `Party: Hair Extensions (x${bridalParty.hairExtensionInstallation})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.partySareeDraping > 0) {
+            const price = bridalParty.partySareeDraping * BRIDAL_PARTY_PRICES.partySareeDraping;
+            lineItems.push({ description: `Party: Saree Draping (x${bridalParty.partySareeDraping})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.partyHijabSetting > 0) {
+            const price = bridalParty.partyHijabSetting * BRIDAL_PARTY_PRICES.partyHijabSetting;
+            lineItems.push({ description: `Party: Hijab Setting (x${bridalParty.partyHijabSetting})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.airbrush) {
+            lineItems.push({ description: `Party: Airbrush Service`, price: BRIDAL_PARTY_PRICES.airbrush });
+            subtotal += BRIDAL_PARTY_PRICES.airbrush;
+        }
+    }
+
+
     const surcharge = LOCATION_OPTIONS[location].surcharge;
     const total = subtotal + surcharge;
 
     return { lineItems, surcharge, total };
-  }, [days, location, bridalTrial]);
+  }, [days, location, bridalTrial, bridalParty]);
 
   const hasSelections = days.some(d => d.serviceId);
 

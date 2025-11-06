@@ -18,6 +18,18 @@ export type Service = {
   askServiceType: boolean; // Can choose makeup/hair/both
 };
 
+export type BridalPartyServices = {
+    addServices: boolean;
+    hairAndMakeup: number;
+    makeupOnly: number;
+    hairOnly: number;
+    dupattaSetting: number;
+    hairExtensionInstallation: number;
+    partySareeDraping: number;
+    partyHijabSetting: number;
+    airbrush: boolean;
+};
+
 export type Day = {
   id: number;
   date: Date | undefined;
@@ -49,6 +61,11 @@ export type Address = {
     postalCode: string;
 };
 
+export type PartyBooking = {
+    service: string;
+    quantity: number;
+};
+
 export type FinalQuote = {
   contact: { name: string; email: string };
   booking: {
@@ -59,6 +76,10 @@ export type FinalQuote = {
         serviceOption: string;
         addOns: string[];
     }[];
+    bridalParty?: {
+        services: PartyBooking[];
+        airbrush: boolean;
+    },
     location: string;
     address?: Address;
     trial?: {
