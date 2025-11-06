@@ -67,6 +67,7 @@ export type PartyBooking = {
 };
 
 export type FinalQuote = {
+  id: string; // Unique booking ID
   contact: { name: string; email: string };
   booking: {
     days: { 
@@ -88,6 +89,7 @@ export type FinalQuote = {
     }
   };
   quote: Quote;
+  status: 'quoted' | 'confirmed' | 'cancelled';
 };
 
 export type ActionState = {

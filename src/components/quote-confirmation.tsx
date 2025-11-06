@@ -22,7 +22,7 @@ const initialState = {
 export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const [state, formAction] = useActionState(confirmBookingAction, { ...initialState, quote });
 
-  const bookingConfirmed = useMemo(() => state.message?.startsWith('Booking Confirmed!'), [state.message]);
+  const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const currentQuote = state.quote || quote;
 
   return (
@@ -33,11 +33,11 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
           <CardHeader className="text-center items-center">
             <CheckCircle2 className="h-16 w-16 text-primary" />
             <CardTitle className="font-headline text-4xl mt-4">
-              {bookingConfirmed ? 'Booking Confirmed!' : 'Quote Generated!'}
+              {bookingConfirmed ? 'Booking Confirmed!' : 'Your Quote is Ready!'}
             </CardTitle>
             <CardDescription className="text-lg max-w-prose">
               {bookingConfirmed 
-                ? `Thank you, ${currentQuote.contact.name}. Your booking details are below.`
+                ? `Thank you, ${currentQuote.contact.name}. Your booking is confirmed.`
                 : `Thank you, ${currentQuote.contact.name}. Your quote is ready. A summary has been sent to ${currentQuote.contact.email}.`
               }
             </CardDescription>
@@ -52,6 +52,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
           <CardContent className="space-y-6">
             <div className="p-4 border rounded-lg">
               <h3 className="font-headline text-xl mb-3">Booking Summary</h3>
+               <p className="text-sm text-muted-foreground mb-3">Booking ID: {currentQuote.id}</p>
               <ul className="space-y-3">
                 {currentQuote.booking.days.map((day, index) => (
                   <li key={index} className="text-sm">

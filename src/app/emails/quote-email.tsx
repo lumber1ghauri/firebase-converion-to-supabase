@@ -72,6 +72,22 @@ const totalPrice = {
   fontWeight: 700,
 };
 
+const button = {
+  backgroundColor: '#5E5DF0',
+  borderRadius: '999px',
+  color: '#fff',
+  fontSize: '15px',
+  fontWeight: 'bold',
+  lineHeight: '1.4',
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  padding: '12px 24px',
+  display: 'block',
+  margin: '20px auto',
+};
+
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+
 
 const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
   <div style={main}>
@@ -83,10 +99,19 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
       <p style={paragraph}>
         Thank you for your interest! Here is the personalized quote you requested.
         {quote.booking.address && " Your service address has been confirmed."}
+        {quote.status === 'quoted' && " When you're ready, you can confirm your booking details and proceed to payment using the link below."}
       </p>
+
+       {quote.status === 'quoted' && (
+        <a href={`${baseUrl}/book/${quote.id}`} style={button}>
+          View and Confirm Your Booking
+        </a>
+      )}
+
 
       <div style={section}>
         <h2 style={{ ...heading, fontSize: '20px', marginBottom: '15px' }}>Booking Summary</h2>
+        <p style={{ ...itemDescription, color: '#777', marginBottom: '15px' }}>Booking ID: {quote.id}</p>
         {quote.booking.days.map((day, index) => (
           <div key={index} style={{ marginBottom: '10px' }}>
             <p style={{...item, fontWeight: 500}}>
@@ -156,7 +181,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
       </div>
       
       <p style={{ ...paragraph, fontSize: '14px', color: '#999' }}>
-        Ready to book? You can return to the website to finalize your appointment. This quote is valid for 7 days.
+        This quote is valid for 7 days. If you have any questions, please reply to this email.
       </p>
       <p style={{ ...paragraph, fontSize: '12px', color: '#ccc' }}>
         &copy; {new Date().getFullYear()} GlamBook Pro. All rights reserved.

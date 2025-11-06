@@ -7,6 +7,7 @@ import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
+import { saveBooking } from '@/firebase/firestore/bookings';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -286,8 +287,11 @@ export async function generateQuoteAction(
 
     const locationSurcharge = LOCATION_OPTIONS[validatedFields.data.location].surcharge;
     const total = subtotal + locationSurcharge;
+    
+    const bookingId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     const finalQuote: FinalQuote = {
+        id: bookingId,
         contact: {
             name: validatedFields.data.name,
             email: validatedFields.data.email,
@@ -304,20 +308,24 @@ export async function generateQuoteAction(
             lineItems,
             surcharge: locationSurcharge > 0 ? { description: "Travel Surcharge", price: locationSurcharge } : null,
             total,
-        }
+        },
+        status: 'quoted'
     };
-
+    
     let emailSent = true;
     try {
-      await sendQuoteEmail(finalQuote);
+      await Promise.all([
+        sendQuoteEmail(finalQuote),
+        saveBooking({ id: bookingId, finalQuote, createdAt: new Date() })
+      ]);
     } catch (error) {
-      console.error("Failed to send quote email:", error);
+      console.error("Failed to send quote email or save booking:", error);
       emailSent = false;
     }
 
     return {
         status: 'success',
-        message: emailSent ? 'Success' : 'Quote generated, but failed to send email.',
+        message: emailSent ? 'Success' : 'Quote generated, but failed to send email or save booking.',
         quote: finalQuote,
         errors: null,
     };
@@ -354,25 +362,35 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         }
     }
 
-    finalQuote.booking.address = validatedAddress.data;
+    const updatedQuote: FinalQuote = {
+        ...finalQuote,
+        booking: {
+            ...finalQuote.booking,
+            address: validatedAddress.data,
+        },
+        status: 'confirmed'
+    };
     
     let emailSent = true;
     try {
-      await sendQuoteEmail(finalQuote);
+        await Promise.all([
+            sendQuoteEmail(updatedQuote),
+            saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
+        ]);
     } catch (error) {
-      console.error("Failed to send updated quote email:", error);
+      console.error("Failed to send updated quote email or save booking:", error);
       emailSent = false;
     }
 
     // This is where you would redirect to Stripe
-    console.log("Redirecting to Stripe with quote:", finalQuote);
+    console.log("Redirecting to Stripe with quote:", updatedQuote);
 
 
     // For now, we'll just return a success state with a different message
      return {
         status: 'success',
         message: `Booking Confirmed! ${emailSent ? 'A confirmation email with the address has been sent.' : 'Failed to send updated email.'}`,
-        quote: finalQuote, // Return the updated quote
+        quote: updatedQuote, // Return the updated quote
         errors: null,
     };
 }

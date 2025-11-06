@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "Booking": {
+      "title": "Booking",
+      "description": "Represents a customer's booking quote and final confirmation details.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the booking."
+        },
+        "finalQuote": {
+          "type": "object",
+          "description": "The detailed quote object."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the booking was created."
+        }
+      },
+      "required": ["id", "finalQuote", "createdAt"]
+    }
+  },
+  "auth": {
+    "providers": []
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": {
+        "$ref": "#/entities/Booking"
+      },
+      "description": "Stores all customer booking quotes and confirmations."
+    }
+  }
+}
