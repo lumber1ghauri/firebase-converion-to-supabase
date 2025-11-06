@@ -11,7 +11,7 @@ const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().min(10, { message: 'Please enter a valid phone number.' }),
-  location: z.enum(['toronto', 'outside-toronto']),
+  location: z.enum(['toronto', 'outside-toronto'], { required_error: 'Please select a location.' }),
 });
 
 function parseDaysFromFormData(formData: FormData): Omit<Day, 'id'>[] {
@@ -65,6 +65,7 @@ export async function generateQuoteAction(
     
     if (!validatedFields.success) {
         return {
+            status: 'error',
             message: 'Please correct the errors below.',
             quote: null,
             errors: validatedFields.error.flatten().fieldErrors,
@@ -77,9 +78,10 @@ export async function generateQuoteAction(
 
     if (days.length === 0 || days.some(d => !d.date || !d.serviceId || !d.getReadyTime)) {
         return {
+            status: 'error',
             message: 'Please select a date, time, and service for each booking.',
             quote: null,
-            errors: {},
+            errors: { form: ['Please select a date, time, and service for each booking day.'] },
             fieldValues
         };
     }
@@ -88,6 +90,7 @@ export async function generateQuoteAction(
     if (bridalTrial.addTrial && bridalServiceDay?.date && bridalTrial.date) {
         if (bridalTrial.date >= bridalServiceDay.date) {
             return {
+                status: 'error',
                 message: 'Bridal trial date must be before the event date.',
                 quote: null,
                 errors: { trialDate: ['Trial date must be before the event date.'] },
@@ -97,6 +100,7 @@ export async function generateQuoteAction(
     }
     if (bridalTrial.addTrial && (!bridalTrial.date || !bridalTrial.time)) {
         return {
+            status: 'error',
             message: 'Please select a date and time for the bridal trial.',
             quote: null,
             errors: { trialDate: ['Please select a date and time for the trial.'] },
@@ -134,6 +138,7 @@ export async function generateQuoteAction(
 
         if (!availabilityResult.isAvailable) {
             return {
+                status: 'error',
                 message: availabilityResult.reason || "The selected time slot is not available due to a schedule conflict.",
                 quote: null,
                 errors: null,
@@ -223,6 +228,7 @@ export async function generateQuoteAction(
     };
 
     return {
+        status: 'success',
         message: 'Success',
         quote: finalQuote,
         errors: null,

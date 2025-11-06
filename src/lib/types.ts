@@ -62,6 +62,7 @@ export type FinalQuote = {
 };
 
 export type ActionState = {
+  status: 'idle' | 'success' | 'error';
   message: string;
   quote: FinalQuote | null;
   errors: Record<string, string[] | undefined> | null;

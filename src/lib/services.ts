@@ -49,14 +49,14 @@ export const LOCATION_OPTIONS = {
   'outside-toronto': {
     id: 'outside-toronto',
     label: 'Outside Toronto / GTA',
-    surcharge: 100,
+    surcharge: 50,
   },
 };
 
 export const ADDON_PRICES = {
-    hairExtension: 25, // Price per extension
-    jewellerySetting: 20,
-    sareeDraping: 30,
-    hijabSetting: 30,
-    bridalTrial: 150,
+    hairExtension: 20, // Price per extension
+    jewellerySetting: 15,
+    sareeDraping: 25,
+    hijabSetting: 25,
+    bridalTrial: 100,
 };

@@ -1,4 +1,4 @@
-import { CheckCircle2, IndianRupee, FileText } from "lucide-react";
+import { CheckCircle2, IndianRupee } from "lucide-react";
 import type { FinalQuote } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -26,7 +26,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                                     <span>{day.serviceName}</span>
                                 </div>
                                 <div className="text-muted-foreground ml-2">- {day.serviceOption}</div>
-                                {day.addOns.map((addon, i) => (
+                                {day.addOns.length > 0 && day.addOns.map((addon, i) => (
                                     <div key={i} className="text-muted-foreground ml-2">- {addon}</div>
                                 ))}
                             </li>

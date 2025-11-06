@@ -52,7 +52,7 @@ export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps)
       }
     });
 
-    if (bridalTrial.addTrial) {
+    if (bridalTrial.addTrial && bridalTrial.date) {
         lineItems.push({ description: 'Bridal Trial', price: ADDON_PRICES.bridalTrial });
         subtotal += ADDON_PRICES.bridalTrial;
     }
@@ -88,9 +88,9 @@ export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps)
         {hasSelections && quote.surcharge > 0 && (
           <>
             <Separator />
-            <div className="flex justify-between text-muted-foreground">
+            <div className="flex justify-between font-medium text-sm">
               <span>Travel Surcharge</span>
-              <span className="font-medium">${quote.surcharge.toFixed(2)}</span>
+              <span>${quote.surcharge.toFixed(2)}</span>
             </div>
           </>
         )}
@@ -98,7 +98,7 @@ export function QuoteSummary({ days, location, bridalTrial }: QuoteSummaryProps)
       {hasSelections && (
         <CardFooter className="bg-primary/10 p-6 rounded-b-lg">
           <div className="w-full flex justify-between items-baseline">
-            <span className="text-lg font-bold font-headline">Total</span>
+            <span className="text-lg font-bold font-headline">Grand Total</span>
             <span className="text-3xl font-bold text-primary">${quote.total.toFixed(2)}</span>
           </div>
         </CardFooter>
