@@ -5,6 +5,9 @@ import QuoteEmailTemplate from '@/app/emails/quote-email';
 import type { FinalQuote } from '@/lib/types';
 
 const FROM_EMAIL = 'onboarding@resend.dev';
+// This is your verified Resend email address
+const TO_EMAIL_SANDBOX = 'sellayadigital@gmail.com';
+
 
 export async function sendQuoteEmail(quote: FinalQuote) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -18,10 +21,12 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   try {
     const { data, error } = await resend.emails.send({
       from: `GlamBook Pro <${FROM_EMAIL}>`,
-      to: [quote.contact.email],
+      // In sandbox mode, 'to' must be your verified email.
+      // We will send to the customer's email in production after domain verification.
+      to: [TO_EMAIL_SANDBOX],
       subject: quote.status === 'confirmed' 
-          ? 'Your Booking is Confirmed!'
-          : 'Your Personalized Makeup Quote from GlamBook Pro',
+          ? `[TEST] Booking Confirmed for ${quote.contact.name}!`
+          : `[TEST] Your Makeup Quote for ${quote.contact.name}`,
       react: QuoteEmailTemplate({ quote }),
     });
 
