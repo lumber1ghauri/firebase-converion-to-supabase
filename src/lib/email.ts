@@ -4,11 +4,20 @@ import { Resend } from 'resend';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
 import type { FinalQuote } from '@/lib/types';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize resend inside the function to avoid crashing when API key is not set.
+let resend: Resend | undefined;
+if (process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+}
 
 const FROM_EMAIL = 'hello@sellaya.com';
 
 export async function sendQuoteEmail(quote: FinalQuote) {
+    if (!resend) {
+        console.warn('RESEND_API_KEY is not set. Skipping email sending.');
+        return;
+    }
+
   try {
     const { data, error } = await resend.emails.send({
       from: `GlamBook Pro <${FROM_EMAIL}>`,
