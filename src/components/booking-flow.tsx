@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial } from '@/lib/types';
-import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES } from '@/lib/services';
+import { SERVICES, LOCATION_OPTIONS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
@@ -36,47 +36,44 @@ const initialState: ActionState = {
   fieldValues: {},
 };
 
-const getInitialDays = (fieldValues: any): Day[] => {
-    if (!fieldValues) {
-        return [{ 
-            id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
-            hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false
-        }];
+const getInitialDays = (fieldValues: Record<string, any> | undefined): Day[] => {
+    if (fieldValues && fieldValues['date_0']) {
+        const days: Day[] = [];
+        let i = 0;
+        while (fieldValues[`date_${i}`]) {
+            days.push({
+                id: parseInt(fieldValues[`day_id_${i}`] || Date.now() + i, 10),
+                date: new Date(fieldValues[`date_${i}`]),
+                getReadyTime: fieldValues[`getReadyTime_${i}`],
+                serviceId: fieldValues[`service_${i}`],
+                serviceOption: fieldValues[`serviceOption_${i}`],
+                hairExtensions: parseInt(fieldValues[`hairExtensions_${i}`] || '0', 10),
+                jewellerySetting: fieldValues[`jewellerySetting_${i}`] === 'on',
+                sareeDraping: fieldValues[`sareeDraping_${i}`] === 'on',
+                hijabSetting: fieldValues[`hijabSetting_${i}`] === 'on',
+            });
+            i++;
+        }
+        return days;
     }
-    const days: Day[] = [];
-    let i = 0;
-    while (fieldValues[`date_${i}`]) {
-        days.push({
-            id: parseInt(fieldValues[`day_id_${i}`] || Date.now() + i),
-            date: new Date(fieldValues[`date_${i}`]),
-            getReadyTime: fieldValues[`getReadyTime_${i}`],
-            serviceId: fieldValues[`service_${i}`],
-            serviceOption: fieldValues[`serviceOption_${i}`],
-            hairExtensions: parseInt(fieldValues[`hairExtensions_${i}`] || '0'),
-            jewellerySetting: fieldValues[`jewellerySetting_${i}`] === 'on',
-            sareeDraping: fieldValues[`sareeDraping_${i}`] === 'on',
-            hijabSetting: fieldValues[`hijabSetting_${i}`] === 'on',
-        });
-        i++;
-    }
-    return days.length > 0 ? days : [{ 
+    return [{ 
         id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
         hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false
     }];
 };
 
-const getInitialBridalTrial = (fieldValues: any): BridalTrial => {
-    if (!fieldValues) {
+const getInitialBridalTrial = (fieldValues: Record<string, any> | undefined): BridalTrial => {
+    if (fieldValues && fieldValues.addTrial) {
         return {
-            addTrial: false,
-            date: undefined,
-            time: '11:00'
+            addTrial: fieldValues.addTrial === 'on',
+            date: fieldValues.trialDate ? new Date(fieldValues.trialDate) : undefined,
+            time: fieldValues.trialTime || '11:00'
         };
     }
     return {
-        addTrial: fieldValues.addTrial === 'on',
-        date: fieldValues.trialDate ? new Date(fieldValues.trialDate) : undefined,
-        time: fieldValues.trialTime || '11:00'
+        addTrial: false,
+        date: undefined,
+        time: '11:00'
     };
 };
 
@@ -87,8 +84,8 @@ export default function BookingFlow() {
   const formRef = useRef<HTMLFormElement>(null);
 
   const [showQuote, setShowQuote] = useState(false);
-  const [days, setDays] = useState<Day[]>(getInitialDays(state.fieldValues));
-  const [bridalTrial, setBridalTrial] = useState<BridalTrial>(getInitialBridalTrial(state.fieldValues));
+  const [days, setDays] = useState<Day[]>(() => getInitialDays(state.fieldValues));
+  const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [location, setLocation] = useState<keyof typeof LOCATION_OPTIONS>((state.fieldValues?.location as keyof typeof LOCATION_OPTIONS) || 'toronto');
   
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
@@ -101,8 +98,10 @@ export default function BookingFlow() {
         description: state.message,
       });
     }
-    if (state.status === 'success') {
+    if (state.status === 'success' && state.quote) {
         setShowQuote(true);
+    } else {
+        setShowQuote(false);
     }
   }, [state, toast]);
 
@@ -336,24 +335,26 @@ export default function BookingFlow() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="name">Full Name *</Label>
-              <Input id="name" name="name" placeholder="Jane Doe" required defaultValue={state.fieldValues?.name} />
+              <Input id="name" name="name" placeholder="Jane Doe" required defaultValue={state.fieldValues?.name || ''} />
                {state.errors?.name && <p className="text-sm text-destructive mt-1">{state.errors.name[0]}</p>}
             </div>
             <div>
               <Label htmlFor="email">Email Address *</Label>
-              <Input id="email" name="email" type="email" placeholder="jane.doe@example.com" required defaultValue={state.fieldValues?.email} />
+              <Input id="email" name="email" type="email" placeholder="jane.doe@example.com" required defaultValue={state.fieldValues?.email || ''} />
               {state.errors?.email && <p className="text-sm text-destructive mt-1">{state.errors.email[0]}</p>}
             </div>
             <div>
               <Label htmlFor="phone">Phone Number *</Label>
-              <Input id="phone" name="phone" type="tel" placeholder="(416) 555-1234" required defaultValue={state.fieldValues?.phone}/>
+              <Input id="phone" name="phone" type="tel" placeholder="(416) 555-1234" required defaultValue={state.fieldValues?.phone || ''}/>
                {state.errors?.phone && <p className="text-sm text-destructive mt-1">{state.errors.phone[0]}</p>}
             </div>
           </CardContent>
         </Card>
         
         <div className="lg:hidden">
-            {!showQuote && (
+            {showQuote ? (
+                 <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} />
+            ) : (
                 <Alert>
                     <Info className="h-4 w-4" />
                     <AlertTitle>Generate Quote</AlertTitle>
@@ -362,28 +363,14 @@ export default function BookingFlow() {
                     </AlertDescription>
                 </Alert>
             )}
-            {showQuote && (
-                 <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} />
-            )}
         </div>
 
 
-        <SubmitButton isInvalid={isFormInvalid} />
+        <SubmitButton isInvalid={isFormInvalid} showQuote={showQuote} />
       </form>
       
       <div className="lg:col-span-2 sticky top-8 hidden lg:block">
-         {!showQuote && (
-            <Card className="animate-in fade-in-50">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">Quote Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center text-center py-12">
-                     <Info className="h-8 w-8 text-muted-foreground mb-4" />
-                     <p className="text-muted-foreground">Your quote summary will appear here once you fill out the form and generate it.</p>
-                </CardContent>
-            </Card>
-        )}
-        {showQuote && (
+        {showQuote ? (
             <div className="animate-in fade-in-50">
                 <Alert variant="destructive" className="mb-4">
                     <AlertTriangle className="h-4 w-4" />
@@ -394,6 +381,16 @@ export default function BookingFlow() {
                 </Alert>
                 <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} />
             </div>
+        ) : (
+            <Card className="animate-in fade-in-50">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">Quote Summary</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center text-center py-12">
+                     <Info className="h-8 w-8 text-muted-foreground mb-4" />
+                     <p className="text-muted-foreground">Your quote summary will appear here once you fill out the form and generate it.</p>
+                </CardContent>
+            </Card>
         )}
       </div>
     </div>
@@ -401,8 +398,17 @@ export default function BookingFlow() {
 }
 
 
-function SubmitButton({ isInvalid }: { isInvalid: boolean }) {
+function SubmitButton({ isInvalid, showQuote }: { isInvalid: boolean, showQuote: boolean }) {
     const { pending } = useFormStatus();
+    
+    if (showQuote) {
+        return (
+             <Button type="submit" size="lg" className="w-full text-lg font-bold">
+                Accept Quote & Book Now (Coming Soon)
+            </Button>
+        )
+    }
+
     return (
         <Button type="submit" size="lg" className="w-full text-lg font-bold" disabled={isInvalid || pending}>
             {pending ? <>
