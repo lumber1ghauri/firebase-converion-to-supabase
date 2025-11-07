@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
 import type { FinalQuote } from '@/lib/types';
 
-const FROM_EMAIL = 'booking@glambook.pro';
+const FROM_EMAIL = 'booking@sellaya.ca';
 
 export async function sendQuoteEmail(quote: FinalQuote) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -17,11 +17,11 @@ export async function sendQuoteEmail(quote: FinalQuote) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `GlamBook Pro <${FROM_EMAIL}>`,
+      from: `Sellaya <${FROM_EMAIL}>`,
       to: [quote.contact.email],
       subject: quote.status === 'confirmed' 
-          ? `Booking Confirmed: Your Glam Session with GlamBook Pro!`
-          : `Your Personalized Makeup Quote from GlamBook Pro`,
+          ? `Booking Confirmed: Your Session with Sellaya!`
+          : `Your Personalized Makeup Quote from Sellaya`,
       react: QuoteEmailTemplate({ quote }),
     });
 

@@ -92,7 +92,7 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
 const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
   <div style={main}>
     <div style={container}>
-      <h1 style={heading}>GlamBook Pro</h1>
+      <h1 style={heading}>Sellaya</h1>
       <p style={paragraph}>
         Hi {quote.contact.name},
       </p>
@@ -184,7 +184,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
         This quote is valid for 7 days. If you have any questions, please reply to this email.
       </p>
       <p style={{ ...paragraph, fontSize: '12px', color: '#ccc' }}>
-        &copy; {new Date().getFullYear()} GlamBook Pro. All rights reserved.
+        &copy; {new Date().getFullYear()} Sellaya.ca. All rights reserved.
       </p>
     </div>
   </div>

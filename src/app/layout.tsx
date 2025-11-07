@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseProvider } from '@/firebase/provider';
 
 export const metadata: Metadata = {
-  title: 'GlamBook Pro',
+  title: 'Sellaya',
   description: 'Book your makeup artist for any occasion.',
 };
 
