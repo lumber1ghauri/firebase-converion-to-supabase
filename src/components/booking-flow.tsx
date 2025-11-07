@@ -26,7 +26,6 @@ import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Progress } from './ui/progress';
-import { QuoteSummary } from './quote-summary';
 
 
 const initialState: ActionState = {
@@ -146,8 +145,7 @@ export default function BookingFlow() {
   const progress = ((currentStep -1) / (STEPS.length - 1)) * 100;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-      <div className="md:col-span-2">
+    <div className="max-w-4xl mx-auto">
         <div className="mb-8">
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between mt-2">
@@ -278,12 +276,6 @@ export default function BookingFlow() {
           )}
         </div>
       </form>
-      </div>
-
-       <div className="md:col-span-1">
-        <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} bridalParty={bridalParty} />
-      </div>
-      
     </div>
   );
 }
@@ -614,5 +606,3 @@ function SubmitButton() {
         </Button>
     )
 }
-
-    
