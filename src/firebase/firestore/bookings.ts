@@ -2,7 +2,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
-import { getFirestoreInstance } from '@/firebase';
+import { getFirestoreInstance } from '@/firebase/server';
 
 export type BookingDocument = {
     id: string;
