@@ -96,7 +96,7 @@ const timeSlots = generateTimeSlots();
 
 const STEPS = [
   { id: 1, name: 'Services & Dates' },
-  { id: 2, name: 'Bridal Options' },
+  { id: 2, name: 'Makeup Services' },
   { id: 3, name: 'Location & Details' },
 ];
 
@@ -319,7 +319,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay }: {
                 </div>
                     <div>
                     <Label htmlFor={`service-${index}`}>Service *</Label>
-                    <Select name={`service_${index}`} value={day.serviceId || ''} onValueChange={(serviceId) => updateDay(day.id, { serviceId })} required>
+                    <Select name={`service_${index}`} value={day.serviceId || ''} onValueChange={(serviceId) => updateDay(day.id, { serviceId: serviceId || null })} required>
                         <SelectTrigger><SelectValue placeholder="Select a service" /></SelectTrigger>
                         <SelectContent>{SERVICES.map((s) => (<SelectItem key={s.id} value={s.id}><div className="flex items-center gap-2"><s.icon className="h-4 w-4 text-muted-foreground" /><span>{s.name}</span></div></SelectItem>))}</SelectContent>
                     </Select>
@@ -604,3 +604,5 @@ function SubmitButton() {
         </Button>
     )
 }
+
+    
