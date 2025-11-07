@@ -26,16 +26,16 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const currentQuote = state.quote || quote;
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-8">
-      <Card className="shadow-xl border-primary/20 animate-in fade-in-50 duration-500">
+    <div className="w-full max-w-3xl mx-auto py-8 sm:py-12">
+      <Card className="shadow-2xl border-primary/20 animate-in fade-in zoom-in-95 duration-500">
         <form action={formAction}>
           <input type="hidden" name="finalQuote" value={JSON.stringify(currentQuote)} />
-          <CardHeader className="text-center items-center">
-            <CheckCircle2 className="h-16 w-16 text-primary" />
-            <CardTitle className="font-headline text-4xl mt-4">
+          <CardHeader className="text-center items-center p-6 sm:p-8">
+            <CheckCircle2 className="h-16 w-16 text-primary animate-in fade-in zoom-in-50 duration-700 delay-200" />
+            <CardTitle className="font-headline text-3xl sm:text-4xl mt-4">
               {bookingConfirmed ? 'Booking Confirmed!' : 'Your Quote is Ready!'}
             </CardTitle>
-            <CardDescription className="text-lg max-w-prose">
+            <CardDescription className="text-base sm:text-lg max-w-prose">
               {bookingConfirmed 
                 ? `Thank you, ${currentQuote.contact.name}. Your booking is confirmed.`
                 : `Thank you, ${currentQuote.contact.name}. Your quote is ready. A summary has been sent to ${currentQuote.contact.email}.`
@@ -49,8 +49,8 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 </Alert>
             )}
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-4 border rounded-lg">
+          <CardContent className="space-y-6 px-4 sm:px-6">
+            <div className="p-4 border rounded-lg bg-background/50">
               <h3 className="font-headline text-xl mb-3">Booking Summary</h3>
                <p className="text-sm text-muted-foreground mb-3">Booking ID: {currentQuote.id}</p>
               <ul className="space-y-3">
@@ -90,7 +90,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
               </div>
             </div>
 
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border rounded-lg bg-background/50">
                 <h3 className="font-headline text-xl mb-4">Service Address</h3>
                 {bookingConfirmed && currentQuote.booking.address ? (
                     <div className='text-sm space-y-1'>
@@ -130,7 +130,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 )}
             </div>
 
-            <div className="p-4 border rounded-lg">
+            <div className="p-4 border rounded-lg bg-background/50">
               <h3 className="font-headline text-xl mb-3">Price Breakdown</h3>
               <ul className="space-y-1 text-sm">
                 {currentQuote.quote.lineItems.map((item, index) => (
@@ -151,7 +151,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
               </ul>
             </div>
           </CardContent>
-          <CardFooter className="flex-col gap-4 bg-primary/10 p-6 rounded-b-lg">
+          <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
             <div className="w-full flex justify-between items-baseline">
               <span className="text-xl font-bold font-headline">Grand Total</span>
               <span className="text-4xl font-bold text-primary">${currentQuote.quote.total.toFixed(2)}</span>

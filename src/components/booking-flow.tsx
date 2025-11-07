@@ -142,11 +142,11 @@ export default function BookingFlow() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
   
-  const progress = ((currentStep -1) / (STEPS.length - 1)) * 100;
+  const progress = ((currentStep) / (STEPS.length)) * 100;
 
   return (
     <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
+        <div className="mb-8 px-2 animate-in fade-in duration-500">
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between mt-2">
                 {STEPS.map(step => (
@@ -177,7 +177,7 @@ export default function BookingFlow() {
         )}
 
         <div className={cn(currentStep !== 1 && 'hidden')}>
-            <Card className="shadow-md animate-in fade-in-50 duration-500">
+            <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl">1. Services & Dates</CardTitle>
                     <CardDescription>Select services, dates, and times for your booking. Add multiple days if needed.</CardDescription>
@@ -215,7 +215,7 @@ export default function BookingFlow() {
         </div>
 
         <div className={cn(currentStep !== 3 && 'hidden')}>
-            <Card className="shadow-md animate-in fade-in-50 duration-1000">
+            <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl">3. Location & Contact</CardTitle>
                     <CardDescription>Travel fees may apply for locations outside the GTA. Finally, enter your contact information.</CardDescription>
@@ -410,7 +410,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
   
   if (!hasBridalService) {
       return (
-        <Card className="shadow-md animate-in fade-in-50 duration-700">
+        <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
             <CardHeader>
                 <CardTitle className="font-headline text-2xl">2. Makeup Services</CardTitle>
             </CardHeader>
@@ -428,8 +428,8 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
   }
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-md animate-in fade-in-50 duration-700">
+    <div className="space-y-8 animate-in fade-in-50 slide-in-from-top-10 duration-700">
+      <Card className="shadow-lg">
         <CardHeader>
             <div className="flex items-center justify-between">
                 <div>
@@ -476,7 +476,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
         )}
       </Card>
 
-      <Card className="shadow-md animate-in fade-in-50 duration-800">
+      <Card className="shadow-lg">
           <CardHeader>
               <div className="flex items-center justify-between">
                   <div className='flex items-center gap-4'>
