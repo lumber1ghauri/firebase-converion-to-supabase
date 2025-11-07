@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, PartyPopper, Gem, Sparkles, Camera, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
@@ -13,7 +13,7 @@ import { SERVICES, LOCATION_OPTIONS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -26,6 +26,7 @@ import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Progress } from './ui/progress';
+import { QuoteSummary } from './quote-summary';
 
 
 const initialState: ActionState = {
@@ -115,7 +116,6 @@ export default function BookingFlow() {
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
   
-  // Navigate back to the correct step if there are errors
   useEffect(() => {
     if (state.status === 'error') {
       if (state.errors?.trialDate) {
@@ -133,7 +133,7 @@ export default function BookingFlow() {
         });
       }
     }
-  }, [state.status, state.errors, state.message, toast]);
+  }, [state, toast]);
 
 
   if (state.status === 'success' && state.quote) {
@@ -143,18 +143,21 @@ export default function BookingFlow() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
   
-  const progress = ((currentStep) / STEPS.length) * 100;
+  const progress = ((currentStep -1) / (STEPS.length - 1)) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+      <div className="md:col-span-2">
         <div className="mb-8">
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between mt-2">
                 {STEPS.map(step => (
                     <div key={step.id} className={cn(
-                        "text-sm",
+                        "text-sm w-1/3",
                         step.id < currentStep ? "text-primary font-medium" :
-                        step.id === currentStep ? "text-primary font-bold" : "text-muted-foreground"
+                        step.id === currentStep ? "text-primary font-bold" : "text-muted-foreground",
+                        step.id === 2 ? 'text-center' : '',
+                        step.id === 3 ? 'text-right' : '',
                     )}>
                         {step.name}
                     </div>
@@ -260,7 +263,7 @@ export default function BookingFlow() {
         </div>
 
         <div className="mt-8 flex justify-between">
-          <Button type="button" variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+          <Button type="button" variant="outline" onClick={prevStep} className={cn(currentStep === 1 && 'invisible')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
@@ -275,6 +278,11 @@ export default function BookingFlow() {
           )}
         </div>
       </form>
+      </div>
+
+       <div className="md:col-span-1">
+        <QuoteSummary days={days} location={location} bridalTrial={bridalTrial} bridalParty={bridalParty} />
+      </div>
       
     </div>
   );
@@ -387,9 +395,11 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay }: {
             )}
 
 
-            <Button type="button" variant="ghost" size="icon" onClick={() => removeDay(day.id)} disabled={isOnlyDay} className="absolute top-2 right-2 hover:bg-destructive/20 hover:text-destructive">
-                <Trash2 className="h-5 w-5" />
-            </Button>
+            {!isOnlyDay && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeDay(day.id)} className="absolute top-2 right-2 hover:bg-destructive/20 hover:text-destructive">
+                    <Trash2 className="h-5 w-5" />
+                </Button>
+            )}
         </div>
     );
 }
@@ -410,7 +420,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
       return (
         <Card className="shadow-md animate-in fade-in-50 duration-700">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">2. Bridal Options</CardTitle>
+                <CardTitle className="font-headline text-2xl">2. Makeup Services</CardTitle>
             </CardHeader>
             <CardContent>
                 <Alert>
@@ -426,7 +436,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
   }
 
   return (
-    <>
+    <div className="space-y-8">
       <Card className="shadow-md animate-in fade-in-50 duration-700">
         <CardHeader>
             <div className="flex items-center justify-between">
@@ -557,7 +567,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
               </CardContent>
           )}
       </Card>
-    </>
+    </div>
   )
 }
 
