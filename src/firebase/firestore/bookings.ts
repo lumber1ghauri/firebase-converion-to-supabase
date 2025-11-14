@@ -32,6 +32,7 @@ export async function saveBookingClient(
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
+    // Use JSON stringify/parse to deep-clone and remove any undefined values
     const bookingData = JSON.parse(JSON.stringify(booking));
 
     const dataToSave = {
@@ -39,7 +40,9 @@ export async function saveBookingClient(
         updatedAt: serverTimestamp(),
     };
 
-    setDoc(bookingRef, dataToSave, { merge: true }).catch(error => {
+    try {
+        await setDoc(bookingRef, dataToSave, { merge: true });
+    } catch (error) {
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -50,8 +53,9 @@ export async function saveBookingClient(
         );
         // We throw the error here so the calling UI can handle it (e.g., show a toast)
         throw error;
-    });
+    }
 }
+
 
 // Function to be called from the client after the server action returns the quote
 export async function saveBookingAndSendEmail(
