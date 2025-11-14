@@ -1,8 +1,8 @@
 export const firebaseConfig = {
-  "projectId": "sellaya-backup-01-139717-c22bb",
-  "appId": "1:316775060859:web:b5861e00f3a9a7044219de",
-  "apiKey": "AIzaSyA72yhVhOyih0RS4JZaf4S0Sdkmy2OIHbM",
-  "authDomain": "sellaya-backup-01-139717-c22bb.firebaseapp.com",
+  "projectId": "sellaya-lba-02-52991340-1d0a3",
+  "appId": "1:179293509698:web:64c17a06d6f2496c8835db",
+  "apiKey": "AIzaSyBE-eF2AWbN34wfSeoMc3JATUX0zWLQKhQ",
+  "authDomain": "sellaya-lba-02-52991340-1d0a3.firebaseapp.com",
   "measurementId": "",
-  "messagingSenderId": "316775060859"
+  "messagingSenderId": "179293509698"
 };
