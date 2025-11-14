@@ -2,12 +2,9 @@
 import {
   doc,
   getDoc,
-  getDocs,
   setDoc,
-  collection,
   serverTimestamp,
   type Firestore,
-  addDoc,
 } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -29,16 +26,13 @@ export async function saveBooking(
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
-    // Ensure uid is part of the data to be saved
     const dataToSave = {
         ...booking,
         uid: booking.uid,
         updatedAt: serverTimestamp(),
-        // Only set createdAt on initial creation
         ...(booking.createdAt ? {} : { createdAt: serverTimestamp() }),
     };
 
-    // Non-blocking write with error handling
     setDoc(bookingRef, dataToSave, { merge: true })
       .catch((error) => {
         console.error("Error saving booking: ", error);
@@ -50,7 +44,6 @@ export async function saveBooking(
             requestResourceData: dataToSave,
           })
         );
-        // Re-throw to allow the caller to handle UI feedback if needed
         throw error;
       });
 }
@@ -77,30 +70,6 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
         const permissionError = new FirestorePermissionError({
             path: bookingRef.path,
             operation: 'get'
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw error;
-    }
-}
-
-export async function getAllBookings(firestore: Firestore): Promise<BookingDocument[]> {
-    const bookingsCol = collection(firestore, 'bookings');
-    try {
-        const bookingSnapshot = await getDocs(bookingsCol);
-        const bookingList = bookingSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                id: doc.id,
-                createdAt: data.createdAt?.toDate(),
-                updatedAt: data.updatedAt?.toDate(),
-            } as BookingDocument
-        });
-        return bookingList;
-    } catch (error: any) {
-        const permissionError = new FirestorePermissionError({
-            path: bookingsCol.path,
-            operation: 'list'
         });
         errorEmitter.emit('permission-error', permissionError);
         throw error;

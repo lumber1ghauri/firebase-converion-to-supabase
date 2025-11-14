@@ -18,14 +18,19 @@ service cloud.firestore {
 
     // Rules for bookings
     match /bookings/{bookingId} {
-      // Any signed-in user can create a booking if they are the owner.
+      // Any signed-in user can create a booking if they are the owner of the document.
       allow create: if isOwner(request.resource.data.uid);
       
-      // Only the owner or an admin can read, update, or delete a specific booking.
-      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
+      // The owner or an admin can read or update their own booking.
+      allow read, update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
       
-      // Only admins can list all bookings for the dashboard.
-      allow list: if isAdmin();
+      // Admins can delete any booking.
+      allow delete: if isAdmin();
+    }
+    
+    match /bookings/{bookingId} {
+        // Admins can list all bookings for the dashboard.
+        allow list: if isAdmin();
     }
   }
 }

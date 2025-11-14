@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useFirestore } from '@/firebase';
-import { getAllBookings, type BookingDocument } from '@/firebase/firestore/bookings';
+import { useCollection } from '@/firebase';
+import type { BookingDocument } from '@/firebase/firestore/bookings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Loader2, AlertTriangle, Eye, Search, CalendarClock, User, Users } from 
 import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
-import type { FinalQuote, PriceTier } from '@/lib/types';
+import type { FinalQuote } from '@/lib/types';
 
 
 function getTimeToEvent(eventDateStr: string): string {
@@ -65,52 +65,32 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 's
 
 
 export default function AdminDashboard() {
-  const firestore = useFirestore();
-  const [bookings, setBookings] = useState<BookingDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: bookings, isLoading, error } = useCollection<BookingDocument>('bookings');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
 
-  const fetchBookings = () => {
-    setLoading(true);
-    getAllBookings(firestore)
-      .then(data => {
-        const sortedData = data.sort((a, b) => {
-            try {
-                const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
-                const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
-                if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-                return dateA.getTime() - dateB.getTime();
-            } catch (e) {
-                return 0;
-            }
-        });
-        setBookings(sortedData);
-      })
-      .catch(err => {
-        console.error(err);
-        setError('Failed to fetch bookings. You may not have administrative privileges.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+  const sortedBookings = useMemo(() => {
+    if (!bookings) return [];
+    return [...bookings].sort((a, b) => {
+        try {
+            const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
+            const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
+            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+            return dateA.getTime() - dateB.getTime();
+        } catch (e) {
+            return 0;
+        }
+    });
+  }, [bookings]);
 
-  useEffect(() => {
-    if (firestore) {
-        fetchBookings();
-    }
-  }, [firestore]);
-  
   const filteredBookings = useMemo(() => {
-    if (!searchTerm) return bookings;
+    if (!searchTerm) return sortedBookings;
     const lowercasedTerm = searchTerm.toLowerCase();
-    return bookings.filter(booking => 
+    return sortedBookings.filter(booking => 
         booking.id.toLowerCase().includes(lowercasedTerm) || 
         booking.finalQuote.contact.name.toLowerCase().includes(lowercasedTerm)
     );
-  }, [searchTerm, bookings]);
+  }, [searchTerm, sortedBookings]);
 
 
   const getStatusVariant = (status: BookingDocument['finalQuote']['status']) => {
@@ -126,17 +106,12 @@ export default function AdminDashboard() {
   };
   
   const handleUpdateBooking = (updatedQuote: FinalQuote) => {
-      setBookings(currentBookings => 
-          currentBookings.map(b => b.id === updatedQuote.id ? { ...b, finalQuote: updatedQuote } : b)
-      );
        setSelectedBooking(currentBooking => 
           currentBooking && currentBooking.id === updatedQuote.id ? { ...currentBooking, finalQuote: updatedQuote } : currentBooking
       );
-      // Optionally refetch all data to ensure consistency
-      fetchBookings();
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -150,7 +125,8 @@ export default function AdminDashboard() {
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
         <AlertTriangle className="h-12 w-12 text-destructive" />
         <h2 className="mt-4 text-xl font-semibold">An Error Occurred</h2>
-        <p className="mt-2 text-muted-foreground">{error}</p>
+        <p className="mt-2 text-muted-foreground">{error.message}</p>
+        <p className="mt-2 text-xs text-muted-foreground">Please ensure you have administrative privileges and that Firestore rules are correctly configured.</p>
       </div>
     );
   }
@@ -265,7 +241,7 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </div>
-             {filteredBookings.length === 0 && !loading && (
+             {filteredBookings.length === 0 && !isLoading && (
                 <div className="py-20 text-center text-muted-foreground">
                     No bookings found.
                 </div>
@@ -276,5 +252,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    
