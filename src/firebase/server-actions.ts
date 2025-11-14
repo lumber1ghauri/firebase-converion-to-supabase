@@ -1,7 +1,7 @@
 
 'use server';
 
-import { initializeServerFirebase } from '@/firebase/server-init';
+import { getServerFirestore } from '@/firebase/server-init';
 import type { BookingDocument } from '@/firebase/firestore/bookings';
 
 /**
@@ -16,7 +16,7 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
 
   try {
     // Get the initialized Firestore instance.
-    const { firestore } = await initializeServerFirebase();
+    const { firestore } = getServerFirestore();
     const bookingRef = firestore.collection('bookings').doc(bookingId);
     const docSnap = await bookingRef.get();
 

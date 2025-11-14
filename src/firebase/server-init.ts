@@ -20,7 +20,7 @@ const firestore = admin.firestore();
  * A server-only function that returns the initialized Firestore instance.
  * Other server-side modules can call this to get a ready-to-use Firestore object.
  */
-export async function initializeServerFirebase() {
+export function getServerFirestore() {
   // The function now simply returns the already-initialized instance.
   return { firestore };
 }
