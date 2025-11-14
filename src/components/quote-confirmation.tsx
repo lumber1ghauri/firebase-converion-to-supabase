@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
+import { saveBookingClient } from '@/firebase/firestore/bookings';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -19,9 +19,10 @@ import { Separator } from './ui/separator';
 import { ContractDisplay } from './contract-display';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
 
-type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'payment' | 'confirmed';
+type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'confirmed';
 
 function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: { 
   title: string; 
@@ -90,9 +91,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
   const [address, setAddress] = useState({ street: '', city: '', province: 'ON', postalCode: '' });
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
-  
-  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
-
 
   const containsStudioService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'studio'), [quote.booking.days]);
   const containsMobileService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'mobile'), [quote.booking.days]);
@@ -106,8 +104,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   });
 
   const finalPrice = selectedTier ? quote.quotes[selectedTier].total : 0;
-  const depositAmount = finalPrice * 0.5;
-
+  
   const requiresAddress = useMemo(() => quote.booking.hasMobileService && !quote.booking.address, [quote]);
   
   const bookingConfirmed = useMemo(() => quote.status === 'confirmed', [quote.status]);
@@ -165,35 +162,28 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
           return;
       }
-      if (!paymentScreenshot) {
-          toast({ variant: 'destructive', title: 'Screenshot Required', description: 'Please upload a screenshot of your payment.' });
-          return;
-      }
 
       setIsSaving(true);
       setError(null);
 
       try {
-          const screenshotUrl = await uploadPaymentScreenshot(paymentScreenshot, quote.id, user.uid);
-
-          const total = quote.quotes[selectedTier].total;
-          const depositAmount = total * 0.5;
-          
           const updatedQuote: FinalQuote = {
               ...quote,
               selectedQuote: selectedTier,
               status: 'confirmed',
-              paymentDetails: {
-                  deposit: { status: 'pending', amount: depositAmount, screenshotUrl },
-                  final: { status: 'pending', amount: total - depositAmount },
-              }
           };
 
           await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
 
           setQuote(updatedQuote);
           setCurrentStep('confirmed');
-          toast({ title: 'Booking Submitted!', description: 'Your booking is pending approval. You will receive a confirmation email once the payment is verified.' });
+          
+          const emailResult = await sendConfirmationEmailAction(updatedQuote.id);
+          if (emailResult.success) {
+            toast({ title: 'Booking Confirmed!', description: 'Your booking is confirmed. You will receive a confirmation email shortly.' });
+          } else {
+             toast({ variant: 'destructive', title: 'Booking Confirmed, but Email Failed', description: `Your booking is saved, but we couldn't send the confirmation email. ${emailResult.message}` });
+          }
 
       } catch (err: any) {
           setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
@@ -212,7 +202,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         setCurrentStep('sign-contract');
       }
     } else if (currentStep === 'sign-contract') {
-        setCurrentStep('payment');
+        handleFinalizeBooking();
     }
   };
 
@@ -220,8 +210,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     { id: 'select-tier', name: 'Select Tier' },
     ...(requiresAddress ? [{ id: 'address', name: 'Address' }] : []),
     { id: 'sign-contract', name: 'Sign Contract' },
-    { id: 'payment', name: 'Payment' },
-  ].map(step => ({ ...step, icon: step.id === 'address' ? MapPin : step.id === 'sign-contract' ? FileText : step.id === 'payment' ? Banknote : Users }));
+  ].map(step => ({ ...step, icon: step.id === 'address' ? MapPin : step.id === 'sign-contract' ? FileText : Users }));
 
 
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
@@ -236,11 +225,11 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               <CheckCircle2 className="h-16 w-16 text-primary animate-in fade-in zoom-in-50 duration-700 delay-200" />
           )}
           <CardTitle className="font-headline text-3xl sm:text-4xl mt-4">
-            {bookingConfirmed ? 'Booking Submitted for Approval!' : 'Your Quote is Ready!'}
+            {bookingConfirmed ? 'Booking Confirmed!' : 'Your Quote is Ready!'}
           </CardTitle>
           <CardDescription className="text-base sm:text-lg max-w-prose">
             {bookingConfirmed 
-              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is now pending. You will receive a final confirmation email as soon as we approve your payment.`
+              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. A confirmation email has been sent to you.`
               : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
@@ -415,73 +404,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             </div>
           </div>
 
-          {/* Step 3: Payment */}
-          <div className={cn('space-y-6 px-6', currentStep !== 'payment' && 'hidden')}>
-            <h3 className="font-headline text-2xl text-center">Payment Information</h3>
-            <Card className="max-w-md mx-auto">
-              <CardHeader>
-                <CardTitle>50% Deposit Required</CardTitle>
-                <CardDescription>
-                  To secure your booking with {selectedTier === 'lead' ? 'Anum - Lead Artist' : 'the Team'}, a 50% deposit is required.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-muted-foreground">Total Amount</p>
-                <p className="text-3xl font-bold">${finalPrice.toFixed(2)}</p>
-                <Separator className="my-4" />
-                <p className="text-muted-foreground">Deposit Due Today</p>
-                <p className="text-4xl font-bold text-primary">${depositAmount.toFixed(2)}</p>
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-                <Card>
-                  <CardHeader>
-                      <div className="flex items-center gap-3">
-                          <Banknote className="w-8 h-8 text-primary" />
-                          <CardTitle>Interac e-Transfer</CardTitle>
-                      </div>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-3">
-                      <p>Please send the deposit amount to the following email address:</p>
-                      <p className="font-mono p-2 bg-muted rounded-md">payment@sellaya.ca</p>
-                      <p>
-                          In the message/memo field, please include your Booking ID:
-                          <strong className="ml-1">{quote.id}</strong>
-                      </p>
-                       <div className="space-y-2 pt-4">
-                            <Label htmlFor="payment-screenshot" className="font-medium">Upload Screenshot *</Label>
-                            <Input 
-                                id="payment-screenshot" 
-                                type="file" 
-                                accept="image/png, image/jpeg, image/jpg"
-                                onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} 
-                                className="file:text-primary file:font-medium"
-                            />
-                            {paymentScreenshot && <p className='text-xs text-muted-foreground'>Selected: {paymentScreenshot.name}</p>}
-                       </div>
-                       <Button type="button" size="lg" className="w-full mt-4 font-bold" disabled={isSaving || !paymentScreenshot} onClick={handleFinalizeBooking}>
-                           {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : "Confirm & Send Screenshot"}
-                       </Button>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                        <div className="flex items-center gap-3">
-                          <CreditCard className="w-8 h-8 text-primary" />
-                          <CardTitle>Credit Card (Stripe)</CardTitle>
-                      </div>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-3">
-                      <p>Click the button below to complete your payment securely via Stripe.</p>
-                      <Button className="w-full" disabled>
-                          Pay ${depositAmount.toFixed(2)} with Stripe
-                      </Button>
-                        <p className="text-xs text-muted-foreground text-center">Stripe payments coming soon.</p>
-                  </CardContent>
-                </Card>
-            </div>
-          </div>
 
           {/* Final Confirmed State */}
           {bookingConfirmed && (
@@ -520,15 +442,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                       </div>
                     </CardFooter>
                 </Card>
-                  {quote.paymentDetails?.deposit.screenshotUrl && (
-                     <div className="mt-6 text-center">
-                        <h4 className="font-headline text-lg mb-2">Payment Submitted</h4>
-                        <a href={quote.paymentDetails.deposit.screenshotUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
-                            <LinkIcon className="w-4 h-4" />
-                            View Screenshot
-                        </a>
-                    </div>
-                  )}
                   {quote.booking.address && (
                       <div className="mt-6 text-center">
                         <h4 className="font-headline text-lg mb-2">Service Address</h4>
@@ -558,14 +471,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                     </Button>
                 )}
                 {currentStep === 'sign-contract' && (
-                      <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!contractSigned} onClick={handleProceed}>
-                        Agree & Proceed to Payment
+                      <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!contractSigned || isSaving} onClick={handleProceed}>
+                         {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Confirming...</> : "Agree & Confirm Booking"}
                     </Button>
-                )}
-                  {currentStep === 'payment' && (
-                    <p className="text-sm text-center text-muted-foreground">
-                        Your booking will be confirmed upon receipt of the deposit. Please follow the instructions above.
-                    </p>
                 )}
             </CardFooter>
           )}

@@ -9,7 +9,6 @@ import {
   type Firestore,
   type Timestamp,
 } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -133,22 +132,5 @@ export async function deleteBooking(firestore: Firestore, bookingId: string): Pr
             })
         );
         throw error;
-    }
-}
-
-export async function uploadPaymentScreenshot(file: File, bookingId: string, userId: string): Promise<string> {
-    const storage = getStorage();
-    const filePath = `payment_screenshots/${userId}/${bookingId}/${file.name}`;
-    const storageRef = ref(storage, filePath);
-    
-    try {
-        const snapshot = await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(snapshot.ref);
-        return downloadURL;
-    } catch (error) {
-        console.error("Error uploading payment screenshot:", error);
-        // Here you might want to handle storage permission errors specifically
-        // For now, re-throwing a generic error.
-        throw new Error("Failed to upload payment screenshot.");
     }
 }

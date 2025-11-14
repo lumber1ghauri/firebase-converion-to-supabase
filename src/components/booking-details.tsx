@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { FinalQuote, PaymentInfo, PaymentStatus, PriceTier } from '@/lib/types';
+import type { FinalQuote, PriceTier } from '@/lib/types';
 import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking as saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
+import { saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { sendConfirmationEmailAction, sendFollowUpEmailAction } from '@/app/admin/actions';
 import {
   AlertDialog,
@@ -56,59 +56,10 @@ function generateWhatsAppLink(phone: string | undefined): string | null {
 }
 
 
-const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, isUpdating }: { 
-    title: string; 
-    paymentInfo: PaymentInfo; 
-    onStatusChange: (update: { depositStatus?: PaymentStatus; finalStatus?: PaymentStatus }) => void;
-    isUpdating: boolean;
-}) => {
-    const isPending = paymentInfo.status === 'pending';
-    const paymentType = title.toLowerCase().includes('deposit') ? 'deposit' : 'final';
-
-    return (
-        <Card className={isPending ? "bg-destructive/10 border-destructive/30" : "bg-green-500/10 border-green-500/30"}>
-            <CardHeader className="pb-2">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-base">{title}</CardTitle>
-                    <Select 
-                        value={paymentInfo.status} 
-                        disabled={isUpdating}
-                        onValueChange={(newStatus: PaymentStatus) => {
-                            if(paymentType === 'deposit') {
-                                onStatusChange({ depositStatus: newStatus });
-                            } else {
-                                onStatusChange({ finalStatus: newStatus });
-                            }
-                        }}
-                    >
-                        <SelectTrigger className="w-[120px] h-8 text-xs capitalize">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="pending" className="capitalize text-xs">Pending</SelectItem>
-                            <SelectItem value="received" className="capitalize text-xs">Received</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardHeader>
-            <CardContent className="text-sm space-y-3">
-                <p className="font-mono text-xl font-bold text-foreground/80">${paymentInfo.amount.toFixed(2)}</p>
-                {paymentInfo.screenshotUrl ? (
-                    <a href={paymentInfo.screenshotUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                        <LinkIcon className="w-3 h-3" />
-                        View Screenshot
-                    </a>
-                ) : (
-                    <p className="text-xs text-muted-foreground">No screenshot provided.</p>
-                )}
-            </CardContent>
-        </Card>
-    )
-}
-
 export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; bookingDoc: BookingDocument | undefined; onBookingDeleted: (bookingId: string) => void; }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
+  const [isSendingConfirmation, setIsSendingConfirmation] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
@@ -117,59 +68,26 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
   const whatsappLink = generateWhatsAppLink(quote.contact.phone);
   
-  const handleStatusChange = async (update: {
-      status?: FinalQuote['status'];
-      depositStatus?: PaymentStatus;
-      finalStatus?: PaymentStatus;
-  }) => {
+  const handleStatusChange = async (newStatus: FinalQuote['status']) => {
       if (!user || !firestore || !bookingDoc) {
           toast({ variant: "destructive", title: "Error", description: "User, database, or booking data not available." });
           return;
       }
       setIsUpdating(true);
       
-      let updatedQuote = { ...quote };
-      const wasDepositPending = updatedQuote.paymentDetails?.deposit.status === 'pending';
-
-      if (update.status) {
-          updatedQuote.status = update.status;
-      }
-      if (updatedQuote.paymentDetails) {
-          if (update.depositStatus) {
-              updatedQuote.paymentDetails.deposit.status = update.depositStatus;
-          }
-          if (update.finalStatus) {
-              updatedQuote.paymentDetails.final.status = update.finalStatus;
-          }
-          // Ensure if final is received, deposit is also marked as received
-          if (update.finalStatus === 'received') {
-              updatedQuote.paymentDetails.deposit.status = 'received';
-          }
-      }
+      const updatedQuote = { ...quote, status: newStatus };
 
       try {
-          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone, createdAt: bookingDoc.createdAt });
+          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
-              description: "The booking has been successfully updated.",
+              description: `Booking moved to '${newStatus}'.`,
           });
-          
-          const isDepositNowReceived = updatedQuote.paymentDetails?.deposit.status === 'received';
-          if (wasDepositPending && isDepositNowReceived) {
-                const result = await sendConfirmationEmailAction(updatedQuote.id);
-                if (result.success) {
-                    toast({
-                        title: "Action Complete",
-                        description: "Deposit approved and confirmation email sent to the client.",
-                    });
-                } else {
-                     toast({
-                        variant: "destructive",
-                        title: "Email Failed",
-                        description: result.message,
-                    });
-                }
+
+          // If the booking is confirmed, automatically send the confirmation email.
+          if (newStatus === 'confirmed') {
+              await handleSendConfirmation();
           }
 
       } catch (error: any) {
@@ -181,6 +99,21 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
       } finally {
           setIsUpdating(false);
       }
+  };
+  
+  const handleSendConfirmation = async () => {
+    if (quote.status !== 'confirmed') {
+        toast({ variant: 'destructive', title: 'Not Confirmed', description: 'Cannot send confirmation for a booking that is not confirmed.' });
+        return;
+    }
+    setIsSendingConfirmation(true);
+    const result = await sendConfirmationEmailAction(quote.id);
+    if (result.success) {
+        toast({ title: "Confirmation Sent!", description: result.message });
+    } else {
+        toast({ variant: "destructive", title: "Failed to Send", description: result.message });
+    }
+    setIsSendingConfirmation(false);
   };
 
   const handleDelete = async () => {
@@ -224,11 +157,13 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
     }
     setIsSendingFollowUp(false);
   };
+  
+  const isActionPending = isUpdating || isSendingFollowUp || isSendingConfirmation;
 
 
   return (
     <div className="space-y-6 relative">
-      {(isUpdating || isSendingFollowUp) && (
+      {isActionPending && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -275,7 +210,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
                     <CardTitle className="text-lg">Booking Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Select value={quote.status} onValueChange={(newStatus: FinalQuote['status']) => handleStatusChange({ status: newStatus })} disabled={isUpdating}>
+                    <Select value={quote.status} onValueChange={(newStatus: FinalQuote['status']) => handleStatusChange(newStatus)} disabled={isActionPending}>
                         <SelectTrigger className="w-[150px] capitalize text-base font-semibold">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -394,34 +329,6 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
                     </div>
                 </CardContent>
             </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><DollarSign className="w-5 h-5" />Payment Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                {quote.paymentDetails ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <PaymentDetailCard 
-                            title="50% Deposit" 
-                            paymentInfo={quote.paymentDetails.deposit}
-                            onStatusChange={handleStatusChange}
-                            isUpdating={isUpdating}
-                        />
-                        <PaymentDetailCard 
-                            title="Final Payment" 
-                            paymentInfo={quote.paymentDetails.final}
-                            onStatusChange={handleStatusChange}
-                            isUpdating={isUpdating}
-                        />
-                    </div>
-                ) : (
-                    <div className="text-center py-4 px-2 bg-muted rounded-md text-muted-foreground flex items-center justify-center gap-2">
-                         <AlertTriangle className="w-4 h-4"/>
-                        <span>No payment information available for this booking.</span>
-                    </div>
-                )}
-                </CardContent>
-            </Card>
         </>
       )}
 
@@ -462,15 +369,26 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
                     variant="secondary" 
                     className="w-full md:w-auto" 
                     onClick={handleSendFollowUp}
-                    disabled={isSendingFollowUp || isUpdating}
+                    disabled={isActionPending}
                 >
                     {isSendingFollowUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                     Send Follow-up Email
                 </Button>
             )}
+            {quote.status === 'confirmed' && (
+                 <Button 
+                    variant="secondary" 
+                    className="w-full md:w-auto" 
+                    onClick={handleSendConfirmation}
+                    disabled={isActionPending}
+                >
+                    {isSendingConfirmation ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Mail className="mr-2 h-4 w-4" />}
+                    Re-send Confirmation Email
+                </Button>
+            )}
             <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full md:w-auto" disabled={isUpdating || isSendingFollowUp}>
+                    <Button variant="destructive" className="w-full md:w-auto" disabled={isActionPending}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Booking
                     </Button>

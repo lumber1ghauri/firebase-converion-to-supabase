@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -38,23 +39,6 @@ function getTimeToEvent(eventDateStr: string): string {
     } catch (e) {
         return "Invalid date";
     }
-}
-
-function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'success' | 'secondary' | 'destructive' } {
-    const details = booking.finalQuote.paymentDetails;
-    if (booking.finalQuote.status !== 'confirmed') {
-        return { text: 'N/A', variant: 'secondary' };
-    }
-    if (!details) {
-        return { text: 'Pending', variant: 'destructive' };
-    }
-    if (details.deposit.status === 'received' && details.final.status === 'received') {
-        return { text: 'Paid', variant: 'success' };
-    }
-    if (details.deposit.status === 'received') {
-        return { text: 'Deposit Paid', variant: 'secondary' };
-    }
-    return { text: 'Deposit Pending', variant: 'destructive' };
 }
 
 
@@ -162,7 +146,6 @@ export default function AdminDashboard() {
                     <TableHead>Customer</TableHead>
                     <TableHead>Artist</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Payment</TableHead>
                     <TableHead className="hidden md:table-cell">Booking Date</TableHead>
                     <TableHead className="hidden md:table-cell">Event</TableHead>
                     <TableHead className="text-right">Total</TableHead>
@@ -173,7 +156,6 @@ export default function AdminDashboard() {
                 </TableHeader>
                 <TableBody>
                   {filteredBookings.map((booking, index) => {
-                     const paymentStatus = getPaymentStatus(booking);
                      const artistTier = booking.finalQuote.selectedQuote;
                      return (
                         <TableRow key={booking.id}>
@@ -195,11 +177,6 @@ export default function AdminDashboard() {
                           <TableCell>
                             <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize whitespace-nowrap">
                               {booking.finalQuote.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                               <Badge variant={paymentStatus.variant} className="capitalize whitespace-nowrap">
-                                {paymentStatus.text}
                             </Badge>
                           </TableCell>
                            <TableCell className="hidden md:table-cell text-sm">

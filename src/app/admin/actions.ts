@@ -24,6 +24,11 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
     if (!bookingDoc) {
       return { success: false, message: `Booking with ID ${bookingId} not found.` };
     }
+    
+     // We only send the email if the booking is actually confirmed.
+    if (bookingDoc.finalQuote.status !== 'confirmed') {
+        return { success: false, message: `This action is only for 'confirmed' bookings. This booking is currently '${bookingDoc.finalQuote.status}'.` };
+    }
 
     // Call the existing email function with the booking data.
     await sendQuoteEmail(bookingDoc.finalQuote);
