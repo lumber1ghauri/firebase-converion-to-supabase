@@ -32,8 +32,8 @@ service cloud.firestore {
     }
     
     match /bookings/{booking} {
-        // Only admins can list all bookings
-        allow list: if isAdmin();
+        // Allow any signed-in user (including anonymous for admin access) to list all bookings
+        allow list: if isSignedIn();
     }
   }
 }
