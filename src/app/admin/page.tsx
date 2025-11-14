@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, AlertTriangle, Eye, Search, CalendarClock } from 'lucide-react';
-import { format, differenceInDays, parse, addDays, subDays } from 'date-fns';
+import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
@@ -58,7 +58,10 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 's
     if (details.final.status === 'pending') {
         return { text: 'Final Pending', variant: 'destructive' };
     }
-    return { text: 'Paid', variant: 'success' };
+    if (details.deposit.status === 'received' && details.final.status === 'received') {
+        return { text: 'Paid', variant: 'success' };
+    }
+    return { text: 'Deposit Paid', variant: 'secondary' };
 }
 
 
@@ -69,10 +72,10 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
 
-  useEffect(() => {
+  const fetchBookings = () => {
+    setLoading(true);
     getAllBookings()
       .then(data => {
-        // Sort bookings by event date, soonest first
         const sortedData = data.sort((a, b) => {
             try {
                 const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
@@ -92,6 +95,10 @@ export default function AdminDashboard() {
       .finally(() => {
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchBookings();
   }, []);
   
   const filteredBookings = useMemo(() => {
@@ -117,6 +124,8 @@ export default function AdminDashboard() {
   };
   
   const handleUpdateBooking = (updatedQuote: FinalQuote) => {
+      // This function updates the local state, providing an instant UI update.
+      // The `revalidatePath` in the server action ensures the next server render is fresh.
       setBookings(currentBookings => 
           currentBookings.map(b => b.id === updatedQuote.id ? { ...b, finalQuote: updatedQuote } : b)
       );
@@ -242,7 +251,7 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </div>
-             {filteredBookings.length === 0 && (
+             {filteredBookings.length === 0 && !loading && (
                 <div className="py-20 text-center text-muted-foreground">
                     No bookings found.
                 </div>
@@ -253,3 +262,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    
