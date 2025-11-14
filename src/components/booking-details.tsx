@@ -39,14 +39,15 @@ function generateWhatsAppLink(phone: string | undefined): string | null {
 }
 
 
-const PaymentDetailCard = ({ title, paymentInfo, totalAmount }: { title: string; paymentInfo: PaymentInfo; totalAmount: number }) => {
+const PaymentDetailCard = ({ title, paymentInfo }: { title: string; paymentInfo: PaymentInfo; }) => {
     const isPending = paymentInfo.status === 'pending';
+    const variant = isPending ? "destructive" : "success";
     return (
         <Card className={isPending ? "bg-destructive/10 border-destructive/30" : "bg-green-500/10 border-green-500/30"}>
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-base">{title}</CardTitle>
-                    <Badge variant={isPending ? 'destructive' : 'default'} className="capitalize">{paymentInfo.status}</Badge>
+                    <Badge variant={variant} className="capitalize">{paymentInfo.status}</Badge>
                 </div>
             </CardHeader>
             <CardContent className="text-sm space-y-3">
@@ -68,6 +69,18 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
   const whatsappLink = generateWhatsAppLink(quote.contact.phone);
+
+  const getStatusVariant = (status: FinalQuote['status']) => {
+    switch (status) {
+      case 'confirmed':
+        return 'success';
+      case 'cancelled':
+        return 'destructive';
+      case 'quoted':
+      default:
+        return 'secondary';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -105,7 +118,7 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
                 <CardTitle className="text-lg">Booking Status</CardTitle>
             </CardHeader>
             <CardContent>
-                <Badge variant={quote.status === 'confirmed' ? 'default' : quote.status === 'cancelled' ? 'destructive' : 'secondary'} className="capitalize text-base">
+                <Badge variant={getStatusVariant(quote.status)} className="capitalize text-base">
                 {quote.status}
                 </Badge>
                 {quote.selectedQuote && (
@@ -223,8 +236,8 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
                 <CardContent>
                 {quote.paymentDetails ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <PaymentDetailCard title="50% Deposit" paymentInfo={quote.paymentDetails.deposit} totalAmount={selectedQuoteData.total} />
-                        <PaymentDetailCard title="Final Payment" paymentInfo={quote.paymentDetails.final} totalAmount={selectedQuoteData.total} />
+                        <PaymentDetailCard title="50% Deposit" paymentInfo={quote.paymentDetails.deposit} />
+                        <PaymentDetailCard title="Final Payment" paymentInfo={quote.paymentDetails.final} />
                     </div>
                 ) : (
                     <div className="text-center py-4 px-2 bg-muted rounded-md text-muted-foreground flex items-center justify-center gap-2">

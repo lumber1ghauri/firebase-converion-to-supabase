@@ -112,7 +112,7 @@ function getTimeToEvent(eventDateStr: string): string {
     return `${days} days`;
 }
 
-function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'default' | 'secondary' | 'destructive' } {
+function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'success' | 'secondary' | 'destructive' } {
     const details = booking.finalQuote.paymentDetails;
     if (booking.finalQuote.status !== 'confirmed') {
         return { text: 'N/A', variant: 'secondary' };
@@ -126,7 +126,7 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'd
     if (details.final.status === 'pending') {
         return { text: 'Final Pending', variant: 'destructive' };
     }
-    return { text: 'Paid', variant: 'default' };
+    return { text: 'Paid', variant: 'success' };
 }
 
 
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
   const getStatusVariant = (status: BookingDocument['finalQuote']['status']) => {
     switch (status) {
       case 'confirmed':
-        return 'default';
+        return 'success';
       case 'cancelled':
         return 'destructive';
       case 'quoted':
