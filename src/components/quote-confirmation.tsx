@@ -72,11 +72,13 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
 
+  // If ANY day is 'studio', only show lead artist.
   const showLeadArtistOption = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
+  // Only show team option if NO days are 'studio' (i.e., all are mobile)
   const showTeamOption = useMemo(() => !currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
-
+  
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(
-      quote.selectedQuote || (showLeadArtistOption ? 'lead' : 'team')
+    quote.selectedQuote || (showLeadArtistOption ? 'lead' : 'team')
   );
 
 
@@ -240,11 +242,13 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
 
             {!bookingConfirmed && (
                 <div className="p-4">
-                    <h3 className="font-headline text-2xl text-center mb-4">Please Select Your Artist Tier</h3>
+                    {showLeadArtistOption && showTeamOption && (
+                      <h3 className="font-headline text-2xl text-center mb-4">Please Select Your Artist Tier</h3>
+                    )}
                      <RadioGroup 
                         value={selectedTier} 
                         onValueChange={(val) => setSelectedTier(val as PriceTier)} 
-                        className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && showTeamOption && "md:grid-cols-2")}
+                        className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && showTeamOption ? "md:grid-cols-2" : "max-w-md mx-auto")}
                     >
                         {showLeadArtistOption && (
                             <QuoteTierCard 
