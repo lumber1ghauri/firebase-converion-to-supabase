@@ -1,22 +1,18 @@
 
 'use client';
-
 import { useEffect, useState } from 'react';
-import { getBooking } from '@/firebase/firestore/bookings';
-import type { BookingDocument } from '@/firebase/firestore/bookings';
+import { getBooking, type BookingDocument } from '@/firebase/firestore/bookings';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
-import { Loader2 } from 'lucide-react';
-import { useFirestore } from '@/firebase';
+import { Loader2, AlertTriangle } from 'lucide-react';
 
 export default function BookPage({ params }: { params: { bookingId: string } }) {
   const [booking, setBooking] = useState<BookingDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const db = useFirestore();
 
   useEffect(() => {
-    if (params.bookingId && db) {
-      getBooking(db, params.bookingId)
+    if (params.bookingId) {
+      getBooking(params.bookingId)
         .then(bookingData => {
           if (bookingData) {
             setBooking(bookingData);
@@ -32,7 +28,7 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
           setLoading(false);
         });
     }
-  }, [params.bookingId, db]);
+  }, [params.bookingId]);
 
   if (loading) {
     return (
@@ -48,6 +44,7 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
       <div className="flex flex-col items-center justify-center min-h-screen text-center">
         <h1 className="text-2xl font-bold text-destructive">Error</h1>
         <p className="mt-4 text-muted-foreground">{error}</p>
+        <AlertTriangle className="w-12 h-12 text-destructive mt-4" />
       </div>
     );
   }

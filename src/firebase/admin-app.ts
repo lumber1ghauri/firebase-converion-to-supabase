@@ -1,5 +1,6 @@
 
 import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { firebaseConfig } from './config';
 
 // This is a temporary solution to use the client-side config for server-side actions.
@@ -10,14 +11,27 @@ const serviceAccount = {
     privateKey: '-----BEGIN PRIVATE KEY-----\n ... \n-----END PRIVATE KEY-----\n', // Placeholder
 };
 
-export function getAdminApp(): App {
+let adminApp: App | undefined;
+let adminDb: Firestore | undefined;
+
+function initializeAdminApp(): App {
     const apps = getApps();
     if (apps.length > 0) {
-        return apps[0];
+        return apps.find(app => app.name === 'admin') || initializeApp({ projectId: firebaseConfig.projectId }, 'admin');
     }
     // In a real app, you would use applicationDefault() or a service account file.
     // For this environment, we're simulating initialization.
     return initializeApp({
         projectId: firebaseConfig.projectId,
-    });
+    }, 'admin');
+}
+
+export function getAdminDb(): Firestore {
+    if (!adminApp) {
+        adminApp = initializeAdminApp();
+    }
+    if (!adminDb) {
+        adminDb = getFirestore(adminApp);
+    }
+    return adminDb;
 }

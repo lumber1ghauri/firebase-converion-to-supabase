@@ -2,8 +2,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { getAllBookings } from '@/firebase/firestore/bookings';
-import type { BookingDocument, } from '@/firebase/firestore/bookings';
+import { getAllBookings, type BookingDocument } from '@/firebase/firestore/bookings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +13,6 @@ import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
-import { useFirestore } from '@/firebase';
 
 
 function getTimeToEvent(eventDateStr: string): string {
@@ -72,11 +70,10 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
-  const db = useFirestore();
 
   const fetchBookings = () => {
     setLoading(true);
-    getAllBookings(db)
+    getAllBookings()
       .then(data => {
         const sortedData = data.sort((a, b) => {
             try {
@@ -101,7 +98,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchBookings();
-  }, [db]);
+  }, []);
   
   const filteredBookings = useMemo(() => {
     if (!searchTerm) return bookings;

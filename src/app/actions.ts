@@ -10,8 +10,6 @@ import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { getBooking, saveBooking } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
-import { getFirestore } from 'firebase-admin/firestore';
-import {getAdminApp} from '@/firebase/admin-app'
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -354,8 +352,7 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    const adminDb = getFirestore(getAdminApp());
-    await saveBooking(adminDb, { id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact, phone: finalQuote.contact.phone });
+    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact, phone: finalQuote.contact.phone });
     await sendQuoteEmail(finalQuote);
 
     return {
@@ -406,8 +403,7 @@ export async function saveAddressAction(prevState: any, formData: FormData): Pro
         },
     };
     
-    const adminDb = getFirestore(getAdminApp());
-    await saveBooking(adminDb, { id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
 
     return {
         status: 'success',
@@ -458,8 +454,7 @@ export async function finalizeBookingAction(prevState: any, formData: FormData):
         }
     };
     
-    const adminDb = getFirestore(getAdminApp());
-    await saveBooking(adminDb, { id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
     await sendQuoteEmail(updatedQuote);
 
      return {
@@ -480,8 +475,7 @@ export async function updateBookingStatusAction(
   }
 ): Promise<{ success: boolean; message: string; booking?: FinalQuote }> {
   try {
-    const adminDb = getFirestore(getAdminApp());
-    const existingBooking = await getBooking(adminDb, bookingId);
+    const existingBooking = await getBooking(bookingId);
 
     if (!existingBooking) {
       return { success: false, message: 'Booking not found.' };
@@ -507,7 +501,7 @@ export async function updateBookingStatusAction(
     }
 
 
-    await saveBooking(adminDb, {
+    await saveBooking({
       id: existingBooking.id,
       createdAt: existingBooking.createdAt,
       contact: finalQuote.contact,
