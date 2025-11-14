@@ -241,7 +241,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           </CardTitle>
           <CardDescription className="text-base sm:text-lg max-w-prose">
             {bookingConfirmed 
-              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is pending approval. You'll receive a final confirmation email once your e-Transfer is verified.`
+              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is now pending. You will receive a final confirmation email as soon as we approve your payment.`
               : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
@@ -575,3 +575,5 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
+
+    
