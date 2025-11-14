@@ -1,28 +1,18 @@
 
-'use server';
-
 import admin from 'firebase-admin';
 
-// This function initializes the Firebase Admin SDK.
-// It ensures that initialization happens only once.
-function initializeAdminApp() {
-  if (admin.apps.length > 0) {
-    return admin.app();
-  }
-  
+// This function ensures that the Firebase Admin SDK is initialized only once.
+if (!admin.apps.length) {
   try {
     // When running in a Google Cloud environment, the SDK can automatically
     // detect the project credentials.
-    return admin.initializeApp();
+    admin.initializeApp();
   } catch (error: any) {
     console.error('Firebase server initialization error', error.stack);
-    // Re-throw the error to make it visible to the caller.
     throw new Error('Failed to initialize Firebase Admin SDK.');
   }
 }
 
-// Call the initialization function to get the app instance.
-const adminApp = initializeAdminApp();
 // Get the Firestore instance from the initialized app.
 const firestore = admin.firestore();
 
