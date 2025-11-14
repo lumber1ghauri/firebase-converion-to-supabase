@@ -49,7 +49,7 @@ export const SERVICE_TYPE_OPTIONS = {
   mobile: {
     id: 'mobile',
     label: 'Mobile Service',
-    description: 'We travel to your location (additional fees may apply).',
+    description: 'We come to you.',
   }
 }
 
