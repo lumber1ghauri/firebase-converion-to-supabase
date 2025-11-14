@@ -152,8 +152,8 @@ const button = {
 };
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
-  <div style={{ padding: '20px', border: '1px solid #e8e8e8', borderRadius: '8px', marginBottom: '20px' }}>
-    <h3 style={{ ...sectionTitle, fontSize: '18px', textAlign: 'center', marginTop: 0, marginBottom: '16px' }}>
+  <div style={{ padding: '24px', border: '1px solid #e8e8e8', borderRadius: '12px', marginBottom: '20px', backgroundColor: '#fcfcfd' }}>
+    <h3 style={{ ...sectionTitle, fontSize: '20px', textAlign: 'center', marginTop: 0, marginBottom: '24px' }}>
       {title}
     </h3>
     {quote.lineItems.map((lineItem, index) => (
@@ -273,7 +273,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
             title={`Confirmed Quote: ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}`}
           />
         ) : (
-          <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <PriceBreakdown quote={quote.quotes.lead} title="Quote: Anum - Lead Artist"/>
             <PriceBreakdown quote={quote.quotes.team} title="Quote: Team"/>
           </div>
