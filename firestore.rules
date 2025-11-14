@@ -127,7 +127,10 @@ service cloud.firestore {
       allow delete: if isExistingOwner(clientId);
     }
      match /bookings/{bookingId} {
-        allow read, write: if true; // Allows anyone to read/write for now
+        // Allow create if user is authenticated, and allow read/update if the user is the owner
+        allow create: if request.auth != null;
+        allow read, update: if request.auth.uid == resource.data.contact.email;
+        allow delete: if false;
      }
   }
 }

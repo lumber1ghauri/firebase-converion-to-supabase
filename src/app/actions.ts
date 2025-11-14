@@ -524,21 +524,3 @@ export async function updateBookingStatusAction(
     return { success: false, message };
   }
 }
-
-export async function clientSaveBooking(quote: FinalQuote) {
-    'use server';
-    try {
-        await saveBooking({
-            id: quote.id,
-            finalQuote: quote,
-            createdAt: new Date(),
-            contact: quote.contact,
-            phone: quote.contact.phone
-        });
-        await sendQuoteEmail(quote);
-        return { success: true };
-    } catch (error: any) {
-        console.error("Client-side save failed:", error);
-        return { success: false, message: error.message };
-    }
-}

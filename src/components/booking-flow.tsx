@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -8,7 +9,7 @@ import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, 
 import { useToast } from '@/hooks/use-toast';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
-import { clientSaveBooking, generateQuoteAction } from '@/app/actions';
+import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
@@ -108,6 +109,7 @@ export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const firestore = useFirestore();
   
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -147,22 +149,31 @@ export default function BookingFlow() {
           description: state.message,
       });
     } else if (state.status === 'success' && state.quote) {
-        // This is where we handle the client-side save
         setIsSubmittingClient(true);
-        clientSaveBooking(state.quote).then(result => {
-            if (!result.success) {
+        const bookingRef = doc(firestore, 'bookings', state.quote.id);
+        const dataToSave = {
+            id: state.quote.id,
+            finalQuote: state.quote,
+            createdAt: new Date(),
+            contact: state.quote.contact,
+            phone: state.quote.contact.phone,
+            updatedAt: serverTimestamp(),
+        };
+
+        setDoc(bookingRef, dataToSave, { merge: true })
+            .catch((error) => {
+                console.error("Client-side save failed:", error);
                 toast({
                     variant: 'destructive',
                     title: 'Could not save booking',
-                    description: result.message || 'An unexpected error occurred.',
+                    description: error.message || 'An unexpected error occurred.',
                 });
-            }
-             // Let the regular state transition to QuoteConfirmation happen regardless
-        }).finally(() => {
-            setIsSubmittingClient(false);
-        });
+            })
+            .finally(() => {
+                setIsSubmittingClient(false);
+            });
     }
-  }, [state, toast, STEPS]);
+  }, [state, toast, STEPS, firestore]);
 
 
   if (state.status === 'success' && state.quote) {
