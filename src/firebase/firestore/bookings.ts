@@ -38,7 +38,7 @@ export async function saveBooking(
     // Non-blocking write with error handling
     setDoc(bookingRef, dataToSave, { merge: true })
       .then(async () => {
-          // Send email only when a quote is first created
+          // Send email only when a quote is first created and has not been confirmed yet.
           if (booking.finalQuote.status === 'quoted') {
               try {
                   await sendQuoteEmail(booking.finalQuote);
@@ -58,6 +58,8 @@ export async function saveBooking(
             requestResourceData: dataToSave,
           })
         );
+        // Re-throw the error so the caller knows the save failed.
+        throw error;
       });
 }
 

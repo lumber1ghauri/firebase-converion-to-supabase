@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBooking } from '@/firebase/firestore/bookings';
+import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -43,10 +44,11 @@ function generateWhatsAppLink(phone: string | undefined): string | null {
 }
 
 
-const PaymentDetailCard = ({ title, paymentInfo, onStatusChange }: { 
+const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, isUpdating }: { 
     title: string; 
     paymentInfo: PaymentInfo; 
     onStatusChange: (update: { depositStatus?: PaymentStatus; finalStatus?: PaymentStatus }) => void;
+    isUpdating: boolean;
 }) => {
     const isPending = paymentInfo.status === 'pending';
     const paymentType = title.toLowerCase().includes('deposit') ? 'deposit' : 'final';
@@ -58,6 +60,7 @@ const PaymentDetailCard = ({ title, paymentInfo, onStatusChange }: {
                     <CardTitle className="text-base">{title}</CardTitle>
                     <Select 
                         value={paymentInfo.status} 
+                        disabled={isUpdating}
                         onValueChange={(newStatus: PaymentStatus) => {
                             if(paymentType === 'deposit') {
                                 onStatusChange({ depositStatus: newStatus });
@@ -113,6 +116,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       setIsUpdating(true);
       
       let updatedQuote = { ...quote };
+      const wasDepositPending = updatedQuote.paymentDetails?.deposit.status === 'pending';
 
       if (update.status) {
           updatedQuote.status = update.status;
@@ -137,6 +141,24 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
               title: "Status Updated",
               description: "The booking has been successfully updated.",
           });
+
+          // Check if the deposit was just approved
+          const isDepositNowReceived = updatedQuote.paymentDetails?.deposit.status === 'received';
+          if (wasDepositPending && isDepositNowReceived) {
+              const result = await sendConfirmationEmailAction(updatedQuote.id);
+              if (result.success) {
+                toast({
+                    title: "Confirmation Sent",
+                    description: "The booking confirmation email has been sent to the client.",
+                });
+              } else {
+                toast({
+                    variant: "destructive",
+                    title: "Email Failed",
+                    description: result.message,
+                });
+              }
+          }
       } catch (error: any) {
           toast({
               variant: "destructive",
@@ -198,7 +220,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
                     <CardTitle className="text-lg">Booking Status</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Select value={quote.status} onValueChange={(newStatus: FinalQuote['status']) => handleStatusChange({ status: newStatus })}>
+                    <Select value={quote.status} onValueChange={(newStatus: FinalQuote['status']) => handleStatusChange({ status: newStatus })} disabled={isUpdating}>
                         <SelectTrigger className="w-[150px] capitalize text-base font-semibold">
                             <SelectValue placeholder="Status" />
                         </SelectTrigger>
@@ -328,11 +350,13 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
                             title="50% Deposit" 
                             paymentInfo={quote.paymentDetails.deposit}
                             onStatusChange={handleStatusChange}
+                            isUpdating={isUpdating}
                         />
                         <PaymentDetailCard 
                             title="Final Payment" 
                             paymentInfo={quote.paymentDetails.final}
                             onStatusChange={handleStatusChange}
+                            isUpdating={isUpdating}
                         />
                     </div>
                 ) : (

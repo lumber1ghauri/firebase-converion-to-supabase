@@ -3,11 +3,10 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon } from "lucide-react";
+import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
 import { saveBooking, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
-import { sendQuoteEmail } from '@/lib/email';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -191,10 +190,10 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           };
 
           await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
-          await sendQuoteEmail(updatedQuote);
+
           setQuote(updatedQuote);
           setCurrentStep('confirmed');
-          toast({ title: 'Booking Confirmed!', description: 'An email with payment details has been sent.' });
+          toast({ title: 'Booking Submitted!', description: 'Your booking is pending approval. You will receive a confirmation email once the payment is verified.' });
 
       } catch (err: any) {
           setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
@@ -237,11 +236,11 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               <CheckCircle2 className="h-16 w-16 text-primary animate-in fade-in zoom-in-50 duration-700 delay-200" />
           )}
           <CardTitle className="font-headline text-3xl sm:text-4xl mt-4">
-            {bookingConfirmed ? 'Booking Confirmed!' : 'Your Quote is Ready!'}
+            {bookingConfirmed ? 'Booking Submitted for Approval!' : 'Your Quote is Ready!'}
           </CardTitle>
           <CardDescription className="text-base sm:text-lg max-w-prose">
             {bookingConfirmed 
-              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. An email with all details has been sent.`
+              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is pending approval. You'll receive a final confirmation email once your e-Transfer is verified.`
               : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
