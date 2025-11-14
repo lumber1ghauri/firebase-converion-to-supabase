@@ -6,9 +6,9 @@ import { getFirestore } from 'firebase-admin/firestore';
 let app: App;
 
 export async function initializeServerFirebase() {
+  // Check if the app is already initialized to prevent re-initialization on every call.
+  // This is a standard pattern for serverless environments.
   if (!getApps().length) {
-    // When no configuration is provided, the Admin SDK automatically looks for
-    // Application Default Credentials, which are available in the Cloud Workstations environment.
     app = initializeApp();
   } else {
     app = getApp();

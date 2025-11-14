@@ -24,12 +24,12 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
       const data = docSnap.data();
       if (!data) return null;
       
-      // Convert Firestore Timestamps to Dates if they exist
+      // Explicitly convert Firestore Timestamps to JS Dates for serialization.
       const finalData: any = { ...data };
-      if (finalData.createdAt && finalData.createdAt.toDate) {
+      if (finalData.createdAt && typeof finalData.createdAt.toDate === 'function') {
           finalData.createdAt = finalData.createdAt.toDate();
       }
-      if (finalData.updatedAt && finalData.updatedAt.toDate) {
+      if (finalData.updatedAt && typeof finalData.updatedAt.toDate === 'function') {
           finalData.updatedAt = finalData.updatedAt.toDate();
       }
       
