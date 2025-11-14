@@ -127,21 +127,19 @@ export default function BookingFlow() {
   }, [hasBridalService]);
   
   useEffect(() => {
-    if (state.status === 'error') {
-      if (state.errors?.trialDate) {
-        setCurrentStep(2);
-      } else if (state.errors?.name || state.errors?.email || state.errors?.phone) {
-        setCurrentStep(STEPS.find(s => s.name === 'Contact Details')!.id);
-      } else {
-        setCurrentStep(1);
-      }
-      if (state.message) {
-         toast({
-            variant: 'destructive',
-            title: 'Booking Error',
-            description: state.message,
-        });
-      }
+    if (state.status === 'error' && state.message) {
+      const stepWithError =
+        state.errors?.trialDate ? 2
+        : state.errors?.name || state.errors?.email || state.errors?.phone ? STEPS.find(s => s.name === 'Contact Details')!.id
+        : 1;
+      
+      setCurrentStep(stepWithError);
+
+      toast({
+          variant: 'destructive',
+          title: 'Booking Error',
+          description: state.message,
+      });
     }
   }, [state, toast, STEPS]);
 
@@ -151,15 +149,14 @@ export default function BookingFlow() {
   }
 
   const nextStep = () => {
-    // Client-side validation before proceeding
     if (currentStep === 1) {
         for (const day of days) {
             if (!day.serviceId) {
-                toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a service for each booking day.' });
+                toast({ variant: 'destructive', title: 'Validation Error', description: `Please select a service for Day ${days.indexOf(day) + 1}.` });
                 return;
             }
             if (day.serviceType === 'mobile' && !day.mobileLocation) {
-                toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a mobile service location for all mobile service days.' });
+                toast({ variant: 'destructive', title: 'Validation Error', description: `Please select a mobile service location for Day ${days.indexOf(day) + 1}.` });
                 return;
             }
         }
@@ -417,8 +414,9 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                                 if (value === 'toronto') {
                                     updateDay(day.id, { mobileLocation: 'toronto' });
                                 } else {
-                                    // Default to undefined so user has to pick a sub-option
-                                    updateDay(day.id, { mobileLocation: undefined });
+                                    // Default to the first non-toronto option
+                                    const firstOutsideOption = Object.keys(MOBILE_LOCATION_OPTIONS).find(key => key !== 'toronto') as MOBILE_LOCATION_IDS | undefined;
+                                    updateDay(day.id, { mobileLocation: firstOutsideOption });
                                 }
                             }}
                             className="grid grid-cols-2 gap-4 mt-2"
@@ -528,11 +526,6 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
   updateBridalPartyQty: (field: keyof BridalPartyServices, increase: boolean) => void;
 }) {
   const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
-  const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
-
-  if (!hasBridalService) {
-      return null;
-  }
 
   return (
     <div className="space-y-8 animate-in fade-in-50 slide-in-from-top-10 duration-700">
