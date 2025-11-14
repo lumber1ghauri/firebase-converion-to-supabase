@@ -6,15 +6,17 @@ import { getBooking } from '@/firebase/firestore/bookings';
 import type { BookingDocument } from '@/firebase/firestore/bookings';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { Loader2 } from 'lucide-react';
+import { useFirestore } from '@/firebase';
 
 export default function BookPage({ params }: { params: { bookingId: string } }) {
   const [booking, setBooking] = useState<BookingDocument | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const db = useFirestore();
 
   useEffect(() => {
-    if (params.bookingId) {
-      getBooking(params.bookingId)
+    if (params.bookingId && db) {
+      getBooking(db, params.bookingId)
         .then(bookingData => {
           if (bookingData) {
             setBooking(bookingData);
@@ -30,7 +32,7 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
           setLoading(false);
         });
     }
-  }, [params.bookingId]);
+  }, [params.bookingId, db]);
 
   if (loading) {
     return (

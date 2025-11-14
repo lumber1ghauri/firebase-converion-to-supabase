@@ -1,9 +1,6 @@
 
-'use server';
-
-import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs, Firestore, Timestamp } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
-import { getFirestore } from '@/firebase';
 
 export type BookingDocument = {
     id: string;
@@ -14,23 +11,23 @@ export type BookingDocument = {
     phone: string;
 }
 
-// Server-side action helper
-export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
-    const db = getFirestore();
+export async function saveBooking(db: Firestore, booking: Omit<BookingDocument, 'updatedAt'>) {
     if (!db) {
         console.error("Firestore is not initialized. Skipping saveBooking.");
         return;
     }
     const bookingRef = doc(db, 'bookings', booking.id);
-    await setDoc(bookingRef, {
+    // Convert Date objects to Timestamps for Firestore
+    const dataToSave = {
         ...booking,
+        createdAt: Timestamp.fromDate(booking.createdAt),
         updatedAt: serverTimestamp(),
-    }, { merge: true });
+    };
+    await setDoc(bookingRef, dataToSave, { merge: true });
 }
 
 
-export async function getBooking(bookingId: string): Promise<BookingDocument | null> {
-    const db = getFirestore();
+export async function getBooking(db: Firestore, bookingId: string): Promise<BookingDocument | null> {
     if (!db) {
         console.error("Firestore is not initialized. Skipping getBooking.");
         return null;
@@ -52,8 +49,7 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
     }
 }
 
-export async function getAllBookings(): Promise<BookingDocument[]> {
-    const db = getFirestore();
+export async function getAllBookings(db: Firestore): Promise<BookingDocument[]> {
     if (!db) {
         console.error("Firestore is not initialized. Skipping getAllBookings.");
         return [];

@@ -14,6 +14,7 @@ import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
+import { useFirestore } from '@/firebase';
 
 
 function getTimeToEvent(eventDateStr: string): string {
@@ -71,10 +72,11 @@ export default function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
+  const db = useFirestore();
 
   const fetchBookings = () => {
     setLoading(true);
-    getAllBookings()
+    getAllBookings(db)
       .then(data => {
         const sortedData = data.sort((a, b) => {
             try {
@@ -82,7 +84,7 @@ export default function AdminDashboard() {
                 const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
                 if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
                 return dateA.getTime() - dateB.getTime();
-            } catch (e) {
+            } catch (e) => {
                 return 0;
             }
         });
@@ -99,7 +101,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchBookings();
-  }, []);
+  }, [db]);
   
   const filteredBookings = useMemo(() => {
     if (!searchTerm) return bookings;
@@ -124,14 +126,14 @@ export default function AdminDashboard() {
   };
   
   const handleUpdateBooking = (updatedQuote: FinalQuote) => {
-      // This function updates the local state, providing an instant UI update.
-      // The `revalidatePath` in the server action ensures the next server render is fresh.
       setBookings(currentBookings => 
           currentBookings.map(b => b.id === updatedQuote.id ? { ...b, finalQuote: updatedQuote } : b)
       );
        setSelectedBooking(currentBooking => 
           currentBooking && currentBooking.id === updatedQuote.id ? { ...currentBooking, finalQuote: updatedQuote } : currentBooking
       );
+      // Optionally refetch all data to ensure consistency
+      fetchBookings();
   }
 
   if (loading) {
@@ -262,5 +264,3 @@ export default function AdminDashboard() {
     </div>
   );
 }
-
-    

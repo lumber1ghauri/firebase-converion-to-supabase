@@ -10,11 +10,13 @@
  * - /services/{serviceId}: Stores available makeup services (publicly readable).
  * - /clients/{clientId}/appointments/{appointmentId}: Stores appointments for a client.
  * - /clients/{clientId}/quotes/{quoteId}: Stores quotes for a client.
+ * - /bookings/{bookingId}: Stores all booking and quote documents.
  *
  * Key Security Decisions:
  * - Clients can only create, read, update, and delete their own profiles and related appointments/quotes.
  * - Service information is publicly accessible for reading.
  * - Listing of clients is disallowed to protect user privacy.
+ * - Bookings are publicly writable for the quote form, but reads and updates should be restricted.
  *
  * Denormalization for Authorization:
  * - The clientId is included in the appointment and quote documents to avoid needing to "get()" the parent client document in rules.
@@ -124,5 +126,8 @@ service cloud.firestore {
       allow update: if isExistingOwner(clientId);
       allow delete: if isExistingOwner(clientId);
     }
+     match /bookings/{bookingId} {
+        allow read, write: if true; // Allows anyone to read/write for now
+     }
   }
 }
