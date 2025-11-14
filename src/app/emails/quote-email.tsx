@@ -69,12 +69,6 @@ const grandTotalStyle = {
     borderTop: 'none',
 }
 
-const totalDescription = {
-  fontSize: '18px',
-  color: '#484848',
-  fontWeight: 700,
-};
-
 const totalPrice = {
   fontSize: '24px',
   color: '#484848',
@@ -95,7 +89,7 @@ const button = {
   margin: '20px auto',
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+const baseUrl = "https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev";
 
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
@@ -120,7 +114,7 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
         <p style={itemPrice}>${quote.tax.toFixed(2)}</p>
     </div>
     <div style={grandTotalStyle}>
-      <p style={totalDescription}>Grand Total</p>
+      <p style={{...itemDescription, fontSize: '18px', color: '#484848', fontWeight: 700}}>Grand Total</p>
       <p style={totalPrice}>${quote.total.toFixed(2)}</p>
     </div>
   </div>
