@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard } from "lucide-react";
@@ -278,7 +279,9 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 )}
                 
                 <div className="p-4 mt-6">
-                    <h3 className="font-headline text-2xl text-center mb-4">Select Your Artist Tier</h3>
+                    { (showLeadArtistOption || showTeamOption) && !(showLeadArtistOption && !showTeamOption) && (
+                         <h3 className="font-headline text-2xl text-center mb-4">Select Your Artist Tier</h3>
+                    )}
                      <RadioGroup 
                         value={selectedTier} 
                         onValueChange={(val) => setSelectedTier(val as PriceTier)} 
@@ -478,3 +481,5 @@ function SubmitButton({ text = "Confirm Booking & Proceed to Payment", disabled 
         </Button>
     )
 }
+
+    
