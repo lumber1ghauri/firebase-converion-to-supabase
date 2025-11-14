@@ -31,19 +31,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    // allowedDevOrigins is now nested inside experimental
-    allowedDevOrigins: [
-        "https-6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev",
-        "https-6000-firebase-sellaya-backup-01-1762673440166.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev"
-    ],
-    serverActions: {
-      bodySizeLimit: '2mb',
-      serverActions: {
-        bodySizeLimit: '2mb',
-      },
-    },
-  },
+  allowedDevOrigins: [
+    "https-6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev",
+    "https-6000-firebase-sellaya-backup-01-1762673440166.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev"
+  ],
   serverActions: {
     bodySizeLimit: '2mb',
   },
