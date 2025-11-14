@@ -11,6 +11,7 @@ import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
+import type { MOBILE_LOCATION_IDS } from '@/lib/services';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,7 +40,8 @@ const initialState: ActionState = {
 const getInitialDays = (): Day[] => {
     return [{ 
         id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
-        hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false
+        hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false,
+        serviceType: 'studio',
     }];
 };
 
@@ -95,8 +97,8 @@ function generateTimeSlots() {
 const timeSlots = generateTimeSlots();
 
 const STEPS = [
-  { id: 1, name: 'Location & Services' },
-  { id: 2, name: 'Makeup Services' },
+  { id: 1, name: 'Services & Dates' },
+  { id: 2, name: 'Bridal Options' },
   { id: 3, name: 'Contact Details' },
 ];
 
@@ -110,10 +112,6 @@ export default function BookingFlow() {
   const [days, setDays] = useState<Day[]>(() => getInitialDays());
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
-  
-  const [serviceType, setServiceType] = useState<ServiceType>((state.fieldValues?.serviceType as ServiceType) || 'studio');
-  const [mobileLocation, setMobileLocation] = useState<keyof typeof MOBILE_LOCATION_OPTIONS>((state.fieldValues?.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS) || 'toronto');
-  const [showOutsideTorontoOptions, setShowOutsideTorontoOptions] = useState(false);
   
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
@@ -182,52 +180,10 @@ export default function BookingFlow() {
         <div className={cn(currentStep !== 1 && 'hidden')}>
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">1. Location & Services</CardTitle>
-                    <CardDescription>First, choose your service type, then select services, dates, and times for your booking.</CardDescription>
+                    <CardTitle className="font-headline text-2xl">1. Services & Dates</CardTitle>
+                    <CardDescription>Select services, dates, and times for your booking.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                     <div>
-                        <Label className="text-lg font-medium">Service Type *</Label>
-                        <RadioGroup name="serviceType" value={serviceType} onValueChange={(value) => setServiceType(value as ServiceType)} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" required>
-                            {Object.values(SERVICE_TYPE_OPTIONS).map(opt => (
-                                <Label key={opt.id} className="flex flex-col items-start space-y-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
-                                    <div className="flex items-center gap-2">
-                                        <RadioGroupItem value={opt.id} id={opt.id} />
-                                        <span className="font-semibold">{opt.label}</span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground ml-6">{opt.description}</p>
-                                </Label>
-                            ))}
-                        </RadioGroup>
-                        {state.errors?.serviceType && <p className="text-sm text-destructive mt-2">{state.errors.serviceType[0]}</p>}
-                    </div>
-
-                    {serviceType === 'mobile' && (
-                        <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300">
-                            <Label className="text-lg font-medium">Mobile Service Location *</Label>
-                            <div className="flex items-center gap-4 mt-2">
-                                <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); setMobileLocation('toronto'); }}>Toronto / GTA</Button>
-                                <Button type="button" variant={showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); setMobileLocation('immediate-neighbors'); }}>Outside Toronto / GTA</Button>
-                            </div>
-                            
-                            <input type="hidden" name="mobileLocation" value={mobileLocation} />
-
-                            {showOutsideTorontoOptions && (
-                                <RadioGroup value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS)} className="grid grid-cols-1 gap-4 mt-4" required>
-                                    {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
-                                        <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
-                                            <RadioGroupItem value={opt.id} id={`mobile-${opt.id}`} />
-                                            <span>{opt.label}</span>
-                                        </Label>
-                                    ))}
-                                </RadioGroup>
-                            )}
-                            {state.errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{state.errors.mobileLocation[0]}</p>}
-                        </div>
-                    )}
-                    
-                    <Separator />
-
                     <div className="space-y-6">
                       {days.map((day, index) => (
                           <BookingDayCard
@@ -237,9 +193,10 @@ export default function BookingFlow() {
                               updateDay={(id, data) => setDays(days.map(d => d.id === id ? {...d, ...data} : d))}
                               removeDay={(id) => setDays(days.filter(d => d.id !== id))}
                               isOnlyDay={days.length <= 1}
+                              errors={state.errors}
                           />
                       ))}
-                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false }])} className="w-full">
+                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false, serviceType: 'studio' }])} className="w-full">
                       <Plus className="mr-2 h-4 w-4" /> Add Another Day
                       </Button>
                     </div>
@@ -311,20 +268,29 @@ export default function BookingFlow() {
   );
 }
 
-function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay }: {
+function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }: {
     day: Day;
     index: number;
     updateDay: (id: number, data: Partial<Omit<Day, 'id'>>) => void;
     removeDay: (id: number) => void;
     isOnlyDay: boolean;
+    errors: ActionState['errors'];
 }) {
     const service = SERVICES.find(s => s.id === day.serviceId);
     const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+    const [showOutsideTorontoOptions, setShowOutsideTorontoOptions] = useState(day.mobileLocation !== 'toronto' && !!day.mobileLocation);
+
 
     return (
         <div className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
             <input type="hidden" name={`day_id_${index}`} value={day.id} />
+             {!isOnlyDay && (
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeDay(day.id)} className="absolute top-2 right-2 hover:bg-destructive/20 hover:text-destructive">
+                    <Trash2 className="h-5 w-5" />
+                </Button>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <Label htmlFor={`date-${index}`}>Day {index + 1} - Date *</Label>
@@ -357,9 +323,51 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay }: {
                 </div>
             </div>
 
+            <Separator />
+            <div>
+                <Label className="text-md font-medium">Service Type *</Label>
+                <RadioGroup name={`serviceType_${index}`} value={day.serviceType} onValueChange={(value) => updateDay(day.id, { serviceType: value as ServiceType })} className="grid grid-cols-2 gap-4 mt-2" required>
+                    {Object.values(SERVICE_TYPE_OPTIONS).map(opt => (
+                        <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                            <RadioGroupItem value={opt.id} id={`${day.id}-${opt.id}`} />
+                            <div className='flex flex-col'>
+                                <span className="font-semibold">{opt.label}</span>
+                                <span className="text-sm text-muted-foreground">{opt.description}</span>
+                            </div>
+                        </Label>
+                    ))}
+                </RadioGroup>
+                {errors?.serviceType && <p className="text-sm text-destructive mt-2">{errors.serviceType[0]}</p>}
+            </div>
+
+            {day.serviceType === 'mobile' && (
+                <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300 space-y-4">
+                    <Label className="text-md font-medium">Mobile Service Location *</Label>
+                    <div className="flex items-center gap-4">
+                        <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); updateDay(day.id, { mobileLocation: 'toronto' }); }}>Toronto / GTA</Button>
+                        <Button type="button" variant={showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); updateDay(day.id, { mobileLocation: 'immediate-neighbors' }); }}>Outside Toronto / GTA</Button>
+                    </div>
+
+                    <input type="hidden" name={`mobileLocation_${index}`} value={day.mobileLocation} />
+
+                    {showOutsideTorontoOptions && (
+                        <RadioGroup value={day.mobileLocation} onValueChange={(value) => updateDay(day.id, { mobileLocation: value as MOBILE_LOCATION_IDS })} className="grid grid-cols-1 gap-2 mt-4" required>
+                            {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
+                                <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                    <RadioGroupItem value={opt.id} id={`${day.id}-mobile-${opt.id}`} />
+                                    <span>{opt.label}</span>
+                                </Label>
+                            ))}
+                        </RadioGroup>
+                    )}
+                    {errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{errors.mobileLocation[0]}</p>}
+                </div>
+            )}
+
+
             {service?.askServiceType && (
                 <div className='pt-4'>
-                    <Label>Service Type *</Label>
+                    <Label>Service Option *</Label>
                     <RadioGroup name={`serviceOption_${index}`} value={day.serviceOption || 'makeup-hair'} onValueChange={(val) => updateDay(day.id, { serviceOption: val as ServiceOption })} className="grid grid-cols-3 gap-4 pt-2">
                             {Object.entries(SERVICE_OPTION_DETAILS).map(([id, {label}]) => (
                             <Label key={id} className="flex items-center space-x-2 border rounded-md p-2 justify-center cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors text-sm">
@@ -417,12 +425,6 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay }: {
                 </Card>
             )}
 
-
-            {!isOnlyDay && (
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeDay(day.id)} className="absolute top-2 right-2 hover:bg-destructive/20 hover:text-destructive">
-                    <Trash2 className="h-5 w-5" />
-                </Button>
-            )}
         </div>
     );
 }
@@ -443,7 +445,7 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
       return (
         <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
             <CardHeader>
-                <CardTitle className="font-headline text-2xl">2. Makeup Services</CardTitle>
+                <CardTitle className="font-headline text-2xl">2. Bridal Options</CardTitle>
             </CardHeader>
             <CardContent>
                 <Alert>

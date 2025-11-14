@@ -53,14 +53,14 @@ export const SERVICE_TYPE_OPTIONS = {
   }
 }
 
-export const STUDIO_ADDRESS: {street: string, city: string, province: string, postalCode: string, country: string} = {
+export const STUDIO_ADDRESS: {street: string, city: string, province: string, postalCode: string, country: string, googleMapsUrl: string} = {
     street: "123 Glamour Lane",
     city: "Toronto",
     province: "ON",
     postalCode: "M5V 2T6",
     country: "Canada",
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=123+Glamour+Lane+Toronto+ON"
 }
-
 
 export const MOBILE_LOCATION_OPTIONS = {
   toronto: {
@@ -84,6 +84,9 @@ export const MOBILE_LOCATION_OPTIONS = {
     surcharge: 150,
   },
 };
+
+export type MOBILE_LOCATION_IDS = keyof typeof MOBILE_LOCATION_OPTIONS;
+
 
 export const ADDON_PRICES = {
     hairExtension: 20, // Price per extension

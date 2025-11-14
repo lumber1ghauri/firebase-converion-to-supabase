@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { MOBILE_LOCATION_OPTIONS } from "./services";
 
 export type ServiceOption = 'makeup-hair' | 'makeup-only' | 'hair-only';
 
@@ -30,6 +31,8 @@ export type BridalPartyServices = {
     airbrush: boolean;
 };
 
+export type ServiceType = 'studio' | 'mobile';
+
 export type Day = {
   id: number;
   date: Date | undefined;
@@ -40,6 +43,8 @@ export type Day = {
   jewellerySetting: boolean;
   sareeDraping: boolean;
   hijabSetting: boolean;
+  serviceType: ServiceType;
+  mobileLocation?: keyof typeof MOBILE_LOCATION_OPTIONS;
 };
 
 export type BridalTrial = {
@@ -50,7 +55,6 @@ export type BridalTrial = {
 
 export type Quote = {
   lineItems: { description: string; price: number }[];
-  surcharge: { description:string; price: number } | null;
   total: number;
 };
 
@@ -66,25 +70,24 @@ export type PartyBooking = {
     quantity: number;
 };
 
-export type ServiceType = 'studio' | 'mobile';
-
 export type FinalQuote = {
   id: string; // Unique booking ID
   contact: { name: string; email: string };
   booking: {
-    serviceType: ServiceType;
     days: { 
         date: string; 
         getReadyTime: string;
         serviceName: string;
         serviceOption: string;
+        serviceType: ServiceType;
+        location: string;
         addOns: string[];
     }[];
+    hasMobileService: boolean;
     bridalParty?: {
         services: PartyBooking[];
         airbrush: boolean;
     },
-    location: string;
     address?: Address;
     trial?: {
         date: string;

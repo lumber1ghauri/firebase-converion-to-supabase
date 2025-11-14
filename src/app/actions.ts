@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking, ServiceType } from '@/lib/types';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
-import { saveBooking as saveBookingToDb } from '@/firebase/firestore/bookings';
+import { saveBooking } from '@/firebase/firestore/bookings';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -16,11 +16,6 @@ const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().regex(phoneRegex, { message: 'Please enter a valid phone number.' }),
-  serviceType: z.enum(['studio', 'mobile'], { required_error: 'Please select a service type.' }),
-  mobileLocation: z.string().optional(),
-}).refine(data => data.serviceType !== 'mobile' || !!data.mobileLocation, {
-    message: 'Please select a mobile service location.',
-    path: ['mobileLocation'],
 });
 
 const AddressSchema = z.object({
@@ -46,6 +41,8 @@ function parseDaysFromFormData(formData: FormData): Omit<Day, 'id'>[] {
                 jewellerySetting: formData.get(`jewellerySetting_${i}`) === 'on',
                 sareeDraping: formData.get(`sareeDraping_${i}`) === 'on',
                 hijabSetting: formData.get(`hijabSetting_${i}`) === 'on',
+                serviceType: formData.get(`serviceType_${i}`) as ServiceType,
+                mobileLocation: formData.get(`mobileLocation_${i}`) as keyof typeof MOBILE_LOCATION_OPTIONS | undefined,
             });
         }
         i++;
@@ -86,9 +83,6 @@ export async function generateQuoteAction(
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         phone: formData.get('phone') as string,
-        serviceType: formData.get('serviceType') as ServiceType,
-        mobileLocation: formData.get('mobileLocation') as keyof typeof MOBILE_LOCATION_OPTIONS,
-        // We will pass the rest of the form data to fieldValues to repopulate the form
         ...Object.fromEntries(formData.entries()),
     };
 
@@ -114,6 +108,16 @@ export async function generateQuoteAction(
             message: 'Please select a date, time, and service for each booking.',
             quote: null,
             errors: { form: ['Please select a date, time, and service for each booking day.'] },
+            fieldValues
+        };
+    }
+
+     if (days.some(d => d.serviceType === 'mobile' && !d.mobileLocation)) {
+        return {
+            status: 'error',
+            message: 'Please select a mobile service location for all mobile service days.',
+            quote: null,
+            errors: { form: ['Please select a mobile service location for all mobile service days.'] },
             fieldValues
         };
     }
@@ -185,6 +189,7 @@ export async function generateQuoteAction(
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
     const bookingDays: FinalQuote['booking']['days'] = [];
+    let totalSurcharge = 0;
 
     days.forEach((day, index) => {
         const service = SERVICES.find((s) => s.id === day.serviceId);
@@ -221,11 +226,21 @@ export async function generateQuoteAction(
               subtotal += ADDON_PRICES.hijabSetting;
               addOns.push("Bride's Hijab Setting");
           }
+          
+          const daySurcharge = day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].surcharge : 0;
+          if (daySurcharge > 0) {
+              const locationLabel = MOBILE_LOCATION_OPTIONS[day.mobileLocation].label;
+              lineItems.push({ description: `  - Travel Surcharge (${locationLabel})`, price: daySurcharge });
+              subtotal += daySurcharge;
+              totalSurcharge += daySurcharge;
+          }
 
           bookingDays.push({ 
               date: format(day.date, "PPP"), 
               getReadyTime: day.getReadyTime,
               serviceName: service.name,
+              serviceType: day.serviceType,
+              location: day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].label : "Studio",
               serviceOption: service.askServiceType ? serviceOption.label : 'Standard',
               addOns
           });
@@ -287,13 +302,8 @@ export async function generateQuoteAction(
             subtotal += BRIDAL_PARTY_PRICES.airbrush;
         }
     }
-
-
-    const locationSurcharge = validatedFields.data.serviceType === 'mobile' && validatedFields.data.mobileLocation ? MOBILE_LOCATION_OPTIONS[validatedFields.data.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS].surcharge : 0;
-    const locationLabel = validatedFields.data.serviceType === 'mobile' && validatedFields.data.mobileLocation ? MOBILE_LOCATION_OPTIONS[validatedFields.data.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS].label : "Studio Service";
     
-    const total = subtotal + locationSurcharge;
-    
+    const total = subtotal; // Surcharges are now part of line items
     const bookingId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     const finalQuote: FinalQuote = {
@@ -303,9 +313,8 @@ export async function generateQuoteAction(
             email: validatedFields.data.email,
         },
         booking: {
-            serviceType: validatedFields.data.serviceType,
             days: bookingDays,
-            location: locationLabel,
+            hasMobileService: days.some(d => d.serviceType === 'mobile'),
             trial: (bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) 
                 ? { date: format(bridalTrial.date, "PPP"), time: bridalTrial.time }
                 : undefined,
@@ -313,23 +322,12 @@ export async function generateQuoteAction(
         },
         quote: {
             lineItems,
-            surcharge: locationSurcharge > 0 ? { description: "Travel Surcharge", price: locationSurcharge } : null,
             total,
         },
         status: 'quoted'
     };
     
-    try {
-        await saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() });
-    } catch (error: any) {
-         return {
-            status: 'error',
-            message: `Failed to finalize booking: ${error.message}`,
-            quote: null,
-            errors: null,
-            fieldValues,
-        };
-    }
+    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
     
     return {
         status: 'success',
@@ -353,22 +351,13 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     }
     const finalQuote: FinalQuote = JSON.parse(finalQuoteString);
 
-    if (finalQuote.booking.serviceType === 'studio') {
+    if (!finalQuote.booking.hasMobileService) {
         const updatedQuote: FinalQuote = {
             ...finalQuote,
             status: 'confirmed'
         };
 
-        try {
-            await saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
-        } catch (error: any) {
-             return {
-                status: 'success',
-                message: `Failed to confirm booking: ${error.message}`,
-                quote: finalQuote,
-                errors: { form: [`Failed to confirm booking: ${error.message}`] },
-            }
-        }
+        await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
         
         console.log("Redirecting to Stripe with quote:", updatedQuote);
         return {
@@ -378,7 +367,6 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             errors: null,
         };
     }
-
 
     const addressData = {
         street: formData.get('street'),
@@ -406,22 +394,11 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         status: 'confirmed'
     };
     
-    try {
-        await saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
-    } catch (error: any) {
-        return {
-            status: 'success', // Keep rendering confirmation page
-            message: `Failed to send confirmation: ${error.message}`,
-            quote: finalQuote, // Return original quote
-            errors: { form: [`Failed to send confirmation: ${error.message}`] },
-        }
-    }
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
 
     // This is where you would redirect to Stripe
     console.log("Redirecting to Stripe with quote:", updatedQuote);
 
-
-    // For now, we'll just return a success state with a different message
      return {
         status: 'success',
         message: 'Booking Confirmed! A confirmation email with the address has been sent.',

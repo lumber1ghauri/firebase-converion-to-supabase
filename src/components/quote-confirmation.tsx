@@ -1,6 +1,8 @@
+'use client';
+
 import { useActionState, useMemo } from 'react';
 import { useFormStatus } from 'react-dom';
-import { CheckCircle2, IndianRupee, Loader2 } from "lucide-react";
+import { CheckCircle2, IndianRupee, Loader2, MapPin } from "lucide-react";
 import type { FinalQuote } from "@/lib/types";
 import { confirmBookingAction } from '@/app/actions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +27,8 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
 
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const currentQuote = state.quote || quote;
+  const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
+
 
   return (
     <div className="w-full max-w-3xl mx-auto py-8 sm:py-12">
@@ -62,6 +66,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                       <span>{day.serviceName}</span>
                     </div>
                     <div className="text-muted-foreground ml-2">- {day.serviceOption}</div>
+                     <div className="text-muted-foreground ml-2">- {day.location}</div>
                     {day.addOns.length > 0 && day.addOns.map((addon, i) => (
                       <div key={i} className="text-muted-foreground ml-2">- {addon}</div>
                     ))}
@@ -84,58 +89,67 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                     </li>
                  )}
               </ul>
-              <Separator className="my-3" />
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Location:</span>
-                <span className="font-medium">{currentQuote.booking.location}</span>
-              </div>
             </div>
 
-            <div className="p-4 border rounded-lg bg-background/50">
-                <h3 className="font-headline text-xl mb-4">Service Address</h3>
-                 {currentQuote.booking.serviceType === 'studio' ? (
-                    <div className='text-sm space-y-1'>
-                        <p className='font-medium'>{STUDIO_ADDRESS.street}</p>
+            {currentQuote.booking.days.some(d => d.serviceType === 'studio') && (
+                <div className="p-4 border rounded-lg bg-background/50">
+                    <h3 className="font-headline text-xl mb-4">Studio Address</h3>
+                    <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group hover:bg-accent p-2 rounded-md transition-colors">
+                        <p className='font-medium group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
                         <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
-                        <p className='text-muted-foreground'>{STUDIO_ADDRESS.country}</p>
-                    </div>
-                ) : bookingConfirmed && currentQuote.booking.address ? (
+                        <div className='flex items-center gap-2 pt-1'>
+                            <MapPin className='w-4 h-4 text-primary'/>
+                            <span className='text-primary font-medium'>View on Google Maps</span>
+                        </div>
+                    </a>
+                </div>
+            )}
+            
+            {requiresAddress && !bookingConfirmed && (
+                <div className="p-4 border rounded-lg bg-background/50">
+                    <h3 className="font-headline text-xl mb-4">Mobile Service Address</h3>
+                    <div className='space-y-4'>
+                            {state.status !== 'idle' && state.errors && (
+                                <Alert variant="destructive">
+                                    <AlertDescription>{state.message || "Please correct the errors below."}</AlertDescription>
+                                </Alert>
+                            )}
+                            <div>
+                                <Label htmlFor="street">Street Address</Label>
+                                <Input id="street" name="street" placeholder="123 Glamour Ave" required />
+                                {state.errors?.street && <p className="text-sm text-destructive mt-1">{state.errors.street[0]}</p>}
+                            </div>
+                            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                                <div>
+                                    <Label htmlFor="city">City</Label>
+                                    <Input id="city" name="city" placeholder="Toronto" required />
+                                    {state.errors?.city && <p className="text-sm text-destructive mt-1">{state.errors.city[0]}</p>}
+                                </div>
+                                <div>
+                                    <Label htmlFor="province">Province</Label>
+                                    <Input id="province" name="province" value="ON" readOnly required />
+                                    {state.errors?.province && <p className="text-sm text-destructive mt-1">{state.errors.province[0]}</p>}
+                                </div>
+                                <div>
+                                    <Label htmlFor="postalCode">Postal Code</Label>
+                                    <Input id="postalCode" name="postalCode" placeholder="M5V 2T6" required />
+                                    {state.errors?.postalCode && <p className="text-sm text-destructive mt-1">{state.errors.postalCode[0]}</p>}
+                                </div>
+                            </div>
+                        </div>
+                </div>
+            )}
+            
+            {bookingConfirmed && currentQuote.booking.address && (
+                 <div className="p-4 border rounded-lg bg-background/50">
+                    <h3 className="font-headline text-xl mb-4">Service Address</h3>
                     <div className='text-sm space-y-1'>
                         <p className='font-medium'>{currentQuote.booking.address.street}</p>
                         <p className='text-muted-foreground'>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>
                     </div>
-                ) : (
-                    <div className='space-y-4'>
-                         {state.status !== 'idle' && state.errors && (
-                            <Alert variant="destructive">
-                                <AlertDescription>{state.message || "Please correct the errors below."}</AlertDescription>
-                            </Alert>
-                         )}
-                        <div>
-                            <Label htmlFor="street">Street Address</Label>
-                            <Input id="street" name="street" placeholder="123 Glamour Ave" required />
-                            {state.errors?.street && <p className="text-sm text-destructive mt-1">{state.errors.street[0]}</p>}
-                        </div>
-                        <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                            <div>
-                                <Label htmlFor="city">City</Label>
-                                <Input id="city" name="city" placeholder="Toronto" required />
-                                {state.errors?.city && <p className="text-sm text-destructive mt-1">{state.errors.city[0]}</p>}
-                            </div>
-                            <div>
-                                <Label htmlFor="province">Province</Label>
-                                <Input id="province" name="province" value="ON" readOnly required />
-                                {state.errors?.province && <p className="text-sm text-destructive mt-1">{state.errors.province[0]}</p>}
-                            </div>
-                            <div>
-                                <Label htmlFor="postalCode">Postal Code</Label>
-                                <Input id="postalCode" name="postalCode" placeholder="M5V 2T6" required />
-                                {state.errors?.postalCode && <p className="text-sm text-destructive mt-1">{state.errors.postalCode[0]}</p>}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
+
 
             <div className="p-4 border rounded-lg bg-background/50">
               <h3 className="font-headline text-xl mb-3">Price Breakdown</h3>
@@ -146,15 +160,6 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                     <span className="font-medium">${item.price.toFixed(2)}</span>
                   </li>
                 ))}
-                {currentQuote.quote.surcharge && (
-                  <>
-                    <Separator className="my-2" />
-                    <li className="flex justify-between font-medium">
-                      <span>{currentQuote.quote.surcharge!.description}</span>
-                      <span>${currentQuote.quote.surcharge!.price.toFixed(2)}</span>
-                    </li>
-                  </>
-                )}
               </ul>
             </div>
           </CardContent>
