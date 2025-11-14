@@ -347,9 +347,13 @@ export async function generateQuoteAction(
         status: 'quoted'
     };
     
-    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
-    
-    await sendQuoteEmail(finalQuote);
+    try {
+      await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
+      await sendQuoteEmail(finalQuote);
+    } catch (e) {
+        console.error("Failed to save booking or send email", e);
+        // Depending on the desired behavior, you might want to return an error state here
+    }
 
     return {
         status: 'success',
@@ -395,7 +399,6 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         };
 
         await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
-        
         await sendQuoteEmail(updatedQuote);
 
         return {
@@ -434,7 +437,6 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     };
     
     await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
-
     await sendQuoteEmail(updatedQuote);
 
      return {

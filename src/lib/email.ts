@@ -10,7 +10,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
     console.log("RESEND_API_KEY not set or is a placeholder. Skipping email.");
-    console.log("Email would be sent to:", quote.contact.email);
+    console.log("Email would have been sent to:", quote.contact.email, "with subject:", subject);
     return;
   }
   
@@ -34,7 +34,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
       return;
     }
 
-    console.log('Email sent successfully for booking ID:', quote.id);
+    console.log('Email sent successfully for booking ID:', quote.id, 'to:', quote.contact.email);
   } catch (error) {
     console.error('Failed to send email:', error);
   }
