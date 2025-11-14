@@ -1,7 +1,7 @@
 
 'use client';
 
-import type { FinalQuote, PriceTier } from '@/lib/types';
+import type { FinalQuote, PriceTier, PaymentDetails } from '@/lib/types';
 import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
@@ -78,18 +78,12 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
       const updatedQuote = { ...quote, status: newStatus };
 
       try {
-          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBookingClient(firestore, { ...bookingDoc, finalQuote: updatedQuote });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
               description: `Booking moved to '${newStatus}'.`,
           });
-
-          // If the booking is confirmed, automatically send the confirmation email.
-          if (newStatus === 'confirmed') {
-              await handleSendConfirmation();
-          }
-
       } catch (error: any) {
           toast({
               variant: "destructive",
@@ -100,12 +94,48 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
           setIsUpdating(false);
       }
   };
-  
-  const handleSendConfirmation = async () => {
-    if (quote.status !== 'confirmed') {
-        toast({ variant: 'destructive', title: 'Not Confirmed', description: 'Cannot send confirmation for a booking that is not confirmed.' });
+
+  const handlePaymentStatusChange = async (newPaymentStatus: PaymentDetails['status']) => {
+    if (!user || !firestore || !bookingDoc || !quote.paymentDetails) {
+        toast({ variant: "destructive", title: "Error", description: "Booking or payment data not available." });
         return;
     }
+    setIsUpdating(true);
+
+    const updatedQuote: FinalQuote = {
+        ...quote,
+        paymentDetails: {
+            ...quote.paymentDetails,
+            status: newPaymentStatus,
+        },
+    };
+
+    try {
+        await saveBookingClient(firestore, { ...bookingDoc, finalQuote: updatedQuote });
+        onUpdate(updatedQuote);
+        toast({
+            title: "Payment Status Updated",
+            description: `Payment status set to '${newPaymentStatus}'.`,
+        });
+        
+        // If payment is approved, send confirmation email
+        if (newPaymentStatus === 'deposit-paid') {
+            await handleSendConfirmation();
+        }
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Update Failed",
+            description: error.message || 'An unknown error occurred.',
+        });
+    } finally {
+        setIsUpdating(false);
+    }
+};
+
+  
+  const handleSendConfirmation = async () => {
     setIsSendingConfirmation(true);
     const result = await sendConfirmationEmailAction(quote.id);
     if (result.success) {
@@ -296,40 +326,45 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
         </CardContent>
       </Card>
       
-      {selectedQuoteData && (
-        <>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Pricing</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <ul className="space-y-1 text-sm">
-                        {selectedQuoteData.lineItems.map((item, index) => (
-                        <li key={index} className="flex justify-between">
-                            <span className={item.description.startsWith('  -') || item.description.startsWith('Party:') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
-                            <span className="font-mono">${item.price.toFixed(2)}</span>
-                        </li>
-                        ))}
-                    </ul>
-                    <Separator className="my-2" />
-                    <ul className="space-y-1 text-sm">
-                        <li className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">Subtotal</span>
-                            <span className='font-mono'>${selectedQuoteData.subtotal.toFixed(2)}</span>
-                        </li>
-                        <li className="flex justify-between font-medium">
-                            <span className="text-muted-foreground">GST (13%)</span>
-                            <span className='font-mono'>${selectedQuoteData.tax.toFixed(2)}</span>
-                        </li>
-                    </ul>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between items-baseline">
-                        <span className="text-lg font-bold">Total</span>
-                        <span className="text-2xl font-bold text-primary font-mono">${selectedQuoteData.total.toFixed(2)}</span>
-                    </div>
-                </CardContent>
-            </Card>
-        </>
+      {quote.paymentDetails && selectedQuoteData && (
+          <Card>
+              <CardHeader>
+                  <CardTitle>Payment Details</CardTitle>
+              </CardHeader>
+              <CardContent className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                      <h4 className="font-medium">Deposit Information</h4>
+                      <p className="text-sm">Method: <Badge variant="outline" className="capitalize">{quote.paymentDetails.method}</Badge></p>
+                      <p className="text-sm">Amount: <span className="font-mono font-medium">${quote.paymentDetails.depositAmount.toFixed(2)}</span></p>
+
+                      <div className="space-y-2">
+                        <Label>Deposit Status</Label>
+                        <Select value={quote.paymentDetails.status} onValueChange={(val: PaymentDetails['status']) => handlePaymentStatusChange(val)} disabled={isActionPending}>
+                              <SelectTrigger className="w-[200px]">
+                                  <SelectValue placeholder="Update status..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="deposit-pending">Deposit Pending</SelectItem>
+                                  <SelectItem value="deposit-paid">Deposit Received</SelectItem>
+                              </SelectContent>
+                        </Select>
+                      </div>
+
+                  </div>
+                  {quote.paymentDetails.method === 'interac' && quote.paymentDetails.screenshotUrl && (
+                      <div>
+                          <h4 className="font-medium">Payment Screenshot</h4>
+                          <a href={quote.paymentDetails.screenshotUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block">
+                              <img src={quote.paymentDetails.screenshotUrl} alt="Payment Screenshot" className="rounded-lg border max-w-xs aspect-video object-cover" />
+                              <div className="flex items-center gap-2 text-sm text-primary hover:underline mt-1">
+                                  <LinkIcon className="w-4 h-4" />
+                                  View full size
+                              </div>
+                          </a>
+                      </div>
+                  )}
+              </CardContent>
+          </Card>
       )}
 
 
@@ -375,7 +410,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
                     Send Follow-up Email
                 </Button>
             )}
-            {quote.status === 'confirmed' && (
+            {quote.status === 'confirmed' && quote.paymentDetails?.status === 'deposit-paid' && (
                  <Button 
                     variant="secondary" 
                     className="w-full md:w-auto" 

@@ -29,6 +29,12 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
     if (bookingDoc.finalQuote.status !== 'confirmed') {
         return { success: false, message: `This action is only for 'confirmed' bookings. This booking is currently '${bookingDoc.finalQuote.status}'.` };
     }
+    
+    // Ensure payment has been marked as received before sending final confirmation
+    if (bookingDoc.finalQuote.paymentDetails?.status !== 'deposit-paid') {
+        return { success: false, message: `This action is for bookings with a paid deposit. This booking's payment status is '${bookingDoc.finalQuote.paymentDetails?.status}'.` };
+    }
+
 
     // Call the existing email function with the booking data.
     await sendQuoteEmail(bookingDoc.finalQuote);

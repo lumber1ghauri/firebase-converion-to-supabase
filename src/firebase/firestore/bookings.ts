@@ -9,6 +9,7 @@ import {
   type Firestore,
   type Timestamp,
 } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -20,28 +21,27 @@ export type BookingDocument = {
     finalQuote: FinalQuote;
     createdAt?: Timestamp | Date;
     updatedAt?: Timestamp;
-    contact: FinalQuote['contact'];
-    phone: string;
 }
 
 // Client-side saveBooking for UI interactions like the admin panel or user-side updates
 export async function saveBookingClient(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'createdAt' | 'updatedAt'> & { uid: string }
+    booking: Partial<BookingDocument> & { id: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
     // Use JSON stringify/parse to deep-clone and remove any undefined values
-    const bookingData = JSON.parse(JSON.stringify(booking));
+    const bookingData = JSON.parse(JSON.stringify(booking.finalQuote));
 
     const dataToSave = {
-        ...bookingData,
+        ...booking,
+        finalQuote: bookingData,
         updatedAt: serverTimestamp(),
     };
 
     try {
         await setDoc(bookingRef, dataToSave, { merge: true });
-    } catch (error) {
+    } catch (error: any) {
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -132,5 +132,25 @@ export async function deleteBooking(firestore: Firestore, bookingId: string): Pr
             })
         );
         throw error;
+    }
+}
+
+
+export async function uploadPaymentScreenshot(file: File, bookingId: string, userId: string): Promise<string> {
+    if (!file) {
+        throw new Error("No file provided for upload.");
+    }
+    const storage = getStorage();
+    const filePath = `payment_screenshots/${userId}/${bookingId}/${file.name}`;
+    const storageRef = ref(storage, filePath);
+
+    try {
+        const snapshot = await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(snapshot.ref);
+        return downloadURL;
+    } catch (error: any) {
+        console.error("Error uploading screenshot:", error);
+        // You could potentially emit a specific storage permission error here
+        throw new Error("Failed to upload screenshot. Please check your network and permissions.");
     }
 }

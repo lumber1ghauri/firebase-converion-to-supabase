@@ -80,6 +80,16 @@ export type PartyBooking = {
     quantity: number;
 };
 
+export type PaymentMethod = 'stripe' | 'interac';
+export type PaymentStatus = 'deposit-pending' | 'deposit-paid';
+
+export type PaymentDetails = {
+    method: PaymentMethod;
+    status: PaymentStatus;
+    depositAmount: number;
+    screenshotUrl?: string;
+};
+
 export type FinalQuote = {
   id: string; // Unique booking ID
   contact: { name: string; email: string; phone: string; };
@@ -109,6 +119,7 @@ export type FinalQuote = {
     team: Quote;
   };
   selectedQuote?: PriceTier;
+  paymentDetails?: PaymentDetails;
   status: 'quoted' | 'confirmed' | 'cancelled';
 };
 

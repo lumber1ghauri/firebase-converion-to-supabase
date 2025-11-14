@@ -4,9 +4,9 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
-import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
+import type { FinalQuote, PriceTier, Quote, PaymentMethod, PaymentDetails } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient } from '@/firebase/firestore/bookings';
+import { saveBookingClient, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -21,8 +21,7 @@ import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
-
-type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'confirmed';
+type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'payment' | 'confirmed';
 
 function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: { 
   title: string; 
@@ -91,6 +90,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
   const [address, setAddress] = useState({ street: '', city: '', province: 'ON', postalCode: '' });
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+  
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>();
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
 
   const containsStudioService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'studio'), [quote.booking.days]);
   const containsMobileService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'mobile'), [quote.booking.days]);
@@ -102,9 +104,12 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     if (!showTeamOption && showLeadArtistOption) return 'lead';
     return quote.selectedQuote;
   });
-
-  const finalPrice = selectedTier ? quote.quotes[selectedTier].total : 0;
   
+  const depositAmount = useMemo(() => {
+    if (!selectedTier) return 0;
+    return quote.quotes[selectedTier].total * 0.5;
+  }, [selectedTier, quote.quotes]);
+
   const requiresAddress = useMemo(() => quote.booking.hasMobileService && !quote.booking.address, [quote]);
   
   const bookingConfirmed = useMemo(() => quote.status === 'confirmed', [quote.status]);
@@ -142,7 +147,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       setError(null);
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
       try {
-          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote });
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -154,45 +159,65 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   };
 
   const handleFinalizeBooking = async () => {
-      if (!selectedTier) {
-          toast({ variant: 'destructive', title: 'Tier not selected', description: 'Please select an artist tier.'});
-          return;
-      }
-      if (!user || !firestore) {
-          toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
-          return;
-      }
+    if (!selectedTier || !paymentMethod) {
+        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please select an artist tier and payment method.' });
+        return;
+    }
+    if (paymentMethod === 'interac' && !screenshotFile) {
+        toast({ variant: 'destructive', title: 'Screenshot Required', description: 'Please upload a payment screenshot for Interac transfers.' });
+        return;
+    }
+    if (!user || !firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
+        return;
+    }
 
-      setIsSaving(true);
-      setError(null);
+    setIsSaving(true);
+    setError(null);
 
-      try {
-          const updatedQuote: FinalQuote = {
-              ...quote,
-              selectedQuote: selectedTier,
-              status: 'confirmed',
-          };
+    try {
+        let paymentDetails: PaymentDetails = {
+            method: paymentMethod,
+            status: paymentMethod === 'stripe' ? 'deposit-paid' : 'deposit-pending',
+            depositAmount: depositAmount,
+            screenshotUrl: '',
+        };
 
-          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+        if (paymentMethod === 'interac' && screenshotFile) {
+            const screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
+            paymentDetails.screenshotUrl = screenshotUrl;
+        }
 
-          setQuote(updatedQuote);
-          setCurrentStep('confirmed');
-          
-          const emailResult = await sendConfirmationEmailAction(updatedQuote.id);
-          if (emailResult.success) {
-            toast({ title: 'Booking Confirmed!', description: 'Your booking is confirmed. You will receive a confirmation email shortly.' });
-          } else {
-             toast({ variant: 'destructive', title: 'Booking Confirmed, but Email Failed', description: `Your booking is saved, but we couldn't send the confirmation email. ${emailResult.message}` });
-          }
+        const updatedQuote: FinalQuote = {
+            ...quote,
+            selectedQuote: selectedTier,
+            status: 'confirmed', // Booking is confirmed, payment is pending
+            paymentDetails: paymentDetails,
+        };
 
-      } catch (err: any) {
-          setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
-          toast({ variant: 'destructive', title: 'Finalization Failed', description: err.message });
-      } finally {
-          setIsSaving(false);
-      }
-  };
+        await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote });
+        setQuote(updatedQuote);
+        setCurrentStep('confirmed');
 
+        toast({
+            title: 'Booking Submitted!',
+            description: paymentMethod === 'interac'
+                ? 'Your booking is pending approval. You will receive a confirmation email once the payment is verified.'
+                : 'Your booking is confirmed! You will receive a confirmation email shortly.',
+        });
+
+        // If Stripe was used, it's auto-confirmed, so we can try to send the email.
+        if (paymentMethod === 'stripe') {
+            await sendConfirmationEmailAction(updatedQuote.id);
+        }
+
+    } catch (err: any) {
+        setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
+        toast({ variant: 'destructive', title: 'Finalization Failed', description: err.message });
+    } finally {
+        setIsSaving(false);
+    }
+};
 
   const handleProceed = () => {
     if (currentStep === 'select-tier') {
@@ -202,16 +227,16 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         setCurrentStep('sign-contract');
       }
     } else if (currentStep === 'sign-contract') {
-        handleFinalizeBooking();
+        setCurrentStep('payment');
     }
   };
 
   const STEPS = [
-    { id: 'select-tier', name: 'Select Tier' },
-    ...(requiresAddress ? [{ id: 'address', name: 'Address' }] : []),
-    { id: 'sign-contract', name: 'Sign Contract' },
-  ].map(step => ({ ...step, icon: step.id === 'address' ? MapPin : step.id === 'sign-contract' ? FileText : Users }));
-
+    { id: 'select-tier', name: 'Select Tier', icon: Users },
+    ...(requiresAddress ? [{ id: 'address', name: 'Address', icon: MapPin }] : []),
+    { id: 'sign-contract', name: 'Sign Contract', icon: FileText },
+    { id: 'payment', name: 'Payment', icon: Banknote }
+  ];
 
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
 
@@ -229,7 +254,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           </CardTitle>
           <CardDescription className="text-base sm:text-lg max-w-prose">
             {bookingConfirmed 
-              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. A confirmation email has been sent to you.`
+              ? quote.paymentDetails?.method === 'interac'
+                  ? `Thank you, ${quote.contact.name}. Your booking is submitted and awaits payment approval. You will receive a final confirmation email once your e-Transfer is verified.`
+                  : `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. A confirmation email has been sent to you.`
               : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
@@ -392,16 +419,62 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             </div>
           </div>
 
-           {/* Step 2: Contract */}
+           {/* Step 3: Contract */}
           <div className={cn('space-y-6 px-6', currentStep !== 'sign-contract' && 'hidden')}>
             <h3 className="font-headline text-2xl text-center">Service Agreement</h3>
             {selectedTier && <ContractDisplay quote={quote} selectedTier={selectedTier} />}
             <div className="flex items-center space-x-2 p-4 bg-muted rounded-md">
               <Checkbox id="terms" onCheckedChange={(checked) => setContractSigned(Boolean(checked))} />
               <Label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                I have read, understood, and agree to the terms and conditions of this service agreement.
+                I have read, understood, and agreed to the terms and conditions of this service agreement.
               </Label>
             </div>
+          </div>
+          
+           {/* Step 4: Payment */}
+           <div className={cn('space-y-6 px-6', currentStep !== 'payment' && 'hidden')}>
+              <div className="text-center">
+                  <h3 className="font-headline text-2xl">Secure Your Booking</h3>
+                  <p className="text-muted-foreground">A 50% non-refundable deposit is required to finalize your booking.</p>
+                  <p className="text-4xl font-bold text-primary mt-2">${depositAmount.toFixed(2)}</p>
+              </div>
+
+              <RadioGroup value={paymentMethod} onValueChange={(val) => setPaymentMethod(val as PaymentMethod)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Label htmlFor='payment-stripe' className={cn('block border rounded-lg p-6 cursor-pointer', paymentMethod === 'stripe' ? 'border-primary ring-2 ring-primary' : 'hover:border-primary/50')}>
+                      <div className='flex items-center gap-4'>
+                           <RadioGroupItem value="stripe" id="payment-stripe" />
+                           <h4 className="font-headline text-xl">Pay with Card</h4>
+                           <CreditCard className='ml-auto w-8 h-8 text-muted-foreground'/>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">Securely pay the deposit with your credit card via Stripe.</p>
+                  </Label>
+                  <Label htmlFor='payment-interac' className={cn('block border rounded-lg p-6 cursor-pointer', paymentMethod === 'interac' ? 'border-primary ring-2 ring-primary' : 'hover:border-primary/50')}>
+                       <div className='flex items-center gap-4'>
+                          <RadioGroupItem value="interac" id="payment-interac" />
+                          <h4 className="font-headline text-xl">Interac e-Transfer</h4>
+                          <Banknote className='ml-auto w-8 h-8 text-muted-foreground'/>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-4">Send an e-Transfer and upload a screenshot for verification.</p>
+                  </Label>
+              </RadioGroup>
+
+              {paymentMethod === 'interac' && (
+                  <div className="p-4 border rounded-lg bg-background/50 space-y-4 animate-in fade-in-0">
+                      <h4 className="font-semibold">e-Transfer Instructions</h4>
+                      <ol className="list-decimal list-inside text-sm space-y-2 text-muted-foreground">
+                          <li>Send <strong>${depositAmount.toFixed(2)}</strong> to <strong>booking@sellaya.ca</strong></li>
+                          <li>Set the security question to: <strong>What is my booking ID?</strong></li>
+                          <li>Set the security answer to: <strong>{quote.id}</strong> (This is case-sensitive)</li>
+                          <li>Once sent, take a screenshot of the confirmation page.</li>
+                          <li>Upload the screenshot below and submit.</li>
+                      </ol>
+                      <div>
+                          <Label htmlFor="screenshot">Upload Screenshot</Label>
+                          <Input id="screenshot" type="file" accept="image/png, image/jpeg, image/jpg" onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)} />
+                          {screenshotFile && <p className='text-sm text-muted-foreground mt-2'>File selected: {screenshotFile.name}</p>}
+                      </div>
+                  </div>
+              )}
           </div>
 
 
@@ -465,14 +538,14 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           )}
           {!bookingConfirmed && (
             <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
-                {currentStep === 'select-tier' && (
-                      <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!selectedTier} onClick={handleProceed}>
+                {currentStep !== 'payment' && (
+                    <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!selectedTier || (currentStep === 'sign-contract' && !contractSigned)} onClick={handleProceed}>
                         Proceed <ArrowRight className="ml-2 h-5 w-5" />
                     </Button>
                 )}
-                {currentStep === 'sign-contract' && (
-                      <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!contractSigned || isSaving} onClick={handleProceed}>
-                         {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Confirming...</> : "Agree & Confirm Booking"}
+                 {currentStep === 'payment' && (
+                    <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={isSaving || !paymentMethod || (paymentMethod === 'interac' && !screenshotFile)} onClick={handleFinalizeBooking}>
+                        {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : `Confirm & Pay $${depositAmount.toFixed(2)}`}
                     </Button>
                 )}
             </CardFooter>

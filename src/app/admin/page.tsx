@@ -4,6 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection } from '@/firebase';
 import type { BookingDocument } from '@/firebase/firestore/bookings';
+import type { PaymentStatus } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,17 @@ import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
+
+function getPaymentStatus(status: PaymentStatus | undefined): { text: string; variant: 'secondary' | 'destructive' | 'success' } {
+    switch (status) {
+        case 'deposit-pending':
+            return { text: 'Deposit Pending', variant: 'secondary' };
+        case 'deposit-paid':
+            return { text: 'Paid', variant: 'success' };
+        default:
+            return { text: 'Not Paid', variant: 'destructive' };
+    }
+}
 
 
 function getTimeToEvent(eventDateStr: string): string {
@@ -144,7 +156,7 @@ export default function AdminDashboard() {
                   <TableRow>
                     <TableHead className="w-[60px]">Sr. No.</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Artist</TableHead>
+                    <TableHead>Payment</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="hidden md:table-cell">Booking Date</TableHead>
                     <TableHead className="hidden md:table-cell">Event</TableHead>
@@ -157,6 +169,7 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredBookings.map((booking, index) => {
                      const artistTier = booking.finalQuote.selectedQuote;
+                     const paymentStatus = getPaymentStatus(booking.finalQuote.paymentDetails?.status);
                      return (
                         <TableRow key={booking.id}>
                            <TableCell className="font-medium">{index + 1}</TableCell>
@@ -164,16 +177,11 @@ export default function AdminDashboard() {
                             <div className="font-medium">{booking.finalQuote.contact.name}</div>
                             <div className="text-sm text-muted-foreground">{booking.id}</div>
                           </TableCell>
-                          <TableCell>
-                            {artistTier ? (
-                                <div className='flex items-center gap-2'>
-                                    {artistTier === 'lead' ? <User className="h-4 w-4 text-primary" /> : <Users className="h-4 w-4 text-primary" />}
-                                    <span className="capitalize text-sm font-medium">{artistTier}</span>
-                                </div>
-                            ) : (
-                                <span className='text-sm text-muted-foreground'>N/A</span>
-                            )}
-                          </TableCell>
+                           <TableCell>
+                                <Badge variant={paymentStatus.variant} className="capitalize whitespace-nowrap">
+                                    {paymentStatus.text}
+                                </Badge>
+                           </TableCell>
                           <TableCell>
                             <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize whitespace-nowrap">
                               {booking.finalQuote.status}
