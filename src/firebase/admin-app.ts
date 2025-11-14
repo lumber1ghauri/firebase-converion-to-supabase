@@ -1,29 +1,25 @@
 
-import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { initializeApp, getApps, App, cert } from 'firebase-admin/app';
 import { getFirestore, Firestore } from 'firebase-admin/firestore';
-import { firebaseConfig } from './config';
-
-// This is a temporary solution to use the client-side config for server-side actions.
-// In a real production app, you would use service account credentials.
-const serviceAccount = {
-    projectId: firebaseConfig.projectId,
-    clientEmail: `firebase-adminsdk-xxxxx@${firebaseConfig.projectId}.iam.gserviceaccount.com`, // Placeholder
-    privateKey: '-----BEGIN PRIVATE KEY-----\n ... \n-----END PRIVATE KEY-----\n', // Placeholder
-};
 
 let adminApp: App | undefined;
 let adminDb: Firestore | undefined;
 
 function initializeAdminApp(): App {
-    const apps = getApps();
-    if (apps.length > 0) {
-        return apps.find(app => app.name === 'admin') || initializeApp({ projectId: firebaseConfig.projectId }, 'admin');
-    }
-    // In a real app, you would use applicationDefault() or a service account file.
-    // For this environment, we're simulating initialization.
-    return initializeApp({
-        projectId: firebaseConfig.projectId,
-    }, 'admin');
+  if (getApps().some(app => app.name === 'admin')) {
+    return getApps().find(app => app.name === 'admin')!;
+  }
+  
+  // In a managed environment (like App Hosting or Cloud Functions),
+  // initializeApp() without arguments automatically uses Application Default Credentials.
+  try {
+    return initializeApp(undefined, 'admin');
+  } catch (e) {
+    console.error("Failed to initialize Firebase Admin SDK with default credentials.", e);
+    // As a fallback for local dev where ADC might not be set, you might use a service account key
+    // but in this managed environment, the default should work.
+    throw new Error("Firebase Admin initialization failed. Ensure environment is configured correctly.");
+  }
 }
 
 export function getAdminDb(): Firestore {
