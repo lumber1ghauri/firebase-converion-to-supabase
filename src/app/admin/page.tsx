@@ -77,13 +77,13 @@ const createDummyBooking = (id: string, name: string, status: FinalQuote['status
 };
 
 const dummyBookings: BookingDocument[] = [
-    createDummyBooking('BK-001', 'Alice Johnson', 'confirmed', addDays(new Date(), 3), 'lead', 'paid'),
-    createDummyBooking('BK-002', 'Bob Williams', 'confirmed', addDays(new Date(), 10), 'team', 'deposit'),
-    createDummyBooking('BK-003', 'Charlie Brown', 'confirmed', addDays(new Date(), 1), 'lead', 'pending'),
-    createDummyBooking('BK-004', 'Diana Prince', 'quoted', addDays(new Date(), 30), undefined, 'pending'),
-    createDummyBooking('BK-005', 'Ethan Hunt', 'cancelled', subDays(new Date(), 5), 'lead', 'deposit'),
-    createDummyBooking('BK-006', 'Fiona Glenanne', 'confirmed', subDays(new Date(), 2), 'team', 'paid'),
-    createDummyBooking('BK-007', 'George Costanza', 'confirmed', new Date(), 'lead', 'deposit'),
+    createDummyBooking('1001', 'Alice Johnson', 'confirmed', addDays(new Date(), 3), 'lead', 'paid'),
+    createDummyBooking('1002', 'Bob Williams', 'confirmed', addDays(new Date(), 10), 'team', 'deposit'),
+    createDummyBooking('1003', 'Charlie Brown', 'confirmed', addDays(new Date(), 1), 'lead', 'pending'),
+    createDummyBooking('1004', 'Diana Prince', 'quoted', addDays(new Date(), 30), undefined, 'pending'),
+    createDummyBooking('1005', 'Ethan Hunt', 'cancelled', subDays(new Date(), 5), 'lead', 'deposit'),
+    createDummyBooking('1006', 'Fiona Glenanne', 'confirmed', subDays(new Date(), 2), 'team', 'paid'),
+    createDummyBooking('1007', 'George Costanza', 'confirmed', new Date(), 'lead', 'deposit'),
 ];
 
 
