@@ -13,7 +13,7 @@ export async function saveBooking(
     
     const dataToSave = {
         ...booking,
-        uid: 'anonymous_server', // Server actions don't have a user UID
+        // The UID is not relevant for a server-action-created quote
         createdAt: new Date(),
         updatedAt: new Date(),
     };
