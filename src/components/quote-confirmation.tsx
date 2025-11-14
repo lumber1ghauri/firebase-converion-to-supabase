@@ -72,13 +72,14 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
 
-  // If ANY day is 'studio', only show lead artist.
-  const showLeadArtistOption = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
-  // Only show team option if NO days are 'studio' (i.e., all are mobile)
-  const showTeamOption = useMemo(() => !currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
+  // If ANY day is 'mobile', show both options. If ALL days are 'studio', show lead only.
+  const hasMobileService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'mobile'), [currentQuote.booking.days]);
+
+  const showLeadArtistOption = true; // Always show lead artist
+  const showTeamOption = hasMobileService;
   
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(
-    quote.selectedQuote || (showLeadArtistOption ? 'lead' : 'team')
+    quote.selectedQuote || (showTeamOption ? undefined : 'lead')
   );
 
 
