@@ -1,6 +1,7 @@
 
 import * as React from 'react';
 import type { FinalQuote, Quote, PriceTier } from '@/lib/types';
+import { GST_RATE } from '@/lib/services';
 
 interface QuoteEmailTemplateProps {
   quote: FinalQuote;
@@ -56,10 +57,17 @@ const itemPrice = {
 const totalStyle = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginTop: '20px',
-  paddingTop: '20px',
+  marginTop: '10px',
+  paddingTop: '10px',
   borderTop: '1px solid #e5e5e5',
 };
+
+const grandTotalStyle = {
+    ...totalStyle,
+    marginTop: '5px',
+    paddingTop: '5px',
+    borderTop: 'none',
+}
 
 const totalDescription = {
   fontSize: '18px',
@@ -104,6 +112,14 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
       </div>
     ))}
     <div style={totalStyle}>
+        <p style={{...itemDescription, fontWeight: 500}}>Subtotal</p>
+        <p style={itemPrice}>${quote.subtotal.toFixed(2)}</p>
+    </div>
+     <div style={{ ...item, paddingTop: '5px' }}>
+        <p style={{...itemDescription, fontWeight: 500}}>GST ({(GST_RATE * 100).toFixed(0)}%)</p>
+        <p style={itemPrice}>${quote.tax.toFixed(2)}</p>
+    </div>
+    <div style={grandTotalStyle}>
       <p style={totalDescription}>Grand Total</p>
       <p style={totalPrice}>${quote.total.toFixed(2)}</p>
     </div>

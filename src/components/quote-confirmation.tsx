@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useActionState, useMemo, useState } from 'react';
@@ -13,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { STUDIO_ADDRESS } from '@/lib/services';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { cn } from '@/lib/utils';
+import { Separator } from './ui/separator';
 
 
 const initialState = {
@@ -53,6 +55,17 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
                     </li>
                     ))}
                 </ul>
+                <Separator className="my-2" />
+                <ul className="space-y-1 text-sm font-medium">
+                    <li className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span>${quote.subtotal.toFixed(2)}</span>
+                    </li>
+                    <li className="flex justify-between">
+                        <span className="text-muted-foreground">GST (13%)</span>
+                        <span>${quote.tax.toFixed(2)}</span>
+                    </li>
+                </ul>
             </CardContent>
             <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">
                 <div className="w-full flex justify-between items-baseline">
@@ -72,14 +85,13 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
 
-  // If ANY day is 'mobile', show both options. If ALL days are 'studio', show lead only.
-  const hasMobileService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'mobile'), [currentQuote.booking.days]);
+  const containsStudioService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
 
-  const showLeadArtistOption = true; // Always show lead artist
-  const showTeamOption = hasMobileService;
+  const showLeadArtistOption = containsStudioService || currentQuote.booking.hasMobileService;
+  const showTeamOption = currentQuote.booking.hasMobileService && !containsStudioService;
   
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(
-    quote.selectedQuote || (showTeamOption ? undefined : 'lead')
+    quote.selectedQuote || (!showTeamOption ? 'lead' : undefined)
   );
 
 
@@ -210,6 +222,17 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                             <span className="font-medium">${item.price.toFixed(2)}</span>
                           </li>
                         ))}
+                      </ul>
+                      <Separator className="my-2" />
+                       <ul className="space-y-1 text-sm font-medium">
+                          <li className="flex justify-between">
+                              <span className="text-muted-foreground">Subtotal</span>
+                              <span>${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).subtotal.toFixed(2)}</span>
+                          </li>
+                          <li className="flex justify-between">
+                              <span className="text-muted-foreground">GST (13%)</span>
+                              <span>${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).tax.toFixed(2)}</span>
+                          </li>
                       </ul>
                    </CardContent>
                    <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">

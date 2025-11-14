@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
-import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
+import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES, GST_RATE } from '@/lib/services';
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, PriceTier, Quote } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { saveBooking } from '@/firebase/firestore/bookings';
@@ -169,7 +169,10 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
         }
     }
     
-    return { lineItems, total: subtotal };
+    const tax = subtotal * GST_RATE;
+    const total = subtotal + tax;
+
+    return { lineItems, subtotal, tax, total };
 }
 
 
@@ -347,13 +350,8 @@ export async function generateQuoteAction(
         status: 'quoted'
     };
     
-    try {
-      await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
-      await sendQuoteEmail(finalQuote);
-    } catch (e) {
-        console.error("Failed to save booking or send email", e);
-        // Depending on the desired behavior, you might want to return an error state here
-    }
+    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
+    await sendQuoteEmail(finalQuote);
 
     return {
         status: 'success',

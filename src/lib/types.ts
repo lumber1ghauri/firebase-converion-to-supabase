@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from "lucide-react";
 import { MOBILE_LOCATION_OPTIONS } from "./services";
 
@@ -62,6 +63,8 @@ export type BridalTrial = {
 
 export type Quote = {
   lineItems: { description: string; price: number }[];
+  subtotal: number;
+  tax: number;
   total: number;
 };
 
