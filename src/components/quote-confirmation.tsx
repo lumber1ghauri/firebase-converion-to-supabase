@@ -1,12 +1,13 @@
-
 'use client';
 
 import * as React from 'react';
-import { useActionState, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
-import { saveAddressAction, finalizeBookingAction } from '@/app/actions';
+import { useFirestore, useAuth } from '@/firebase';
+import { saveBooking } from '@/firebase/firestore/bookings';
+import { sendQuoteEmail } from '@/lib/email';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -18,21 +19,8 @@ import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
 import { ContractDisplay } from './contract-display';
 import { Checkbox } from './ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
 
-
-const initialAddressState = {
-  status: 'idle' as const,
-  message: '',
-  quote: null,
-  errors: null,
-};
-
-const initialFinalizeState = {
-  status: 'idle' as const,
-  message: '',
-  quote: null,
-  errors: null,
-}
 
 type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'payment' | 'confirmed';
 
@@ -90,18 +78,22 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
   )
 }
 
-export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
-  const [addressState, addressAction] = useActionState(saveAddressAction, { ...initialAddressState, quote });
-  const [finalizeState, finalizeAction] = useActionState(finalizeBookingAction, { ...initialFinalizeState, quote });
+export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
-  const state = finalizeState.status !== 'idle' ? finalizeState : addressState;
-  const currentQuote = state.quote || quote;
-  
+  const [quote, setQuote] = useState(initialQuote);
   const [currentStep, setCurrentStep] = useState<ConfirmationStep>('select-tier');
   const [contractSigned, setContractSigned] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const containsStudioService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
-  const containsMobileService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'mobile'), [currentQuote.booking.days]);
+  const [address, setAddress] = useState({ street: '', city: '', province: 'ON', postalCode: '' });
+  const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+
+
+  const containsStudioService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'studio'), [quote.booking.days]);
+  const containsMobileService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'mobile'), [quote.booking.days]);
   
   const showLeadArtistOption = useMemo(() => true, []);
   const showTeamOption = useMemo(() => containsMobileService, [containsMobileService]);
@@ -111,12 +103,12 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
     return quote.selectedQuote;
   });
 
-  const finalPrice = selectedTier ? currentQuote.quotes[selectedTier].total : 0;
+  const finalPrice = selectedTier ? quote.quotes[selectedTier].total : 0;
   const depositAmount = finalPrice * 0.5;
 
-  const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
+  const requiresAddress = useMemo(() => quote.booking.hasMobileService && !quote.booking.address, [quote]);
   
-  const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
+  const bookingConfirmed = useMemo(() => quote.status === 'confirmed', [quote.status]);
   
   React.useEffect(() => {
     if (bookingConfirmed && currentStep !== 'confirmed') {
@@ -124,14 +116,76 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
     }
   }, [bookingConfirmed, currentStep]);
 
-
-  // Effect to move to next step after address is saved
-  React.useEffect(() => {
-    if (addressState.status === 'success' && addressState.quote?.booking.address && currentStep === 'address') {
-      setCurrentStep('sign-contract');
+  const validateAddress = () => {
+    const errors: Record<string, string> = {};
+    if (!address.street) errors.street = "Street address is required.";
+    if (!address.city) errors.city = "City is required.";
+    if (!address.postalCode) errors.postalCode = "Postal code is required.";
+    // Basic postal code regex
+    else if (!/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(address.postalCode)) {
+        errors.postalCode = "Invalid postal code format.";
     }
-  }, [addressState, currentStep]);
-  
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+
+  const handleSaveAddress = async () => {
+      if (!validateAddress()) {
+          toast({ variant: 'destructive', title: 'Invalid Address', description: 'Please correct the errors and try again.' });
+          return;
+      }
+      setIsSaving(true);
+      setError(null);
+      const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
+      try {
+          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          setQuote(updatedQuote);
+          setCurrentStep('sign-contract');
+      } catch (err: any) {
+          setError(err.message || "Failed to save address. Please check your connection or permissions.");
+          toast({ variant: 'destructive', title: 'Save Failed', description: err.message });
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  const handleFinalizeBooking = async () => {
+      if (!selectedTier) {
+          toast({ variant: 'destructive', title: 'Tier not selected', description: 'Please select an artist tier.'});
+          return;
+      }
+      setIsSaving(true);
+      setError(null);
+
+      const total = quote.quotes[selectedTier].total;
+      const depositAmount = total * 0.5;
+      
+      const updatedQuote: FinalQuote = {
+          ...quote,
+          selectedQuote: selectedTier,
+          status: 'confirmed',
+          paymentDetails: {
+              deposit: { status: 'pending', amount: depositAmount },
+              final: { status: 'pending', amount: total - depositAmount },
+          }
+      };
+
+      try {
+          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await sendQuoteEmail(updatedQuote);
+          setQuote(updatedQuote);
+          setCurrentStep('confirmed');
+          toast({ title: 'Booking Confirmed!', description: 'An email with payment details has been sent.' });
+      } catch (err: any) {
+          setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
+          toast({ variant: 'destructive', title: 'Finalization Failed', description: err.message });
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+
   const handleProceed = () => {
     if (currentStep === 'select-tier') {
       if (requiresAddress) {
@@ -168,15 +222,15 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
           </CardTitle>
           <CardDescription className="text-base sm:text-lg max-w-prose">
             {bookingConfirmed 
-              ? `Thank you, ${currentQuote.contact.name}. Your booking with ${currentQuote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. An email with all details has been sent.`
-              : `Thank you, ${currentQuote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
+              ? `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. An email with all details has been sent.`
+              : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
-            {state.status === 'success' && state.message.startsWith('Booking Confirmed!') && (
-              <Alert variant="default" className="mt-4 text-left border-green-500/50 bg-green-500/10">
-                  <ShieldCheck className="h-4 w-4 !text-green-500" />
-                  <AlertTitle className="text-green-600">Confirmation Sent</AlertTitle>
-                  <AlertDescription className="text-green-700">{state.message}</AlertDescription>
+            {error && (
+              <Alert variant="destructive" className="mt-4 text-left">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>An Error Occurred</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
               </Alert>
           )}
         </CardHeader>
@@ -210,9 +264,9 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
           <div className={cn(currentStep !== 'select-tier' && 'hidden')}>
             <div className="p-4 border rounded-lg bg-background/50">
                   <h3 className="font-headline text-xl mb-3">Booking Summary</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Booking ID: {currentQuote.id}</p>
+                  <p className="text-sm text-muted-foreground mb-3">Booking ID: {quote.id}</p>
                   <ul className="space-y-3">
-                      {currentQuote.booking.days.map((day, index) => (
+                      {quote.booking.days.map((day, index) => (
                       <li key={index} className="text-sm">
                           <div className="flex justify-between font-medium">
                           <span>{day.date} at {day.getReadyTime}</span>
@@ -225,20 +279,20 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                           ))}
                       </li>
                       ))}
-                      {currentQuote.booking.trial && (
+                      {quote.booking.trial && (
                       <li className="text-sm">
                           <div className="flex justify-between font-medium">
-                          <span>Bridal Trial: {currentQuote.booking.trial!.date} at {currentQuote.booking.trial!.time}</span>
+                          <span>Bridal Trial: {quote.booking.trial!.date} at {quote.booking.trial!.time}</span>
                           </div>
                       </li>
                       )}
-                      {currentQuote.booking.bridalParty && currentQuote.booking.bridalParty.services.length > 0 && (
+                      {quote.booking.bridalParty && quote.booking.bridalParty.services.length > 0 && (
                           <li className="text-sm">
                               <div className="font-medium pt-2">Bridal Party Services:</div>
-                              {currentQuote.booking.bridalParty.services.map((partySvc, i) => (
+                              {quote.booking.bridalParty.services.map((partySvc, i) => (
                                   <div key={i} className="text-muted-foreground ml-2">- {partySvc.service} (x{partySvc.quantity})</div>
                               ))}
-                              {currentQuote.booking.bridalParty.airbrush > 0 && <div className="text-muted-foreground ml-2">- Airbrush Service (x{currentQuote.booking.bridalParty.airbrush})</div>}
+                              {quote.booking.bridalParty.airbrush > 0 && <div className="text-muted-foreground ml-2">- Airbrush Service (x{quote.booking.bridalParty.airbrush})</div>}
                           </li>
                       )}
                   </ul>
@@ -269,7 +323,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                           <QuoteTierCard 
                           title="Anum - Lead Artist"
                           icon={<User className="w-8 h-8 text-primary" />}
-                          quote={currentQuote.quotes.lead}
+                          quote={quote.quotes.lead}
                           tier="lead"
                           selectedTier={selectedTier}
                           onSelect={setSelectedTier}
@@ -279,7 +333,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                           <QuoteTierCard 
                           title="Team"
                           icon={<Users className="w-8 h-8 text-primary" />}
-                          quote={currentQuote.quotes.team}
+                          quote={quote.quotes.team}
                           tier="team"
                           selectedTier={selectedTier}
                           onSelect={setSelectedTier}
@@ -289,51 +343,52 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
               </div>
           </div>
           
-          <form action={addressAction} className={cn(currentStep !== 'address' && 'hidden')}>
-            <input type="hidden" name="finalQuote" value={JSON.stringify({...currentQuote, selectedQuote: selectedTier})} />
+          <div className={cn(currentStep !== 'address' && 'hidden')}>
             <div className="space-y-6 px-6">
               <div className="p-4 border rounded-lg bg-background/so">
                   <h3 className="font-headline text-xl mb-4">Mobile Service Address</h3>
                   <div className='space-y-4'>
-                          {addressState.status === 'error' && addressState.errors && (
+                          {addressErrors && Object.keys(addressErrors).length > 0 && (
                               <Alert variant="destructive">
-                                  <AlertDescription>{addressState.message || "Please correct the errors below."}</AlertDescription>
+                                  <AlertDescription>Please correct the address errors.</AlertDescription>
                               </Alert>
                           )}
                           <div>
                               <Label htmlFor="street">Street Address</Label>
-                              <Input id="street" name="street" placeholder="123 Glamour Ave" required />
-                              {addressState.errors?.street && <p className="text-sm text-destructive mt-1">{addressState.errors.street[0]}</p>}
+                              <Input id="street" name="street" placeholder="123 Glamour Ave" required value={address.street} onChange={e => setAddress({...address, street: e.target.value})} />
+                              {addressErrors?.street && <p className="text-sm text-destructive mt-1">{addressErrors.street}</p>}
                           </div>
                           <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                               <div>
                                   <Label htmlFor="city">City</Label>
-                                  <Input id="city" name="city" placeholder="Toronto" required />
-                                  {addressState.errors?.city && <p className="text-sm text-destructive mt-1">{addressState.errors.city[0]}</p>}
+                                  <Input id="city" name="city" placeholder="Toronto" required value={address.city} onChange={e => setAddress({...address, city: e.target.value})} />
+                                  {addressErrors?.city && <p className="text-sm text-destructive mt-1">{addressErrors.city}</p>}
                               </div>
                               <div>
                                   <Label htmlFor="province">Province</Label>
                                   <Input id="province" name="province" value="ON" readOnly required />
-                                  {addressState.errors?.province && <p className="text-sm text-destructive mt-1">{addressState.errors.province[0]}</p>}
                               </div>
                               <div>
                                   <Label htmlFor="postalCode">Postal Code</Label>
-                                  <Input id="postalCode" name="postalCode" placeholder="M5V 2T6" required />
-                                  {addressState.errors?.postalCode && <p className="text-sm text-destructive mt-1">{addressState.errors.postalCode[0]}</p>}
+                                  <Input id="postalCode" name="postalCode" placeholder="M5V 2T6" required value={address.postalCode} onChange={e => setAddress({...address, postalCode: e.target.value})} />
+                                  {addressErrors?.postalCode && <p className="text-sm text-destructive mt-1">{addressErrors.postalCode}</p>}
                               </div>
                           </div>
                       </div>
               </div>
                <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg mt-6">
-                  <AddressSubmitButton text="Save Address & Proceed" />
+                  <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={isSaving} onClick={handleSaveAddress}>
+                      {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowRight className="ml-2 h-5 w-5" />}
+                      Save Address & Proceed
+                  </Button>
                </CardFooter>
             </div>
-          </form>
+          </div>
 
            {/* Step 2: Contract */}
           <div className={cn('space-y-6 px-6', currentStep !== 'sign-contract' && 'hidden')}>
             <h3 className="font-headline text-2xl text-center">Service Agreement</h3>
-            {selectedTier && <ContractDisplay quote={currentQuote} selectedTier={selectedTier} />}
+            {selectedTier && <ContractDisplay quote={quote} selectedTier={selectedTier} />}
             <div className="flex items-center space-x-2 p-4 bg-muted rounded-md">
               <Checkbox id="terms" onCheckedChange={(checked) => setContractSigned(Boolean(checked))} />
               <Label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
@@ -374,12 +429,11 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                       <p className="font-mono p-2 bg-muted rounded-md">payment@sellaya.ca</p>
                       <p>
                           In the message/memo field, please include your Booking ID:
-                          <strong className="ml-1">{currentQuote.id}</strong>
+                          <strong className="ml-1">{quote.id}</strong>
                       </p>
-                      <form action={finalizeAction}>
-                        <input type="hidden" name="finalQuote" value={JSON.stringify({...currentQuote, selectedQuote: selectedTier})} />
-                        <FinalizeSubmitButton text="I've Sent the e-Transfer" />
-                      </form>
+                       <Button type="button" size="lg" className="w-full mt-4 font-bold" disabled={isSaving} onClick={handleFinalizeBooking}>
+                           {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : "I've Sent the e-Transfer"}
+                       </Button>
                   </CardContent>
                 </Card>
                 <Card>
@@ -407,11 +461,11 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 <h3 className="font-headline text-2xl text-center mb-4">Your Confirmed Package</h3>
                 <Card className="max-w-md mx-auto">
                     <CardHeader>
-                      <CardTitle className='text-center'>{currentQuote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}</CardTitle>
+                      <CardTitle className='text-center'>{quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <ul className="space-y-1 text-sm">
-                        {(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).lineItems.map((item, index) => (
+                        {(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).lineItems.map((item, index) => (
                           <li key={index} className="flex justify-between">
                             <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
                             <span className="font-medium">${item.price.toFixed(2)}</span>
@@ -422,27 +476,27 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                         <ul className="space-y-1 text-sm font-medium">
                           <li className="flex justify-between">
                               <span className="text-muted-foreground">Subtotal</span>
-                              <span>${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).subtotal.toFixed(2)}</span>
+                              <span>${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).subtotal.toFixed(2)}</span>
                           </li>
                           <li className="flex justify-between">
                               <span className="text-muted-foreground">GST (13%)</span>
-                              <span>${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).tax.toFixed(2)}</span>
+                              <span>${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).tax.toFixed(2)}</span>
                           </li>
                       </ul>
                     </CardContent>
                     <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">
                       <div className="w-full flex justify-between items-baseline">
                         <span className="text-lg font-bold font-headline">Total</span>
-                        <span className="text-2xl font-bold text-primary">${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).total.toFixed(2)}</span>
+                        <span className="text-2xl font-bold text-primary">${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).total.toFixed(2)}</span>
                       </div>
                     </CardFooter>
                 </Card>
-                  {currentQuote.booking.address && (
+                  {quote.booking.address && (
                       <div className="mt-6 text-center">
                         <h4 className="font-headline text-lg mb-2">Service Address</h4>
                         <div className='text-sm space-y-1 text-muted-foreground'>
-                            <p>{currentQuote.booking.address.street}</p>
-                            <p>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>
+                            <p>{quote.booking.address.street}</p>
+                            <p>{quote.booking.address.city}, {quote.booking.address.province} {quote.booking.address.postalCode}</p>
                         </div>
                     </div>
                 )}
@@ -481,43 +535,4 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
       </Card>
     </div>
   );
-}
-
-
-function AddressSubmitButton({ text }: { text: string }) {
-    const { pending } = useFormStatus();
-
-    return (
-        <Button type="submit" size="lg" className="w-full font-bold text-lg" disabled={pending}>
-            {pending ? (
-                <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Saving...
-                </>
-            ) : (
-                <>
-                   {text} <ArrowRight className="ml-2 h-5 w-5" />
-                </>
-            )}
-        </Button>
-    )
-}
-
-function FinalizeSubmitButton({ text }: { text: string }) {
-    const { pending } = useFormStatus();
-
-    return (
-        <Button type="submit" size="lg" className="w-full mt-4 font-bold" disabled={pending}>
-            {pending ? (
-                <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Finalizing...
-                </>
-            ) : (
-                <>
-                   {text}
-                </>
-            )}
-        </Button>
-    )
 }

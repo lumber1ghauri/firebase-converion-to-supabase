@@ -1,4 +1,3 @@
-
 'use server';
 import 'dotenv/config';
 import { z } from 'zod';
@@ -7,7 +6,6 @@ import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES, GST_RATE } from '@/lib/services';
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, Quote, PaymentStatus } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
-import { getBooking, saveBooking } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
 
@@ -19,13 +17,6 @@ const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().regex(phoneRegex, { message: 'Please enter a valid phone number.' }),
-});
-
-const AddressSchema = z.object({
-    street: z.string().min(5, { message: 'Please enter a valid street address.'}),
-    city: z.string().min(2, { message: 'Please enter a city.'}),
-    province: z.literal('ON', { required_error: 'Province must be Ontario.'}),
-    postalCode: z.string().regex(postalCodeRegex, { message: 'Please enter a valid Canadian postal code.'}),
 });
 
 function parseDaysFromFormData(formData: FormData): Omit<Day, 'id'>[] {
@@ -358,9 +349,6 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    // The saveBooking and sendQuoteEmail calls are now handled on the client
-    // after this action successfully returns the quote.
-    
     return {
         status: 'success',
         message: 'Success',
@@ -370,108 +358,7 @@ message: 'Please select a date and time for the bridal trial.',
 }
 
 
-export async function saveAddressAction(prevState: any, formData: FormData): Promise<ActionState> {
-    const finalQuoteString = formData.get('finalQuote') as string;
-    let finalQuote: FinalQuote;
-     try {
-        finalQuote = JSON.parse(finalQuoteString);
-    } catch (error) {
-         return {
-            status: 'error',
-            message: 'Invalid quote data. Please try generating the quote again.',
-            quote: null,
-            errors: { form: ['Invalid quote data.'] },
-        }
-    }
-
-    const addressData = {
-        street: formData.get('street'),
-        city: formData.get('city'),
-        province: formData.get('province'),
-        postalCode: formData.get('postalCode'),
-    };
-    
-    const validatedAddress = AddressSchema.safeParse(addressData);
-    if (!validatedAddress.success) {
-        return {
-            status: 'error', // Keep rendering the address page
-            message: 'Please correct the address errors.',
-            quote: finalQuote,
-            errors: validatedAddress.error.flatten().fieldErrors,
-        }
-    }
-
-    const updatedQuote: FinalQuote = {
-        ...finalQuote,
-        booking: {
-            ...finalQuote.booking,
-            address: validatedAddress.data,
-        },
-    };
-    
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
-
-    return {
-        status: 'success',
-        message: 'Address saved.',
-        quote: updatedQuote,
-        errors: null,
-    };
-}
-
-export async function finalizeBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
-    const finalQuoteString = formData.get('finalQuote') as string;
-    let finalQuote: FinalQuote;
-     try {
-        finalQuote = JSON.parse(finalQuoteString);
-    } catch (error) {
-         return {
-            status: 'error',
-            message: 'Invalid quote data. Please try generating the quote again.',
-            quote: null,
-            errors: { form: ['Invalid quote data.'] },
-        }
-    }
-
-     if (!finalQuote || !finalQuote.selectedQuote) {
-        return {
-            status: 'error',
-            message: 'Quote data is missing or quote tier was not selected. Please generate a quote first.',
-            quote: null,
-            errors: { form: ['Quote data is missing.'] },
-        }
-    }
-
-    const total = finalQuote.quotes[finalQuote.selectedQuote].total;
-    const depositAmount = total * 0.5;
-
-    const updatedQuote: FinalQuote = {
-        ...finalQuote,
-        status: 'confirmed',
-        paymentDetails: {
-            deposit: {
-                status: 'pending',
-                amount: depositAmount,
-            },
-            final: {
-                status: 'pending',
-                amount: total - depositAmount,
-            }
-        }
-    };
-    
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
-    await sendQuoteEmail(updatedQuote);
-
-     return {
-        status: 'success',
-        message: 'Booking Confirmed! A confirmation email with payment details has been sent.',
-        quote: updatedQuote,
-        errors: null,
-    };
-}
-
-
+// This server action is now only used for updating status from the admin panel
 export async function updateBookingStatusAction(
   bookingId: string,
   update: {
@@ -481,13 +368,24 @@ export async function updateBookingStatusAction(
   }
 ): Promise<{ success: boolean; message: string; booking?: FinalQuote }> {
   try {
-    const existingBooking = await getBooking(bookingId);
+    // NOTE: This uses firebase-admin and will fail if not run in a server environment
+    // with appropriate authentication. For client-side updates, use the client SDK.
+    const { adminDb } = await import('@/firebase/admin-app');
+    const { Timestamp } = await import('firebase-admin/firestore');
 
-    if (!existingBooking) {
+    const bookingRef = adminDb.collection('bookings').doc(bookingId);
+    const docSnap = await bookingRef.get();
+
+    if (!docSnap.exists) {
       return { success: false, message: 'Booking not found.' };
     }
+    
+    const existingData = docSnap.data();
+    if (!existingData) {
+       return { success: false, message: 'Booking data is corrupt.' };
+    }
 
-    let finalQuote = { ...existingBooking.finalQuote };
+    let finalQuote = { ...existingData.finalQuote } as FinalQuote;
 
     if (update.status) {
       finalQuote.status = update.status;
@@ -501,23 +399,26 @@ export async function updateBookingStatusAction(
       finalQuote.paymentDetails.final.status = update.finalStatus;
     }
 
-    // Special case: If final is 'received', deposit must also be 'received'.
     if (update.finalStatus === 'received' && finalQuote.paymentDetails) {
         finalQuote.paymentDetails.deposit.status = 'received';
     }
 
 
-    await saveBooking({
-      id: existingBooking.id,
-      createdAt: existingBooking.createdAt,
-      contact: finalQuote.contact,
-      phone: finalQuote.contact.phone,
+    await bookingRef.update({
       finalQuote: finalQuote,
+      updatedAt: Timestamp.now(),
     });
     
     revalidatePath('/admin');
     
-    return { success: true, message: 'Booking updated successfully.', booking: finalQuote };
+    // Re-fetch to return the full updated booking
+    const updatedDoc = await bookingRef.get();
+    const updatedBookingData = updatedDoc.data();
+    if (!updatedBookingData) {
+        return { success: false, message: 'Failed to re-fetch updated booking.' };
+    }
+
+    return { success: true, message: 'Booking updated successfully.', booking: updatedBookingData.finalQuote };
   } catch (error) {
     console.error('Failed to update booking:', error);
     const message = error instanceof Error ? error.message : 'An unknown error occurred.';

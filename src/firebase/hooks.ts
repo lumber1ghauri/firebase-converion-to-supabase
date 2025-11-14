@@ -1,9 +1,9 @@
 'use client';
 
 import { useContext } from 'react';
-import { FirebaseContext } from './provider';
+import { FirebaseContext, FirebaseContextValue } from './provider';
 
-export const useFirebase = () => {
+export const useFirebase = (): FirebaseContextValue => {
     const context = useContext(FirebaseContext);
     if (context === undefined) {
         throw new Error('useFirebase must be used within a FirebaseProvider');
@@ -12,23 +12,23 @@ export const useFirebase = () => {
 };
 
 export function useFirebaseApp() {
-  const { app } = useFirebase();
-  if (!app) {
+  const { firebaseApp } = useFirebase();
+  if (!firebaseApp) {
     throw new Error(
       'Firebase app is not initialized. Make sure you have a FirebaseProvider component in your app.'
     );
   }
-  return app;
+  return firebaseApp;
 }
 
 export function useFirestore() {
-  const { db } = useFirebase();
-  if (!db) {
+  const { firestore } = useFirebase();
+  if (!firestore) {
     throw new Error(
       'Firestore is not initialized. Make sure you have a FirebaseProvider component in your app.'
     );
   }
-  return db;
+  return firestore;
 }
 
 export function useAuth() {
@@ -39,4 +39,9 @@ export function useAuth() {
     );
   }
   return auth;
+}
+
+export function useUser() {
+    const { user, isUserLoading } = useFirebase();
+    return { user, isUserLoading };
 }

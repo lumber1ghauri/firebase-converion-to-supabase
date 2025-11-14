@@ -1,36 +1,29 @@
-
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getBooking, type BookingDocument } from '@/firebase/firestore/bookings';
+import { useFirestore, useDoc } from '@/firebase';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import { doc } from 'firebase/firestore';
 
 export default function BookPage({ params }: { params: { bookingId: string } }) {
-  const [booking, setBooking] = useState<BookingDocument | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { firestore } = useFirebase();
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (params.bookingId) {
-      getBooking(params.bookingId)
-        .then(bookingData => {
-          if (bookingData) {
-            setBooking(bookingData);
-          } else {
-            setError('Booking not found. It may have expired or been removed.');
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          setError('Failed to retrieve booking details.');
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
-  }, [params.bookingId]);
+  const docRef = useMemo(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'bookings', params.bookingId);
+  }, [firestore, params.bookingId]);
 
-  if (loading) {
+  const { data: booking, isLoading } = useDoc<BookingDocument>(docRef);
+
+  useEffect(() => {
+    if (!isLoading && !booking) {
+      setError('Booking not found. It may have expired or been removed.');
+    }
+  }, [isLoading, booking]);
+
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -50,6 +43,8 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
   }
 
   if (booking) {
+    // The data from useDoc is just the document data, not the full BookingDocument type with methods
+    // We need to ensure the finalQuote object is what QuoteConfirmation expects
     return <QuoteConfirmation quote={booking.finalQuote} />;
   }
 

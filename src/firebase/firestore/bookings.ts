@@ -1,8 +1,16 @@
-
-'use server';
-import { adminDb } from '@/firebase/admin-app';
+'use client';
+import {
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  collection,
+  serverTimestamp,
+  type Firestore,
+} from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
-import { Timestamp } from 'firebase-admin/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export type BookingDocument = {
     id: string;
@@ -13,21 +21,39 @@ export type BookingDocument = {
     phone: string;
 }
 
-export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
-    const bookingRef = adminDb.collection('bookings').doc(booking.id);
+export async function saveBooking(
+    firestore: Firestore,
+    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { createdAt?: Date }
+) {
+    const bookingRef = doc(firestore, 'bookings', booking.id);
     const dataToSave = {
         ...booking,
-        createdAt: Timestamp.fromDate(booking.createdAt),
-        updatedAt: Timestamp.now(),
+        updatedAt: serverTimestamp(),
+        createdAt: booking.createdAt ? booking.createdAt : serverTimestamp(),
     };
-    await bookingRef.set(dataToSave, { merge: true });
+    
+    // Non-blocking write with error handling
+    setDoc(bookingRef, dataToSave, { merge: true })
+      .catch((error) => {
+        console.error("Error saving booking: ", error);
+        errorEmitter.emit(
+          'permission-error',
+          new FirestorePermissionError({
+            path: bookingRef.path,
+            operation: 'write',
+            requestResourceData: dataToSave,
+          })
+        );
+        // Re-throw to allow the caller to handle UI feedback if needed
+        throw error;
+      });
 }
 
-export async function getBooking(bookingId: string): Promise<BookingDocument | null> {
-    const bookingRef = adminDb.collection('bookings').doc(bookingId);
-    const docSnap = await bookingRef.get();
+export async function getBooking(firestore: Firestore, bookingId: string): Promise<BookingDocument | null> {
+    const bookingRef = doc(firestore, 'bookings', bookingId);
+    const docSnap = await getDoc(bookingRef);
 
-    if (docSnap.exists) {
+    if (docSnap.exists()) {
         const data = docSnap.data();
         if (!data) return null;
         return {
@@ -41,9 +67,9 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
     }
 }
 
-export async function getAllBookings(): Promise<BookingDocument[]> {
-    const bookingsCol = adminDb.collection('bookings');
-    const bookingSnapshot = await bookingsCol.get();
+export async function getAllBookings(firestore: Firestore): Promise<BookingDocument[]> {
+    const bookingsCol = collection(firestore, 'bookings');
+    const bookingSnapshot = await getDocs(bookingsCol);
     const bookingList = bookingSnapshot.docs.map(doc => {
         const data = doc.data();
         return {

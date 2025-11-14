@@ -1,114 +1,40 @@
-/**
- * @fileoverview Firestore Security Rules for GlamBook Pro.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for client and appointment data,
- * ensuring that each user can only access their own data. Makeup service data is public.
- *
- * Data Structure:
- * - /users/{userId}/clients/{clientId}: Stores client information, accessible only by the owner.
- * - /users/{userId}/clients/{clientId}/appointments/{appointmentId}: Stores appointment
- *   information, also accessible only by the owner.
- * - /makeup_services/{makeupServiceId}: Stores public makeup service data, accessible to all.
- *
- * Key Security Decisions:
- * - User listing is disallowed.
- * - Strict ownership is enforced for all client and appointment data.
- * - Makeup service data is publicly readable.
- *
- * Denormalization for Authorization:
- * - The 'clientId' and 'userId' are part of the document path for clients and appointments,
- *   eliminating the need for additional 'get()' calls to verify ownership.
- *
- * Structural Segregation:
- * - User-specific data (clients, appointments) is stored under /users/{userId} to enforce
- *   private access. Public data (makeup services) is stored in a top-level collection.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Checks if the user is signed in.
-     */
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the user ID matches the authenticated user's ID.
-     * @param {string} userId The user ID to check against.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-
-    /**
-     * @description Checks if the user is the owner and the document exists.
-     * @param {string} userId The user ID to check against.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+    
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+    
+    function isOwnerByEmail(email) {
+        return isSignedIn() && request.auth.token.email == email;
     }
 
-    /**
-     * @description Rules for client documents under a user's path.
-     * @path /users/{userId}/clients/{clientId}
-     * @allow (create) User 'user123' can create a client document if request.auth.uid == 'user123' and request.resource.data.id == 'user123'.
-     * @allow (get) User 'user123' can read their own client document.
-     * @allow (list) User 'user123' can list client documents under their user ID.
-     * @allow (update) User 'user123' can update their client document.
-     * @allow (delete) User 'user123' can delete their client document.
-     * @deny (create) User 'user456' cannot create a client document under 'user123'.
-     * @deny (update) User 'user456' cannot update client document under 'user123'.
-     * @deny (delete) User 'user456' cannot delete client document under 'user123'.
-     * @principle Enforces document ownership for all operations.
-     */
-    match /users/{userId}/clients/{clientId} {
-      // Read rules
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      // Write rules
-      allow create: if isOwner(userId) && request.resource.data.id == clientId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+    // Rules for user profiles
+    match /users/{userId} {
+      allow read, update: if isOwner(userId);
+      allow create: if isSignedIn();
+    }
+    
+    // Rules for bookings
+    match /bookings/{bookingId} {
+      allow create: if isSignedIn(); // Any authenticated user can create a booking
+      allow read: if isOwnerByEmail(resource.data.contact.email) || isAdmin(); // Owner or admin can read
+      allow update: if isOwnerByEmail(request.resource.data.contact.email) || isAdmin(); // Owner or admin can update
+      allow delete: if isAdmin(); // Only admin can delete
+      allow list: if isAdmin(); // Only admin can list all bookings
     }
 
-    /**
-     * @description Rules for appointment documents under a client's path.
-     * @path /users/{userId}/clients/{clientId}/appointments/{appointmentId}
-     * @allow (create) User 'user123' can create an appointment document under their client if request.auth.uid == 'user123'.
-     * @allow (get) User 'user123' can read their own appointment document.
-     * @allow (list) User 'user123' can list appointment documents under their client.
-     * @allow (update) User 'user123' can update their appointment document.
-     * @allow (delete) User 'user123' can delete their appointment document.
-     * @deny (create) User 'user456' cannot create an appointment document under 'user123'.
-     * @deny (update) User 'user456' cannot update an appointment document under 'user123'.
-     * @deny (delete) User 'user456' cannot delete an appointment document under 'user123'.
-     * @principle Enforces document ownership and relational integrity.
-     */
-    match /users/{userId}/clients/{clientId}/appointments/{appointmentId} {
-      // Read rules
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      // Write rules
-      allow create: if isOwner(userId) && request.resource.data.clientId == clientId;
-      allow update: if isExistingOwner(userId) && request.resource.data.clientId == clientId;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Rules for makeup service documents.
-     * @path /makeup_services/{makeupServiceId}
-     * @allow (get) Any user can read makeup service documents.
-     * @allow (list) Any user can list makeup service documents.
-     * @deny (create) No user can create makeup service documents. // TODO: Add role-based access for admin users if required.
-     * @deny (update) No user can update makeup service documents. // TODO: Add role-based access for admin users if required.
-     * @deny (delete) No user can delete makeup service documents. // TODO: Add role-based access for admin users if required.
-     * @principle Allows public read access, restricts write access.
-     */
     match /makeup_services/{makeupServiceId} {
       // Read rules
       allow get: if true;

@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FinalQuote, PaymentInfo, PaymentStatus, PriceTier } from '@/lib/types';
@@ -13,6 +12,8 @@ import { updateBookingStatusAction } from '@/app/actions';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore } from '@/firebase';
+import { saveBooking } from '@/firebase/firestore/bookings';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -43,14 +44,12 @@ function generateWhatsAppLink(phone: string | undefined): string | null {
 }
 
 
-const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, bookingId }: { 
+const PaymentDetailCard = ({ title, paymentInfo, onStatusChange }: { 
     title: string; 
     paymentInfo: PaymentInfo; 
-    bookingId: string;
     onStatusChange: (update: { depositStatus?: PaymentStatus; finalStatus?: PaymentStatus }) => void;
 }) => {
     const isPending = paymentInfo.status === 'pending';
-    const variant = isPending ? "destructive" : "success";
     const paymentType = title.toLowerCase().includes('deposit') ? 'deposit' : 'final';
 
     return (
@@ -96,22 +95,11 @@ const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, bookingId }: {
 export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
 
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
   const whatsappLink = generateWhatsAppLink(quote.contact.phone);
-
-  const getStatusVariant = (status: FinalQuote['status']) => {
-    switch (status) {
-      case 'confirmed':
-        return 'success';
-      case 'cancelled':
-        return 'destructive';
-      case 'quoted':
-      default:
-        return 'secondary';
-    }
-  };
   
   const handleStatusChange = async (update: {
       status?: FinalQuote['status'];
@@ -119,21 +107,39 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       finalStatus?: PaymentStatus;
   }) => {
       setIsUpdating(true);
-      const result = await updateBookingStatusAction(quote.id, update);
-      setIsUpdating(false);
+      
+      let updatedQuote = { ...quote };
 
-      if (result.success && result.booking) {
-          onUpdate(result.booking);
+      if (update.status) {
+          updatedQuote.status = update.status;
+      }
+      if (updatedQuote.paymentDetails) {
+          if (update.depositStatus) {
+              updatedQuote.paymentDetails.deposit.status = update.depositStatus;
+          }
+          if (update.finalStatus) {
+              updatedQuote.paymentDetails.final.status = update.finalStatus;
+          }
+          if (update.finalStatus === 'received') {
+              updatedQuote.paymentDetails.deposit.status = 'received';
+          }
+      }
+
+      try {
+          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
               description: "The booking has been successfully updated.",
           });
-      } else {
+      } catch (error: any) {
           toast({
               variant: "destructive",
               title: "Update Failed",
-              description: result.message,
+              description: error.message || 'An unknown error occurred.',
           });
+      } finally {
+          setIsUpdating(false);
       }
   };
 
@@ -308,13 +314,11 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
                         <PaymentDetailCard 
                             title="50% Deposit" 
                             paymentInfo={quote.paymentDetails.deposit}
-                            bookingId={quote.id}
                             onStatusChange={handleStatusChange}
                         />
                         <PaymentDetailCard 
                             title="Final Payment" 
                             paymentInfo={quote.paymentDetails.final}
-                            bookingId={quote.id}
                             onStatusChange={handleStatusChange}
                         />
                     </div>

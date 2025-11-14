@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -7,8 +6,8 @@ import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useFirestore } from '@/firebase';
+import { saveBooking } from '@/firebase/firestore/bookings';
 import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
@@ -150,17 +149,14 @@ export default function BookingFlow() {
       });
     } else if (state.status === 'success' && state.quote) {
         setIsSubmittingClient(true);
-        const bookingRef = doc(firestore, 'bookings', state.quote.id);
         const dataToSave = {
             id: state.quote.id,
             finalQuote: state.quote,
-            createdAt: new Date(),
             contact: state.quote.contact,
             phone: state.quote.contact.phone,
-            updatedAt: serverTimestamp(),
         };
 
-        setDoc(bookingRef, dataToSave, { merge: true })
+        saveBooking(firestore, dataToSave)
             .catch((error) => {
                 console.error("Client-side save failed:", error);
                 toast({

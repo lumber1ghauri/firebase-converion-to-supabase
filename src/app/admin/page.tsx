@@ -1,7 +1,7 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useFirestore } from '@/firebase';
 import { getAllBookings, type BookingDocument } from '@/firebase/firestore/bookings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,7 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 's
 
 
 export default function AdminDashboard() {
+  const firestore = useFirestore();
   const [bookings, setBookings] = useState<BookingDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
 
   const fetchBookings = () => {
     setLoading(true);
-    getAllBookings()
+    getAllBookings(firestore)
       .then(data => {
         const sortedData = data.sort((a, b) => {
             try {
@@ -89,7 +90,7 @@ export default function AdminDashboard() {
       })
       .catch(err => {
         console.error(err);
-        setError('Failed to fetch bookings.');
+        setError('Failed to fetch bookings. You may not have administrative privileges.');
       })
       .finally(() => {
         setLoading(false);
@@ -97,8 +98,10 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (firestore) {
+        fetchBookings();
+    }
+  }, [firestore]);
   
   const filteredBookings = useMemo(() => {
     if (!searchTerm) return bookings;
