@@ -4,12 +4,8 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES, GST_RATE } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, Quote, PaymentStatus } from '@/lib/types';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, PaymentStatus } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
-import { sendQuoteEmail } from '@/lib/email';
-import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
-import { saveBooking as saveBookingServer } from '@/firebase/firestore/server-actions';
 
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
@@ -354,25 +350,13 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    try {
-        await saveBookingServer({
-            id: finalQuote.id,
-            finalQuote: finalQuote,
-            contact: finalQuote.contact,
-            phone: finalQuote.contact.phone,
-        });
-
-    } catch (error: any) {
-         console.error("Error saving booking:", error);
-         return {
-            status: 'error',
-            message: `There was an issue saving your quote: ${error.message}`,
-            quote: null,
-            errors: null,
-            fieldValues
-        };
-    }
-
-    // Redirect to the new booking confirmation page
-    redirect(`/book/${finalQuote.id}`);
+    // Instead of saving here and redirecting, return the quote to the client.
+    // The client component will handle saving and redirection.
+     return {
+        status: 'success',
+        message: 'Quote generated successfully!',
+        quote: finalQuote,
+        errors: null,
+        fieldValues
+    };
 }

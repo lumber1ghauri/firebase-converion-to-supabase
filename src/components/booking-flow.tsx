@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +12,8 @@ import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices,
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import type { MOBILE_LOCATION_IDS } from '@/lib/services';
+import { useFirestore, useUser } from '@/firebase';
+import { saveBookingAndSendEmail } from '@/firebase/firestore/bookings';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,6 +108,9 @@ export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+  const firestore = useFirestore();
+  const { user } = useUser();
   
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -143,7 +149,31 @@ export default function BookingFlow() {
           description: state.message,
       });
     }
-  }, [state, toast, STEPS]);
+
+    if (state.status === 'success' && state.quote) {
+      if (!firestore || !user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Database connection not available.' });
+        return;
+      }
+      
+      const quote = state.quote;
+      // Save the booking and redirect
+      saveBookingAndSendEmail(firestore, { 
+          id: quote.id, 
+          uid: user.uid, 
+          finalQuote: quote,
+          contact: quote.contact,
+          phone: quote.contact.phone,
+          createdAt: new Date(),
+      }).then(() => {
+          router.push(`/book/${quote.id}`);
+      }).catch(err => {
+          console.error("Failed to save booking or send email:", err);
+          toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save your booking. Please try again.' });
+      });
+    }
+
+  }, [state, toast, STEPS, firestore, router, user]);
 
 
   const nextStep = () => {

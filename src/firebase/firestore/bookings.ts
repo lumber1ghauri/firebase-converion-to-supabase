@@ -11,12 +11,13 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { sendQuoteEmail } from '@/lib/email';
 
 export type BookingDocument = {
     id: string;
     uid?: string; // User ID of the owner
     finalQuote: FinalQuote;
-    createdAt: Timestamp;
+    createdAt: Timestamp | Date;
     updatedAt?: Timestamp;
     contact: FinalQuote['contact'];
     phone: string;
@@ -25,7 +26,7 @@ export type BookingDocument = {
 // Client-side saveBooking for UI interactions like the admin panel
 export async function saveBooking(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { uid: string, createdAt: Timestamp | Date }
+    booking: Omit<BookingDocument, 'updatedAt'> & { uid: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
@@ -46,6 +47,40 @@ export async function saveBooking(
             })
         );
         throw error;
+    }
+}
+
+// Function to be called from the client after the server action returns the quote
+export async function saveBookingAndSendEmail(
+    firestore: Firestore,
+    booking: Omit<BookingDocument, 'updatedAt'> & { uid: string }
+) {
+    const bookingRef = doc(firestore, 'bookings', booking.id);
+    
+    const dataToSave = {
+        ...booking,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+    };
+
+    try {
+        await setDoc(bookingRef, dataToSave, { merge: true });
+        
+        // Send email only when a quote is first created
+        if (booking.finalQuote.status === 'quoted') {
+            await sendQuoteEmail(booking.finalQuote);
+        }
+    } catch (error: any) {
+        console.error(`[Client] Error saving booking ${booking.id}:`, error);
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+                path: bookingRef.path,
+                operation: 'write',
+                requestResourceData: dataToSave,
+            })
+        );
+        throw new Error(`Failed to save booking data: ${error.message}`);
     }
 }
 
