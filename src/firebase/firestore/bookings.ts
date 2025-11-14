@@ -32,6 +32,7 @@ export async function saveBooking(
     // Ensure uid is part of the data to be saved
     const dataToSave = {
         ...booking,
+        uid: booking.uid,
         updatedAt: serverTimestamp(),
         // Only set createdAt on initial creation
         ...(booking.createdAt ? {} : { createdAt: serverTimestamp() }),
@@ -73,11 +74,11 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
             return null;
         }
     } catch (error: any) {
-        console.error(`Error fetching document ${bookingId}:`, error);
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
+        const permissionError = new FirestorePermissionError({
             path: bookingRef.path,
             operation: 'get'
-        }));
+        });
+        errorEmitter.emit('permission-error', permissionError);
         throw error;
     }
 }
@@ -97,11 +98,11 @@ export async function getAllBookings(firestore: Firestore): Promise<BookingDocum
         });
         return bookingList;
     } catch (error: any) {
-        console.error('Error fetching all bookings:', error);
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
+        const permissionError = new FirestorePermissionError({
             path: bookingsCol.path,
             operation: 'list'
-        }));
+        });
+        errorEmitter.emit('permission-error', permissionError);
         throw error;
     }
 }
