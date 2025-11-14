@@ -21,14 +21,14 @@ import { Checkbox } from './ui/checkbox';
 
 
 const initialAddressState = {
-  status: 'idle',
+  status: 'idle' as const,
   message: '',
   quote: null,
   errors: null,
 };
 
 const initialFinalizeState = {
-  status: 'idle',
+  status: 'idle' as const,
   message: '',
   quote: null,
   errors: null,
@@ -103,7 +103,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const containsStudioService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
   const containsMobileService = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'mobile'), [currentQuote.booking.days]);
   
-  const showLeadArtistOption = useMemo(() => containsMobileService || containsStudioService, [containsMobileService, containsStudioService]);
+  const showLeadArtistOption = useMemo(() => true, []);
   const showTeamOption = useMemo(() => containsMobileService, [containsMobileService]);
   
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(() => {
@@ -115,11 +115,15 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const depositAmount = finalPrice * 0.5;
 
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
-
+  
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
-  if (bookingConfirmed && currentStep !== 'confirmed') {
-    setCurrentStep('confirmed');
-  }
+  
+  React.useEffect(() => {
+    if (bookingConfirmed && currentStep !== 'confirmed') {
+      setCurrentStep('confirmed');
+    }
+  }, [bookingConfirmed, currentStep]);
+
 
   // Effect to move to next step after address is saved
   React.useEffect(() => {
@@ -255,7 +259,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
               )}
               
               <div className="p-4 mt-6">
-                   <h3 className="font-headline text-2xl text-center mb-4">Select Your Artist Tier</h3>
+                   <h3 className={cn("font-headline text-2xl text-center mb-4", !showLeadArtistOption || !showTeamOption ? "hidden" : "")}>Select Your Artist Tier</h3>
                    <RadioGroup 
                       value={selectedTier} 
                       onValueChange={(val) => setSelectedTier(val as PriceTier)} 
@@ -473,7 +477,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 )}
             </CardFooter>
           )}
-        
+        </CardContent>
       </Card>
     </div>
   );
@@ -517,7 +521,3 @@ function FinalizeSubmitButton({ text }: { text: string }) {
         </Button>
     )
 }
-
-    
-
-    
