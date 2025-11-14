@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 export interface FirebaseContextValue {
   firebaseApp: FirebaseApp;
@@ -28,6 +29,7 @@ export function FirebaseProvider({ children, firebaseApp, firestore, auth }: Fir
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
+    initiateAnonymousSignIn(auth); // Initiate sign-in on mount
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsUserLoading(false);

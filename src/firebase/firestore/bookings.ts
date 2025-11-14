@@ -7,6 +7,7 @@ import {
   collection,
   serverTimestamp,
   type Firestore,
+  addDoc,
 } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -29,9 +30,10 @@ export async function saveBooking(
     const dataToSave = {
         ...booking,
         updatedAt: serverTimestamp(),
-        createdAt: booking.createdAt ? booking.createdAt : serverTimestamp(),
+        // Only set createdAt on initial creation
+        ...(booking.createdAt ? {} : { createdAt: serverTimestamp() }),
     };
-    
+
     // Non-blocking write with error handling
     setDoc(bookingRef, dataToSave, { merge: true })
       .catch((error) => {
@@ -51,33 +53,52 @@ export async function saveBooking(
 
 export async function getBooking(firestore: Firestore, bookingId: string): Promise<BookingDocument | null> {
     const bookingRef = doc(firestore, 'bookings', bookingId);
-    const docSnap = await getDoc(bookingRef);
+    
+    try {
+        const docSnap = await getDoc(bookingRef);
 
-    if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (!data) return null;
-        return {
-            ...data,
-            id: docSnap.id,
-            createdAt: data.createdAt.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-        } as BookingDocument;
-    } else {
-        return null;
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (!data) return null;
+            return {
+                ...data,
+                id: docSnap.id,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+            } as BookingDocument;
+        } else {
+            return null;
+        }
+    } catch (error: any) {
+        console.error(`Error fetching document ${bookingId}:`, error);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: bookingRef.path,
+            operation: 'get'
+        }));
+        throw error;
     }
 }
 
 export async function getAllBookings(firestore: Firestore): Promise<BookingDocument[]> {
     const bookingsCol = collection(firestore, 'bookings');
-    const bookingSnapshot = await getDocs(bookingsCol);
-    const bookingList = bookingSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            ...data,
-            id: doc.id,
-            createdAt: data.createdAt.toDate(),
-            updatedAt: data.updatedAt?.toDate(),
-        } as BookingDocument
-    });
-    return bookingList;
+    try {
+        const bookingSnapshot = await getDocs(bookingsCol);
+        const bookingList = bookingSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                id: doc.id,
+                createdAt: data.createdAt?.toDate(),
+                updatedAt: data.updatedAt?.toDate(),
+            } as BookingDocument
+        });
+        return bookingList;
+    } catch (error: any) {
+        console.error('Error fetching all bookings:', error);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: bookingsCol.path,
+            operation: 'list'
+        }));
+        throw error;
+    }
 }
