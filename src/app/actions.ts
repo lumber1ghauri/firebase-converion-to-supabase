@@ -358,9 +358,9 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact, phone: finalQuote.contact.phone });
-    await sendQuoteEmail(finalQuote);
-
+    // The saveBooking and sendQuoteEmail calls are now handled on the client
+    // after this action successfully returns the quote.
+    
     return {
         status: 'success',
         message: 'Success',
@@ -523,4 +523,22 @@ export async function updateBookingStatusAction(
     const message = error instanceof Error ? error.message : 'An unknown error occurred.';
     return { success: false, message };
   }
+}
+
+export async function clientSaveBooking(quote: FinalQuote) {
+    'use server';
+    try {
+        await saveBooking({
+            id: quote.id,
+            finalQuote: quote,
+            createdAt: new Date(),
+            contact: quote.contact,
+            phone: quote.contact.phone
+        });
+        await sendQuoteEmail(quote);
+        return { success: true };
+    } catch (error: any) {
+        console.error("Client-side save failed:", error);
+        return { success: false, message: error.message };
+    }
 }

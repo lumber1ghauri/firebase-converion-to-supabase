@@ -6,8 +6,9 @@ import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-import { generateQuoteAction } from '@/app/actions';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { clientSaveBooking, generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
@@ -113,6 +114,7 @@ export default function BookingFlow() {
   const [days, setDays] = useState<Day[]>([]);
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
+  const [isSubmittingClient, setIsSubmittingClient] = useState(false);
   
   useEffect(() => {
     // Initialize state on client to avoid hydration mismatch
@@ -144,6 +146,21 @@ export default function BookingFlow() {
           title: 'Booking Error',
           description: state.message,
       });
+    } else if (state.status === 'success' && state.quote) {
+        // This is where we handle the client-side save
+        setIsSubmittingClient(true);
+        clientSaveBooking(state.quote).then(result => {
+            if (!result.success) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Could not save booking',
+                    description: result.message || 'An unexpected error occurred.',
+                });
+            }
+             // Let the regular state transition to QuoteConfirmation happen regardless
+        }).finally(() => {
+            setIsSubmittingClient(false);
+        });
     }
   }, [state, toast, STEPS]);
 
@@ -314,7 +331,7 @@ export default function BookingFlow() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <SubmitButton />
+            <SubmitButton isSubmittingClient={isSubmittingClient} />
           )}
         </div>
       </form>
@@ -698,14 +715,15 @@ function PartyServiceInput({ name, label, description, value, onValueChange, onB
 }
 
 
-function SubmitButton() {
+function SubmitButton({ isSubmittingClient }: { isSubmittingClient: boolean }) {
     const { pending } = useFormStatus();
+    const isSubmitting = pending || isSubmittingClient;
 
     return (
-        <Button type="submit" size="lg" className="font-bold" disabled={pending}>
-            {pending ? <>
+        <Button type="submit" size="lg" className="font-bold" disabled={isSubmitting}>
+            {isSubmitting ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Generating...
+                {pending ? 'Generating...' : 'Saving...'}
             </> : <>
                 Generate My Quote
                 <Send className="ml-2 h-4 w-4" />
