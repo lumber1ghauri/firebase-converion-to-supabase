@@ -348,11 +348,7 @@ export async function generateQuoteAction(
     
     await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
     
-    try {
-        await sendQuoteEmail(finalQuote);
-    } catch (e) {
-        console.error("Email failed to send:", e);
-    }
+    await sendQuoteEmail(finalQuote);
 
     return {
         status: 'success',
@@ -399,11 +395,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
 
         await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
         
-        try {
-            await sendQuoteEmail(updatedQuote);
-        } catch (e) {
-            console.error("Confirmation email failed to send:", e);
-        }
+        await sendQuoteEmail(updatedQuote);
 
         return {
             status: 'success',
@@ -442,11 +434,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     
     await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
 
-    try {
-        await sendQuoteEmail(updatedQuote);
-    } catch (e) {
-        console.error("Confirmation email failed to send:", e);
-    }
+    await sendQuoteEmail(updatedQuote);
 
      return {
         status: 'success',

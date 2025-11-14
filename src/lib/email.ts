@@ -7,14 +7,14 @@ import QuoteEmailTemplate from '@/app/emails/quote-email';
 
 
 export async function sendQuoteEmail(quote: FinalQuote) {
-  if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY === 'YOUR_API_KEY_HERE') {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
     console.log("RESEND_API_KEY not set or is a placeholder. Skipping email.");
     console.log("Email would be sent to:", quote.contact.email);
-    console.log("Quote data:", JSON.stringify(quote, null, 2));
     return;
   }
   
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const resend = new Resend(apiKey);
 
   const subject = quote.status === 'confirmed' 
     ? `Booking Confirmed! - Sellaya.ca (ID: ${quote.id})`
@@ -22,7 +22,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     
   try {
     const { data, error } = await resend.emails.send({
-      from: 'Sellaya <booking@sellaya.ca>',
+      from: 'Sellaya <onboarding@resend.dev>',
       to: [quote.contact.email],
       subject: subject,
       react: QuoteEmailTemplate({ quote }),
@@ -34,7 +34,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
       return;
     }
 
-    console.log('Email sent successfully:', data);
+    console.log('Email sent successfully for booking ID:', quote.id);
   } catch (error) {
     console.error('Failed to send email:', error);
   }
