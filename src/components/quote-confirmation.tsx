@@ -3,10 +3,10 @@
 import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight } from "lucide-react";
+import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking } from '@/firebase/firestore/bookings';
+import { saveBooking, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
@@ -91,6 +91,8 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
   const [address, setAddress] = useState({ street: '', city: '', province: 'ON', postalCode: '' });
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+  
+  const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
 
 
   const containsStudioService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'studio'), [quote.booking.days]);
@@ -164,28 +166,36 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
           return;
       }
+      if (!paymentScreenshot) {
+          toast({ variant: 'destructive', title: 'Screenshot Required', description: 'Please upload a screenshot of your payment.' });
+          return;
+      }
+
       setIsSaving(true);
       setError(null);
 
-      const total = quote.quotes[selectedTier].total;
-      const depositAmount = total * 0.5;
-      
-      const updatedQuote: FinalQuote = {
-          ...quote,
-          selectedQuote: selectedTier,
-          status: 'confirmed',
-          paymentDetails: {
-              deposit: { status: 'pending', amount: depositAmount },
-              final: { status: 'pending', amount: total - depositAmount },
-          }
-      };
-
       try {
+          const screenshotUrl = await uploadPaymentScreenshot(paymentScreenshot, quote.id, user.uid);
+
+          const total = quote.quotes[selectedTier].total;
+          const depositAmount = total * 0.5;
+          
+          const updatedQuote: FinalQuote = {
+              ...quote,
+              selectedQuote: selectedTier,
+              status: 'confirmed',
+              paymentDetails: {
+                  deposit: { status: 'pending', amount: depositAmount, screenshotUrl },
+                  final: { status: 'pending', amount: total - depositAmount },
+              }
+          };
+
           await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           await sendQuoteEmail(updatedQuote);
           setQuote(updatedQuote);
           setCurrentStep('confirmed');
           toast({ title: 'Booking Confirmed!', description: 'An email with payment details has been sent.' });
+
       } catch (err: any) {
           setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
           toast({ variant: 'destructive', title: 'Finalization Failed', description: err.message });
@@ -440,8 +450,19 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                           In the message/memo field, please include your Booking ID:
                           <strong className="ml-1">{quote.id}</strong>
                       </p>
-                       <Button type="button" size="lg" className="w-full mt-4 font-bold" disabled={isSaving} onClick={handleFinalizeBooking}>
-                           {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : "I've Sent the e-Transfer"}
+                       <div className="space-y-2 pt-4">
+                            <Label htmlFor="payment-screenshot" className="font-medium">Upload Screenshot *</Label>
+                            <Input 
+                                id="payment-screenshot" 
+                                type="file" 
+                                accept="image/png, image/jpeg, image/jpg"
+                                onChange={(e) => setPaymentScreenshot(e.target.files?.[0] || null)} 
+                                className="file:text-primary file:font-medium"
+                            />
+                            {paymentScreenshot && <p className='text-xs text-muted-foreground'>Selected: {paymentScreenshot.name}</p>}
+                       </div>
+                       <Button type="button" size="lg" className="w-full mt-4 font-bold" disabled={isSaving || !paymentScreenshot} onClick={handleFinalizeBooking}>
+                           {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : "Confirm & Send Screenshot"}
                        </Button>
                   </CardContent>
                 </Card>
@@ -500,6 +521,15 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                       </div>
                     </CardFooter>
                 </Card>
+                  {quote.paymentDetails?.deposit.screenshotUrl && (
+                     <div className="mt-6 text-center">
+                        <h4 className="font-headline text-lg mb-2">Payment Submitted</h4>
+                        <a href={quote.paymentDetails.deposit.screenshotUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+                            <LinkIcon className="w-4 h-4" />
+                            View Screenshot
+                        </a>
+                    </div>
+                  )}
                   {quote.booking.address && (
                       <div className="mt-6 text-center">
                         <h4 className="font-headline text-lg mb-2">Service Address</h4>
