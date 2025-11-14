@@ -401,7 +401,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
 
         return {
             status: 'success',
-            message: 'Booking Confirmed! A confirmation email with the studio address has been sent.',
+            message: 'Booking Confirmed! A confirmation email with payment details has been sent.',
             quote: updatedQuote,
             errors: null,
         };
@@ -439,7 +439,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
 
      return {
         status: 'success',
-        message: 'Booking Confirmed! A confirmation email with the address has been sent.',
+        message: 'Booking Confirmed! A confirmation email with payment details has been sent.',
         quote: updatedQuote,
         errors: null,
     };
