@@ -16,12 +16,8 @@ service cloud.firestore {
         return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Rules for the 'bookings' collection ---
-
-    // Rule for listing all documents in the collection.
-    // This is required for the admin dashboard.
     match /bookings {
-        allow list: if isAdmin();
+      allow list: if isAdmin();
     }
 
     // Rules for individual booking documents.
