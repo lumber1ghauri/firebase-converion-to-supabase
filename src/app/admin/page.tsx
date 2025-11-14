@@ -15,102 +15,30 @@ import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
 
-const createDummyBooking = (id: string, name: string, status: FinalQuote['status'], eventDate: Date, selectedQuote: FinalQuote['selectedQuote'], paymentStatus: 'paid' | 'deposit' | 'pending'): BookingDocument => {
-    const quoteTier = selectedQuote || 'lead';
-    const total = paymentStatus === 'paid' ? (quoteTier === 'lead' ? 508.50 : 395.50) : (quoteTier === 'lead' ? 508.50 : 395.50);
-    const depositAmount = total * 0.5;
-
-    let paymentDetails: FinalQuote['paymentDetails'];
-    if (status === 'confirmed') {
-        switch (paymentStatus) {
-            case 'paid':
-                paymentDetails = {
-                    deposit: { status: 'received', amount: depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' },
-                    final: { status: 'received', amount: total - depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' }
-                };
-                break;
-            case 'deposit':
-                paymentDetails = {
-                    deposit: { status: 'received', amount: depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' },
-                    final: { status: 'pending', amount: total - depositAmount }
-                };
-                break;
-            case 'pending':
-            default:
-                paymentDetails = {
-                    deposit: { status: 'pending', amount: depositAmount },
-                    final: { status: 'pending', amount: total - depositAmount }
-                };
-                break;
-        }
-    }
-
-    const contact = {
-        name,
-        email: `${name.toLowerCase().replace(' ', '.')}@example.com`,
-        phone: `416-555-${id}`
-    };
-
-
-    return {
-        id,
-        createdAt: new Date(),
-        contact,
-        phone: contact.phone,
-        finalQuote: {
-            id,
-            contact,
-            booking: {
-                days: [{
-                    date: format(eventDate, 'PPP'),
-                    getReadyTime: '10:00 AM',
-                    serviceName: 'Bridal Makeup',
-                    serviceOption: 'Makeup & Hair',
-                    serviceType: 'mobile',
-                    location: 'Toronto / GTA',
-                    addOns: ["Bride's Jewellery Setting"]
-                }],
-                hasMobileService: true,
-                address: { street: '123 Test St', city: 'Toronto', province: 'ON', postalCode: 'M1M 1M1' }
-            },
-            quotes: {
-                lead: { lineItems: [], subtotal: 450, tax: 58.50, total: 508.50 },
-                team: { lineItems: [], subtotal: 350, tax: 45.50, total: 395.50 }
-            },
-            status,
-            selectedQuote,
-            paymentDetails,
-        }
-    };
-};
-
-const dummyBookings: BookingDocument[] = [
-    createDummyBooking('1001', 'Alice Johnson', 'confirmed', addDays(new Date(), 3), 'lead', 'paid'),
-    createDummyBooking('1002', 'Bob Williams', 'confirmed', addDays(new Date(), 10), 'team', 'deposit'),
-    createDummyBooking('1003', 'Charlie Brown', 'confirmed', addDays(new Date(), 1), 'lead', 'pending'),
-    createDummyBooking('1004', 'Diana Prince', 'quoted', addDays(new Date(), 30), undefined, 'pending'),
-    createDummyBooking('1005', 'Ethan Hunt', 'cancelled', subDays(new Date(), 5), 'lead', 'deposit'),
-    createDummyBooking('1006', 'Fiona Glenanne', 'confirmed', subDays(new Date(), 2), 'team', 'paid'),
-    createDummyBooking('1007', 'George Costanza', 'confirmed', new Date(), 'lead', 'deposit'),
-];
-
 
 function getTimeToEvent(eventDateStr: string): string {
-    const eventDate = parse(eventDateStr, 'PPP', new Date());
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const days = differenceInDays(eventDate, today);
+    try {
+        const eventDate = parse(eventDateStr, 'PPP', new Date());
+        if (isNaN(eventDate.getTime())) {
+            return "Invalid date";
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const days = differenceInDays(eventDate, today);
 
-    if (days < 0) {
-        return `Passed`;
+        if (days < 0) {
+            return `Passed`;
+        }
+        if (days === 0) {
+            return "Today";
+        }
+        if (days === 1) {
+            return "Tomorrow";
+        }
+        return `${days} days`;
+    } catch (e) {
+        return "Invalid date";
     }
-    if (days === 0) {
-        return "Today";
-    }
-    if (days === 1) {
-        return "Tomorrow";
-    }
-    return `${days} days`;
 }
 
 function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'success' | 'secondary' | 'destructive' } {
@@ -121,7 +49,10 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 's
     if (!details) {
         return { text: 'Pending', variant: 'destructive' };
     }
-    if (details.deposit.status === 'pending') {
+    if (details.final.status === 'received' && details.deposit.status === 'received') {
+        return { text: 'Paid', variant: 'success' };
+    }
+     if (details.deposit.status === 'pending') {
         return { text: 'Deposit Pending', variant: 'destructive' };
     }
     if (details.final.status === 'pending') {
@@ -139,24 +70,18 @@ export default function AdminDashboard() {
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
 
   useEffect(() => {
-    // Using dummy data for testing
-    const sortedData = dummyBookings.sort((a, b) => {
-        const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
-        const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
-        return dateA.getTime() - dateB.getTime();
-    });
-    setBookings(sortedData);
-    setLoading(false);
-
-    /*
-    // Original Firestore fetching logic
     getAllBookings()
       .then(data => {
         // Sort bookings by event date, soonest first
         const sortedData = data.sort((a, b) => {
-            const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
-            const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
-            return dateA.getTime() - dateB.getTime();
+            try {
+                const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
+                const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
+                if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
+                return dateA.getTime() - dateB.getTime();
+            } catch (e) {
+                return 0;
+            }
         });
         setBookings(sortedData);
       })
@@ -167,7 +92,6 @@ export default function AdminDashboard() {
       .finally(() => {
         setLoading(false);
       });
-    */
   }, []);
   
   const filteredBookings = useMemo(() => {
