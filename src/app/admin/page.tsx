@@ -45,13 +45,20 @@ const createDummyBooking = (id: string, name: string, status: FinalQuote['status
         }
     }
 
+    const contact = {
+        name,
+        email: `${name.toLowerCase().replace(' ', '.')}@example.com`,
+        phone: `416-555-${id}`
+    };
+
 
     return {
         id,
         createdAt: new Date(),
+        contact,
         finalQuote: {
             id,
-            contact: { name, email: `${name.toLowerCase().replace(' ', '.')}@example.com` },
+            contact,
             booking: {
                 days: [{
                     date: format(eventDate, 'PPP'),

@@ -1,3 +1,4 @@
+
 'use server';
 
 import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
@@ -9,6 +10,7 @@ export type BookingDocument = {
     finalQuote: FinalQuote;
     createdAt: Date;
     updatedAt?: Date;
+    contact: FinalQuote['contact'];
 }
 
 // Server-side action helper

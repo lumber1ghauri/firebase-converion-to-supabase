@@ -10,6 +10,15 @@
           "type": "string",
           "description": "Unique identifier for the booking."
         },
+        "contact": {
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "email": { "type": "string", "format": "email" },
+                "phone": { "type": "string" }
+            },
+            "required": ["name", "email", "phone"]
+        },
         "finalQuote": {
           "type": "object",
           "description": "The detailed quote object."
@@ -44,7 +53,7 @@
           "required": ["deposit", "final"]
         }
       },
-      "required": ["id", "finalQuote", "createdAt"]
+      "required": ["id", "finalQuote", "createdAt", "contact"]
     }
   },
   "auth": {

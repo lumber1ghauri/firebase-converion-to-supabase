@@ -90,7 +90,7 @@ export type PaymentInfo = {
 
 export type FinalQuote = {
   id: string; // Unique booking ID
-  contact: { name: string; email: string };
+  contact: { name: string; email: string; phone: string; };
   booking: {
     days: { 
         date: string; 

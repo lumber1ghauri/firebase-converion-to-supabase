@@ -6,8 +6,9 @@ import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
-import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle } from 'lucide-react';
+import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
+import { Button } from './ui/button';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -25,6 +26,16 @@ function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean }
         return { text: "Tomorrow", isPast: false };
     }
     return { text: `in ${days} days`, isPast: false };
+}
+
+function generateWhatsAppLink(phone: string | undefined): string | null {
+    if (!phone) return null;
+    // Remove all non-digit characters and add Canadian country code if missing
+    let cleanedPhone = phone.replace(/\D/g, '');
+    if (cleanedPhone.length === 10) { // Assumes Canadian/US number without country code
+        cleanedPhone = `1${cleanedPhone}`;
+    }
+    return `https://wa.me/${cleanedPhone}`;
 }
 
 
@@ -56,6 +67,7 @@ const PaymentDetailCard = ({ title, paymentInfo, totalAmount }: { title: string;
 export function BookingDetails({ quote }: { quote: FinalQuote }) {
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
+  const whatsappLink = generateWhatsAppLink(quote.contact.phone);
 
   return (
     <div className="space-y-6">
@@ -67,8 +79,17 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
           <CardContent className="text-sm space-y-2">
             <p><strong>Name:</strong> {quote.contact.name}</p>
             <p><strong>Email:</strong> {quote.contact.email}</p>
+            <p><strong>Phone:</strong> {quote.contact.phone || 'N/A'}</p>
+             {whatsappLink && (
+                  <Button asChild variant="outline" size="sm" className="mt-2">
+                      <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                          <MessageSquare className="mr-2 h-4 w-4" />
+                          Contact on WhatsApp
+                      </a>
+                  </Button>
+              )}
             {quote.booking.address && (
-              <div className="pt-2">
+              <div className="pt-4 mt-4 border-t">
                 <p className="font-semibold">Service Address:</p>
                 <p className="text-muted-foreground">
                   {quote.booking.address.street}<br />

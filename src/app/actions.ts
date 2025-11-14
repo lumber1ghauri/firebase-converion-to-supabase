@@ -334,6 +334,7 @@ message: 'Please select a date and time for the bridal trial.',
         contact: {
             name: validatedFields.data.name,
             email: validatedFields.data.email,
+            phone: validatedFields.data.phone,
         },
         booking: {
             days: bookingDays,
@@ -350,7 +351,7 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
+    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact });
     await sendQuoteEmail(finalQuote);
 
     return {
@@ -401,7 +402,7 @@ export async function saveAddressAction(prevState: any, formData: FormData): Pro
         },
     };
     
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact });
 
     return {
         status: 'success',
@@ -452,7 +453,7 @@ export async function finalizeBookingAction(prevState: any, formData: FormData):
         }
     };
     
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact });
     await sendQuoteEmail(updatedQuote);
 
      return {
