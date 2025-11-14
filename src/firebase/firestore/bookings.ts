@@ -33,24 +33,20 @@ export async function saveBooking(
         ...booking,
         uid: booking.uid,
         updatedAt: serverTimestamp(),
-        ...(booking.createdAt ? {} : { createdAt: serverTimestamp() }),
+        // Preserve original createdAt timestamp if it exists, otherwise create it.
+        ...(booking.createdAt ? { createdAt: booking.createdAt } : { createdAt: serverTimestamp() }),
     };
 
-    // Non-blocking write with error handling
-    setDoc(bookingRef, dataToSave, { merge: true })
-      .then(async () => {
-          // Send email only when a quote is first created and has not been confirmed yet.
-          if (booking.finalQuote.status === 'quoted') {
-              try {
-                  await sendQuoteEmail(booking.finalQuote);
-              } catch (emailError) {
-                  console.error("Failed to send quote email:", emailError);
-                  // Optional: You could add more robust error handling here,
-                  // like logging this failure to a specific monitoring service.
-              }
-          }
-      })
-      .catch((error) => {
+    try {
+        // Use a standard `await` for the setDoc operation.
+        await setDoc(bookingRef, dataToSave, { merge: true });
+
+        // If the quote is being created for the first time, send the initial quote email.
+        if (booking.finalQuote.status === 'quoted') {
+            await sendQuoteEmail(booking.finalQuote);
+        }
+    } catch (error) {
+        // If an error occurs (like a permission error), emit it for debugging.
         errorEmitter.emit(
           'permission-error',
           new FirestorePermissionError({
@@ -59,10 +55,11 @@ export async function saveBooking(
             requestResourceData: dataToSave,
           })
         );
-        // Re-throw the error so the caller knows the save failed.
+        // Re-throw the error so the calling function knows the operation failed.
         throw error;
-      });
+    }
 }
+
 
 export async function getBooking(firestore: Firestore, bookingId: string): Promise<BookingDocument | null> {
     const bookingRef = doc(firestore, 'bookings', bookingId);

@@ -224,7 +224,7 @@ export default function AdminDashboard() {
                                         <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
                                     </DialogHeader>
                                     <div className="max-h-[80vh] overflow-y-auto p-1 pr-4">
-                                        {selectedBooking && <BookingDetails quote={selectedBooking.finalQuote} onUpdate={handleUpdateBooking} />}
+                                        {selectedBooking && <BookingDetails quote={selectedBooking.finalQuote} onUpdate={handleUpdateBooking} bookingDoc={selectedBooking} />}
                                     </div>
                                 </DialogContent>
                             </Dialog>

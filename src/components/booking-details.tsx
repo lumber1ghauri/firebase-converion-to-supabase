@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking } from '@/firebase/firestore/bookings';
+import { saveBooking, type BookingDocument } from '@/firebase/firestore/bookings';
 import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
@@ -94,7 +94,7 @@ const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, isUpdating }: {
     )
 }
 
-export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; }) {
+export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; bookingDoc: BookingDocument | undefined; }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -109,8 +109,8 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       depositStatus?: PaymentStatus;
       finalStatus?: PaymentStatus;
   }) => {
-      if (!user || !firestore) {
-          toast({ variant: "destructive", title: "Error", description: "User or database not available." });
+      if (!user || !firestore || !bookingDoc) {
+          toast({ variant: "destructive", title: "Error", description: "User, database, or booking data not available." });
           return;
       }
       setIsUpdating(true);
@@ -135,7 +135,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
 
       try {
           // Use the client-side saveBooking function
-          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone, createdAt: bookingDoc.createdAt });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
@@ -185,7 +185,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
           </CardHeader>
           <CardContent className="text-sm space-y-2">
             <p><strong>Name:</strong> {quote.contact.name}</p>
-            <p><strong>Email:</strong> {quote.contact.email}</p>
+            <p><strong>Email:</strong> <a href={`mailto:${quote.contact.email}`} className='text-primary hover:underline'>{quote.contact.email}</a></p>
             <p><strong>Phone:</strong> {quote.contact.phone || 'N/A'}</p>
              <div className="flex flex-wrap gap-2 mt-2">
                 <Button asChild variant="outline" size="sm">
