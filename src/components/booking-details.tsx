@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { FinalQuote, PriceTier, PaymentDetails } from '@/lib/types';
@@ -15,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { sendConfirmationEmailAction, sendFollowUpEmailAction } from '@/app/admin/actions';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
