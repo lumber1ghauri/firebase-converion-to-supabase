@@ -22,7 +22,7 @@ export default function Home() {
       </main>
 
       <footer className="py-6 text-center text-muted-foreground text-sm font-body">
-        <p>&copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by Sellaya.</p>
+        <p>&copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by <a href="https://www.instagram.com/sellayadigital" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">Sellaya</a>.</p>
         <div className="mt-2">
             <Link href="/admin" className="text-xs text-muted-foreground hover:text-primary transition-colors">
                 Admin Dashboard

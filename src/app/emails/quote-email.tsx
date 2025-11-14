@@ -214,7 +214,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
         This quote is valid for 7 days. If you have any questions, please reply to this email.
       </p>
       <p style={{ ...paragraph, fontSize: '12px', color: '#ccc' }}>
-        &copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by Sellaya.
+        &copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by <a href="https://www.instagram.com/sellayadigital" target="_blank" rel="noopener noreferrer" style={{color: '#999', textDecoration: 'underline'}}>Sellaya</a>.
       </p>
     </div>
   </div>
