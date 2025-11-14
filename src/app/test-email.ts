@@ -12,7 +12,7 @@ export async function sendTestEmailAction() {
   console.log('Attempting to send test email...');
   const testQuote: FinalQuote = {
     id: 'TEST-001',
-    contact: { name: 'Test User', email: 'booking@sellaya.ca' },
+    contact: { name: 'Test User', email: 'user@example.com' }, // Changed to a placeholder user email
     booking: {
       days: [
         {
@@ -54,7 +54,7 @@ export async function sendTestEmailAction() {
   try {
     await sendQuoteEmail(testQuote);
     console.log('Test email action completed successfully.');
-    return { success: true, message: 'Test email sent successfully! Please check your inboxes.' };
+    return { success: true, message: `Test email sent successfully! Please check the inboxes for ${testQuote.contact.email} and the admin email.` };
   } catch (error: any) {
     console.error('Test email action failed:', error);
     return { success: false, message: `Failed to send test email: ${error.message}` };
