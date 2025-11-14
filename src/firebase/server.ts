@@ -1,8 +1,9 @@
-import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
+import 'dotenv/config';
+import { initializeApp, getApp, getApps, type FirebaseApp, cert, ServiceAccount } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore as getFirestoreSdk, type Firestore } from 'firebase/firestore';
 
-// This is the same config as in index.ts
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,6 +12,7 @@ const firebaseConfig = {
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
+
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;

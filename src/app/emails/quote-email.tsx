@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import type { FinalQuote, Quote, PriceTier } from '@/lib/types';
 
@@ -86,7 +87,7 @@ const button = {
   margin: '20px auto',
 };
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (

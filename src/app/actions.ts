@@ -1,5 +1,5 @@
 'use server';
-
+import 'dotenv/config';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
@@ -147,7 +147,7 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
             subtotal += price;
         }
         if(bridalParty.hairExtensionInstallation > 0) {
-            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRices.hairExtensionInstallation[tier];
+            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRICES.hairExtensionInstallation[tier];
             lineItems.push({ description: `Party: Hair Extensions (x${bridalParty.hairExtensionInstallation})`, price });
             subtotal += price;
         }
