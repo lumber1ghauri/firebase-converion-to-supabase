@@ -27,8 +27,8 @@ service cloud.firestore {
       // The owner or an admin can update a booking.
       allow update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
       
-      // Admins can delete any booking.
-      allow delete: if isAdmin();
+      // Allow signed-in users (admins) to delete any booking.
+      allow delete: if isSignedIn();
     }
     
     match /bookings/{booking} {

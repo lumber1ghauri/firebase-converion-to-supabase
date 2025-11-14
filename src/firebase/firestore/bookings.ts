@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   type Firestore,
   type Timestamp,
@@ -111,6 +112,22 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
             throw permissionError; // re-throw the contextual error
          }
          throw error; // On server, just throw original error
+    }
+}
+
+export async function deleteBooking(firestore: Firestore, bookingId: string): Promise<void> {
+    const bookingRef = doc(firestore, 'bookings', bookingId);
+    try {
+        await deleteDoc(bookingRef);
+    } catch (error) {
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+                path: bookingRef.path,
+                operation: 'delete',
+            })
+        );
+        throw error;
     }
 }
 

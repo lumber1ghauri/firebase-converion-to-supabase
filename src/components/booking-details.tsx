@@ -5,15 +5,26 @@ import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2, Mail } from 'lucide-react';
+import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2, Mail, Trash2 } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
 import { Button } from './ui/button';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking as saveBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
+import { saveBooking as saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -94,7 +105,7 @@ const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, isUpdating }: {
     )
 }
 
-export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; bookingDoc: BookingDocument | undefined; }) {
+export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; bookingDoc: BookingDocument | undefined; onBookingDeleted: (bookingId: string) => void; }) {
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -161,6 +172,30 @@ export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQu
           setIsUpdating(false);
       }
   };
+
+  const handleDelete = async () => {
+    if (!firestore || !bookingDoc) {
+        toast({ variant: "destructive", title: "Error", description: "Database or booking data not available." });
+        return;
+    }
+    setIsUpdating(true);
+    try {
+        await deleteBookingClient(firestore, bookingDoc.id);
+        toast({
+            title: "Booking Deleted",
+            description: `Booking ID ${bookingDoc.id} has been permanently removed.`,
+        });
+        onBookingDeleted(bookingDoc.id);
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Deletion Failed",
+            description: error.message || 'An unknown error occurred.',
+        });
+    } finally {
+        setIsUpdating(false);
+    }
+  }
 
 
   return (
@@ -392,7 +427,33 @@ export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQu
             ))}
          </div>
       )}
-
+      
+       <div className="pt-6 border-t mt-6">
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full md:w-auto" disabled={isUpdating}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete Booking
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the booking
+                            for <strong>{quote.contact.name}</strong> (ID: {quote.id}).
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                             {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            Yes, delete booking
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
     </div>
   );
 }

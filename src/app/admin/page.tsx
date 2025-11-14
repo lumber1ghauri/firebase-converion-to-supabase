@@ -101,6 +101,12 @@ export default function AdminDashboard() {
       );
   }
 
+  const handleBookingDeleted = (bookingId: string) => {
+    // Close the dialog and trigger a re-filter/re-render of the main list
+    setSelectedBooking(null);
+  };
+
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40">
@@ -224,7 +230,7 @@ export default function AdminDashboard() {
                                         <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
                                     </DialogHeader>
                                     <div className="max-h-[80vh] overflow-y-auto p-1 pr-4">
-                                        {selectedBooking && <BookingDetails quote={selectedBooking.finalQuote} onUpdate={handleUpdateBooking} bookingDoc={selectedBooking} />}
+                                        {selectedBooking && <BookingDetails quote={selectedBooking.finalQuote} onUpdate={handleUpdateBooking} bookingDoc={selectedBooking} onBookingDeleted={handleBookingDeleted} />}
                                     </div>
                                 </DialogContent>
                             </Dialog>
