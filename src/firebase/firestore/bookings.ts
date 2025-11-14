@@ -1,6 +1,6 @@
 
 'use server';
-import { getAdminDb } from '@/firebase/admin-app';
+import { adminDb } from '@/firebase/admin-app';
 import type { FinalQuote } from '@/lib/types';
 import { Timestamp } from 'firebase-admin/firestore';
 
@@ -14,8 +14,7 @@ export type BookingDocument = {
 }
 
 export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
-    const db = getAdminDb();
-    const bookingRef = db.collection('bookings').doc(booking.id);
+    const bookingRef = adminDb.collection('bookings').doc(booking.id);
     const dataToSave = {
         ...booking,
         createdAt: Timestamp.fromDate(booking.createdAt),
@@ -25,8 +24,7 @@ export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
 }
 
 export async function getBooking(bookingId: string): Promise<BookingDocument | null> {
-    const db = getAdminDb();
-    const bookingRef = db.collection('bookings').doc(bookingId);
+    const bookingRef = adminDb.collection('bookings').doc(bookingId);
     const docSnap = await bookingRef.get();
 
     if (docSnap.exists) {
@@ -44,8 +42,7 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
 }
 
 export async function getAllBookings(): Promise<BookingDocument[]> {
-    const db = getAdminDb();
-    const bookingsCol = db.collection('bookings');
+    const bookingsCol = adminDb.collection('bookings');
     const bookingSnapshot = await bookingsCol.get();
     const bookingList = bookingSnapshot.docs.map(doc => {
         const data = doc.data();
