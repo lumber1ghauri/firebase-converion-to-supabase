@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
@@ -81,7 +80,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user } = useUser();
-  const router = useRouter();
 
   const [quote, setQuote] = useState(initialQuote);
   const [currentStep, setCurrentStep] = useState<ConfirmationStep>('select-tier');

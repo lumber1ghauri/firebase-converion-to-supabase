@@ -48,19 +48,13 @@ function getPaymentStatus(booking: BookingDocument): { text: string; variant: 's
     if (!details) {
         return { text: 'Pending', variant: 'destructive' };
     }
-    if (details.final.status === 'received' && details.deposit.status === 'received') {
-        return { text: 'Paid', variant: 'success' };
-    }
-     if (details.deposit.status === 'pending') {
-        return { text: 'Deposit Pending', variant: 'destructive' };
-    }
-    if (details.final.status === 'pending') {
-        return { text: 'Final Pending', variant: 'destructive' };
-    }
     if (details.deposit.status === 'received' && details.final.status === 'received') {
         return { text: 'Paid', variant: 'success' };
     }
-    return { text: 'Deposit Paid', variant: 'secondary' };
+    if (details.deposit.status === 'received') {
+        return { text: 'Deposit Paid', variant: 'secondary' };
+    }
+    return { text: 'Deposit Pending', variant: 'destructive' };
 }
 
 

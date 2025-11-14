@@ -10,12 +10,18 @@ import QuoteEmailTemplate from '@/app/emails/quote-email';
 export async function sendQuoteEmail(quote: FinalQuote) {
   const apiKey = process.env.RESEND_API_KEY;
 
-  if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey === 're_NiSSXDzL_Kf4jAhdFS2nAvA6M5Uaambtv') {
-    console.log("RESEND_API_KEY not set or is a placeholder/test key. Skipping email.");
-    if (apiKey === 're_NiSSXDzL_Kf4jAhdFS2nAvA6M5Uaambtv') {
-        throw new Error('The provided Resend API key is a test key and cannot be used. Please provide a valid key.');
+  if (!apiKey || apiKey === 'YOUR_API_KEY_HERE' || apiKey.startsWith('re_')) {
+    const errorMessage = `A valid Resend API key is not configured. The current key is either missing, a placeholder, or a known test key. Email functionality is disabled.`;
+    console.error(errorMessage);
+    // In a real app, you might want to throw an error only for developers.
+    // For end-users, you might just log this and fail silently so the UI doesn't break.
+    if (apiKey && apiKey.startsWith('re_') && apiKey.length < 30) { // Simple check for placeholder keys
+        throw new Error(errorMessage);
     }
-    return;
+    // Silently fail if no key is present in production to avoid crashing.
+    if (process.env.NODE_ENV === 'production' && !apiKey) {
+      return;
+    }
   }
   
   const resend = new Resend(apiKey);
