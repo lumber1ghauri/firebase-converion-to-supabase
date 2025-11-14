@@ -321,7 +321,7 @@ export async function generateQuoteAction(
         if(bridalParty.partyHijabSetting > 0) bridalPartyBookings.services.push({ service: 'Hijab Setting', quantity: bridalParty.partyHijabSetting });
     }
     
-    const bookingId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const bookingId = Math.floor(1000 + Math.random() * 9000).toString();
 
     const finalQuote: FinalQuote = {
         id: bookingId,
