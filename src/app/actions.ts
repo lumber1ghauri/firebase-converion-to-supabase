@@ -434,9 +434,22 @@ export async function finalizeBookingAction(prevState: any, formData: FormData):
         }
     }
 
+    const total = finalQuote.quotes[finalQuote.selectedQuote].total;
+    const depositAmount = total * 0.5;
+
     const updatedQuote: FinalQuote = {
         ...finalQuote,
-        status: 'confirmed'
+        status: 'confirmed',
+        paymentDetails: {
+            deposit: {
+                status: 'pending',
+                amount: depositAmount,
+            },
+            final: {
+                status: 'pending',
+                amount: total - depositAmount,
+            }
+        }
     };
     
     await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });

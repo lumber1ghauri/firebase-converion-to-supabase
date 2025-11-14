@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Booking": {
@@ -17,6 +18,30 @@
           "type": "string",
           "format": "date-time",
           "description": "The timestamp when the booking was created."
+        },
+        "paymentDetails": {
+          "type": "object",
+          "properties": {
+            "deposit": {
+              "type": "object",
+              "properties": {
+                "status": { "type": "string", "enum": ["pending", "received"] },
+                "amount": { "type": "number" },
+                "screenshotUrl": { "type": "string", "format": "uri" }
+              },
+              "required": ["status", "amount"]
+            },
+            "final": {
+              "type": "object",
+              "properties": {
+                "status": { "type": "string", "enum": ["pending", "received"] },
+                "amount": { "type": "number" },
+                "screenshotUrl": { "type": "string", "format": "uri" }
+              },
+              "required": ["status", "amount"]
+            }
+          },
+          "required": ["deposit", "final"]
         }
       },
       "required": ["id", "finalQuote", "createdAt"]

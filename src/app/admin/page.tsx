@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -8,10 +9,46 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, AlertTriangle, Eye, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { Loader2, AlertTriangle, Eye, Search, CalendarClock } from 'lucide-react';
+import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
+
+function getTimeToEvent(eventDateStr: string): string {
+    const eventDate = parse(eventDateStr, 'PPP', new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = differenceInDays(eventDate, today);
+
+    if (days < 0) {
+        return `Passed`;
+    }
+    if (days === 0) {
+        return "Today";
+    }
+    if (days === 1) {
+        return "Tomorrow";
+    }
+    return `${days} days`;
+}
+
+function getPaymentStatus(booking: BookingDocument): { text: string; variant: 'default' | 'secondary' | 'destructive' } {
+    const details = booking.finalQuote.paymentDetails;
+    if (booking.finalQuote.status !== 'confirmed') {
+        return { text: 'N/A', variant: 'secondary' };
+    }
+    if (!details) {
+        return { text: 'Pending', variant: 'destructive' };
+    }
+    if (details.deposit.status === 'pending') {
+        return { text: 'Deposit Pending', variant: 'destructive' };
+    }
+    if (details.final.status === 'pending') {
+        return { text: 'Final Pending', variant: 'destructive' };
+    }
+    return { text: 'Paid', variant: 'default' };
+}
+
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<BookingDocument[]>([]);
@@ -22,8 +59,12 @@ export default function AdminDashboard() {
   useEffect(() => {
     getAllBookings()
       .then(data => {
-        // Sort bookings by creation date, newest first
-        const sortedData = data.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        // Sort bookings by event date, soonest first
+        const sortedData = data.sort((a, b) => {
+            const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
+            const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
+            return dateA.getTime() - dateB.getTime();
+        });
         setBookings(sortedData);
       })
       .catch(err => {
@@ -110,59 +151,67 @@ export default function AdminDashboard() {
                     <TableHead className="hidden sm:table-cell">Booking ID</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Booked For</TableHead>
+                    <TableHead>Payment</TableHead>
+                    <TableHead className="hidden md:table-cell">Time to Event</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="hidden sm:table-cell">Created</TableHead>
                     <TableHead>
                       <span className="sr-only">Actions</span>
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map(booking => (
-                    <TableRow key={booking.id}>
-                      <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
-                      <TableCell>
-                        <div className="font-medium">{booking.finalQuote.contact.name}</div>
-                        <div className="text-sm text-muted-foreground">{booking.finalQuote.contact.email}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize">
-                          {booking.finalQuote.status}
-                        </Badge>
-                      </TableCell>
-                       <TableCell className="hidden md:table-cell">
-                        {format(new Date(booking.finalQuote.booking.days[0].date), 'PPP')}
-                      </TableCell>
-                       <TableCell className="text-right">
-                        ${booking.finalQuote.selectedQuote 
-                            ? booking.finalQuote.quotes[booking.finalQuote.selectedQuote].total.toFixed(2)
-                            : booking.finalQuote.quotes.lead.total.toFixed(2)
-                        }
-                      </TableCell>
-                       <TableCell className="hidden sm:table-cell">
-                        {format(booking.createdAt, 'PPP')}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <Eye className="h-4 w-4" />
-                                    <span className="sr-only">View Details</span>
-                                </Button>
-                            </DialogTrigger>
-                             <DialogContent className="sm:max-w-3xl">
-                                <DialogHeader>
-                                <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
-                                </DialogHeader>
-                                <div className="max-h-[70vh] overflow-y-auto p-1 pr-4">
-                                    <BookingDetails quote={booking.finalQuote} />
+                  {filteredBookings.map(booking => {
+                     const paymentStatus = getPaymentStatus(booking);
+                     return (
+                        <TableRow key={booking.id}>
+                          <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{booking.finalQuote.contact.name}</div>
+                            <div className="text-sm text-muted-foreground">{booking.finalQuote.contact.email}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize">
+                              {booking.finalQuote.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                               <Badge variant={paymentStatus.variant} className="capitalize">
+                                {paymentStatus.text}
+                            </Badge>
+                          </TableCell>
+                           <TableCell className="hidden md:table-cell">
+                                <div className="flex items-center gap-2">
+                                    <CalendarClock className="w-4 h-4 text-muted-foreground"/>
+                                    <span>{getTimeToEvent(booking.finalQuote.booking.days[0].date)}</span>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          </TableCell>
+                           <TableCell className="text-right">
+                            ${booking.finalQuote.selectedQuote 
+                                ? booking.finalQuote.quotes[booking.finalQuote.selectedQuote].total.toFixed(2)
+                                : 'N/A'
+                            }
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <Eye className="h-4 w-4" />
+                                        <span className="sr-only">View Details</span>
+                                    </Button>
+                                </DialogTrigger>
+                                 <DialogContent className="sm:max-w-3xl">
+                                    <DialogHeader>
+                                    <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
+                                    </DialogHeader>
+                                    <div className="max-h-[80vh] overflow-y-auto p-1 pr-4">
+                                        <BookingDetails quote={booking.finalQuote} />
+                                    </div>
+                                </DialogContent>
+                            </Dialog>
+                          </TableCell>
+                        </TableRow>
+                     )
+                  })}
                 </TableBody>
               </Table>
             </div>
