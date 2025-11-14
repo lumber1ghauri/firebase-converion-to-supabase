@@ -142,7 +142,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
 
 
        {quote.status === 'quoted' && (
-        <a href={`${baseUrl}/book/${quote.id}`} style={button}>
+        <a href={`${baseUrl}/book/${quote.id}/`} style={button}>
           View and Confirm Your Booking
         </a>
       )}
