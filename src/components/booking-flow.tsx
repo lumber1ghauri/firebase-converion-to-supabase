@@ -279,8 +279,8 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
     const service = SERVICES.find(s => s.id === day.serviceId);
     const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-    const [showOutsideTorontoOptions, setShowOutsideTorontoOptions] = useState(day.mobileLocation !== 'toronto' && !!day.mobileLocation);
-
+    
+    const isOutsideToronto = day.mobileLocation && day.mobileLocation !== 'toronto';
 
     return (
         <div className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
@@ -356,23 +356,44 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
 
             {day.serviceType === 'mobile' && (
                 <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300 space-y-4">
-                    <Label className="text-md font-medium">Mobile Service Location *</Label>
-                    <div className="flex items-center gap-4">
-                        <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); updateDay(day.id, { mobileLocation: 'toronto' }); }}>Toronto / GTA</Button>
-                        <Button type="button" variant={showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); if(day.mobileLocation === 'toronto' || !day.mobileLocation) { updateDay(day.id, { mobileLocation: 'immediate-neighbors' }); } }}>Outside Toronto / GTA</Button>
+                    <div>
+                        <Label className="text-md font-medium">Mobile Service Location *</Label>
+                        <RadioGroup
+                            value={isOutsideToronto ? 'outside-gta' : 'toronto'}
+                            onValueChange={(value) => {
+                                if (value === 'toronto') {
+                                    updateDay(day.id, { mobileLocation: 'toronto' });
+                                } else {
+                                    updateDay(day.id, { mobileLocation: 'immediate-neighbors' });
+                                }
+                            }}
+                            className="grid grid-cols-2 gap-4 mt-2"
+                        >
+                            <Label className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                <RadioGroupItem value="toronto" id={`${day.id}-loc-gta`} />
+                                <span className="font-semibold">Toronto / GTA</span>
+                            </Label>
+                            <Label className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                <RadioGroupItem value="outside-gta" id={`${day.id}-loc-outside`} />
+                                <span className="font-semibold">Outside Toronto / GTA</span>
+                            </Label>
+                        </RadioGroup>
                     </div>
 
                     <input type="hidden" name={`mobileLocation_${index}`} value={day.mobileLocation} />
 
-                    {showOutsideTorontoOptions && (
-                        <RadioGroup value={day.mobileLocation} onValueChange={(value) => updateDay(day.id, { mobileLocation: value as MOBILE_LOCATION_IDS })} className="grid grid-cols-1 gap-2 mt-4" required>
-                            {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
-                                <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
-                                    <RadioGroupItem value={opt.id} id={`${day.id}-mobile-${opt.id}`} />
-                                    <span>{opt.label}</span>
-                                </Label>
-                            ))}
-                        </RadioGroup>
+                    {isOutsideToronto && (
+                        <div className='animate-in fade-in-0 slide-in-from-top-2 duration-300 pl-4 border-l-2 border-primary/20'>
+                            <Label className="text-md font-medium">Approximate Drive Distance</Label>
+                             <RadioGroup value={day.mobileLocation} onValueChange={(value) => updateDay(day.id, { mobileLocation: value as MOBILE_LOCATION_IDS })} className="grid grid-cols-1 gap-2 mt-2" required>
+                                {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
+                                    <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-3 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                        <RadioGroupItem value={opt.id} id={`${day.id}-mobile-${opt.id}`} />
+                                        <span>{opt.label}</span>
+                                    </Label>
+                                ))}
+                            </RadioGroup>
+                        </div>
                     )}
                     {errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{errors.mobileLocation[0]}</p>}
                 </div>
