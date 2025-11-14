@@ -1,23 +1,36 @@
 
 'use server';
+
 import admin from 'firebase-admin';
 
-// Check if the app is already initialized to prevent re-initialization on every call.
-// This is a standard pattern for serverless environments.
-if (!admin.apps.length) {
+// This function initializes the Firebase Admin SDK.
+// It ensures that initialization happens only once.
+function initializeAdminApp() {
+  if (admin.apps.length > 0) {
+    return admin.app();
+  }
+  
   try {
-    admin.initializeApp();
+    // When running in a Google Cloud environment, the SDK can automatically
+    // detect the project credentials.
+    return admin.initializeApp();
   } catch (error: any) {
     console.error('Firebase server initialization error', error.stack);
+    // Re-throw the error to make it visible to the caller.
+    throw new Error('Failed to initialize Firebase Admin SDK.');
   }
 }
 
+// Call the initialization function to get the app instance.
+const adminApp = initializeAdminApp();
+// Get the Firestore instance from the initialized app.
 const firestore = admin.firestore();
 
-// Export the initialized services
-export { firestore };
-
-// This function is kept for structural consistency, but the instances are now module-level.
+/**
+ * A server-only function that returns the initialized Firestore instance.
+ * Other server-side modules can call this to get a ready-to-use Firestore object.
+ */
 export async function initializeServerFirebase() {
+  // The function now simply returns the already-initialized instance.
   return { firestore };
 }

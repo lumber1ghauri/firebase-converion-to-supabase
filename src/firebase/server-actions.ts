@@ -15,17 +15,18 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
   }
 
   try {
+    // Get the initialized Firestore instance.
     const { firestore } = await initializeServerFirebase();
     const bookingRef = firestore.collection('bookings').doc(bookingId);
     const docSnap = await bookingRef.get();
 
     if (docSnap.exists) {
-      // The data from the Admin SDK needs to be structured like the client-side document.
       const data = docSnap.data();
       if (!data) return null;
       
-      // Explicitly convert Firestore Timestamps to JS Dates for serialization.
       const finalData: any = { ...data };
+      
+      // Safely convert Firestore Timestamps to JS Dates for serialization.
       if (finalData.createdAt && typeof finalData.createdAt.toDate === 'function') {
           finalData.createdAt = finalData.createdAt.toDate();
       }
