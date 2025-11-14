@@ -301,7 +301,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                             {day.date ? format(day.date, "PPP") : <span>Pick a date</span>}
                         </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={day.date} onSelect={(date) => { updateDay(day.id, { date: date as Date }); setIsPopoverOpen(false); }} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={day.date} onSelect={(date) => { updateDay(day.id, { date: date as Date }); setIsPopoverOpen(false); }} disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))} initialFocus /></PopoverContent>
                     </Popover>
                     <input type="hidden" name={`date_${index}`} value={day.date?.toISOString() || ''} />
                 </div>
@@ -345,7 +345,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                     <Label className="text-md font-medium">Mobile Service Location *</Label>
                     <div className="flex items-center gap-4">
                         <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); updateDay(day.id, { mobileLocation: 'toronto' }); }}>Toronto / GTA</Button>
-                        <Button type="button" variant={showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); updateDay(day.id, { mobileLocation: 'immediate-neighbors' }); }}>Outside Toronto / GTA</Button>
+                        <Button type="button" variant={showOutsideTorontoOptions ? 'secondary' : 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); if(day.mobileLocation === 'toronto' || !day.mobileLocation) { updateDay(day.id, { mobileLocation: 'immediate-neighbors' }); } }}>Outside Toronto / GTA</Button>
                     </div>
 
                     <input type="hidden" name={`mobileLocation_${index}`} value={day.mobileLocation} />
@@ -440,6 +440,8 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
   updateBridalPartyQty: (field: keyof BridalPartyServices, increase: boolean) => void;
 }) {
   const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
   if (!hasBridalService) {
       return (
@@ -487,8 +489,8 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
                             <PopoverContent className="w-auto p-0">
                             <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => { updateBridalTrial({ date: date as Date }); setIsTrialPopoverOpen(false); }} disabled={(date) => {
                                 const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
-                                if (!bridalDay) return false;
-                                return date >= bridalDay;
+                                if (!bridalDay) return date < today;
+                                return date >= bridalDay || date < today;
                             }} initialFocus/>
                             </PopoverContent>
                         </Popover>
