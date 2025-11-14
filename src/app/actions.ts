@@ -330,6 +330,19 @@ message: 'Please select a date and time for the bridal trial.',
     
     const bookingId = Math.floor(1000 + Math.random() * 9000).toString();
 
+    const booking: FinalQuote['booking'] = {
+        days: bookingDays,
+        hasMobileService: days.some(d => d.serviceType === 'mobile'),
+    };
+
+    if (bridalServiceDay && bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) {
+        booking.trial = { date: format(bridalTrial.date, "PPP"), time: bridalTrial.time };
+    }
+
+    if (bridalPartyBookings) {
+        booking.bridalParty = bridalPartyBookings;
+    }
+
     const finalQuote: FinalQuote = {
         id: bookingId,
         contact: {
@@ -337,14 +350,7 @@ message: 'Please select a date and time for the bridal trial.',
             email: validatedFields.data.email,
             phone: validatedFields.data.phone,
         },
-        booking: {
-            days: bookingDays,
-            hasMobileService: days.some(d => d.serviceType === 'mobile'),
-            trial: (bridalServiceDay && bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) 
-                ? { date: format(bridalTrial.date, "PPP"), time: bridalTrial.time }
-                : undefined,
-            bridalParty: bridalPartyBookings,
-        },
+        booking,
         quotes: {
             lead: quoteLead,
             team: quoteTeam,
