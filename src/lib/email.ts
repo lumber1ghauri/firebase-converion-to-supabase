@@ -9,9 +9,7 @@ import FollowUpEmailTemplate from '@/app/emails/follow-up-email';
 
 
 const getBaseUrl = () => {
-    if (process.env.NODE_ENV === 'production') {
-        return 'https://your-production-url.com'; // Replace with your actual production URL
-    }
+    // This is the correct, publicly accessible URL for your development environment.
     return 'https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
 }
 
@@ -19,6 +17,7 @@ const getResend = () => {
     const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
     if (!apiKey || apiKey.startsWith('re_') === false || apiKey.length < 20) {
         console.error('A valid Resend API key is not configured. Email functionality is disabled.');
+        // Return null to indicate that Resend is not configured.
         return null;
     }
     return new Resend(apiKey);
@@ -30,8 +29,9 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   const resend = getResend();
   
   if (!resend) {
-    // Silently fail but log the error if Resend isn't configured
-    return;
+    // If Resend isn't configured, we can't send emails.
+    // We throw an error here so the calling function knows about the failure.
+    throw new Error('Resend is not configured. Cannot send quote email.');
   }
     
   const clientSubject = quote.status === 'confirmed' 
@@ -82,7 +82,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     }
   } catch (error: any) {
     console.error('Error sending admin email:', error.message);
-    // Don't re-throw here, as the client email might have succeeded.
+    // Don't re-throw here, as the client email might have succeeded. The admin notification is secondary.
   }
 }
 

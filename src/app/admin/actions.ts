@@ -35,9 +35,9 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
 
   } catch (error: any) {
     console.error('Failed to send confirmation email:', error);
-    // Don't return the raw error message to the client in case it contains sensitive info.
-    if (error.message.includes('A valid Resend API key is not configured')) {
-        return { success: false, message: 'Email server is not configured. Please contact support.' };
+    // Provide more specific feedback based on the error.
+    if (error.message.includes('Resend is not configured')) {
+        return { success: false, message: 'Email server is not configured. Please check API keys.' };
     }
     return { success: false, message: 'An unknown error occurred while sending the email.' };
   }
@@ -66,9 +66,11 @@ export async function sendFollowUpEmailAction(bookingId: string): Promise<Action
 
   } catch (error: any) {
     console.error('Failed to send follow-up email:', error);
-     if (error.message.includes('Resend is not configured')) {
-        return { success: false, message: 'Email server is not configured. Please contact support.' };
+    // Provide more specific feedback based on the error.
+    if (error.message.includes('Resend is not configured')) {
+        return { success: false, message: 'Email server is not configured. Please check API keys.' };
     }
-    return { success: false, message: 'An unknown error occurred while sending the follow-up email.' };
+    // Return the actual error message for better debugging.
+    return { success: false, message: error.message || 'An unknown error occurred while sending the follow-up email.' };
   }
 }
