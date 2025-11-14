@@ -118,7 +118,7 @@ export async function generateQuoteAction(
             status: 'error',
             message: 'Please select a mobile service location for all mobile service days.',
             quote: null,
-            errors: { form: ['Please select a mobile service location for all mobile service days.'] },
+            errors: { mobileLocation: ['Please select a mobile service location for all mobile service days.'] },
             fieldValues
         };
     }
@@ -190,7 +190,6 @@ export async function generateQuoteAction(
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
     const bookingDays: FinalQuote['booking']['days'] = [];
-    let totalSurcharge = 0;
 
     days.forEach((day, index) => {
         const service = SERVICES.find((s) => s.id === day.serviceId);
@@ -233,7 +232,6 @@ export async function generateQuoteAction(
               const locationLabel = MOBILE_LOCATION_OPTIONS[day.mobileLocation].label;
               lineItems.push({ description: `  - Travel Surcharge (${locationLabel})`, price: daySurcharge });
               subtotal += daySurcharge;
-              totalSurcharge += daySurcharge;
           }
 
           bookingDays.push({ 
@@ -350,7 +348,20 @@ export async function generateQuoteAction(
 export async function confirmBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
 
     const finalQuoteString = formData.get('finalQuote') as string;
-    if (!finalQuoteString) {
+    let finalQuote: FinalQuote;
+
+    try {
+        finalQuote = JSON.parse(finalQuoteString);
+    } catch (error) {
+         return {
+            status: 'error',
+            message: 'Invalid quote data. Please try generating the quote again.',
+            quote: null,
+            errors: { form: ['Invalid quote data.'] },
+        }
+    }
+    
+    if (!finalQuote) {
         return {
             status: 'error',
             message: 'Quote data is missing. Please generate a quote first.',
@@ -358,7 +369,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             errors: { form: ['Quote data is missing.'] },
         }
     }
-    const finalQuote: FinalQuote = JSON.parse(finalQuoteString);
+    
 
     if (!finalQuote.booking.hasMobileService) {
         const updatedQuote: FinalQuote = {
@@ -374,7 +385,6 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             console.error("Confirmation email failed to send:", e);
         }
 
-        console.log("Redirecting to Stripe with quote:", updatedQuote);
         return {
             status: 'success',
             message: 'Booking Confirmed! A confirmation email with the studio address has been sent.',

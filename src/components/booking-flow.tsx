@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
@@ -41,7 +41,7 @@ const getInitialDays = (): Day[] => {
     return [{ 
         id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
         hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false,
-        serviceType: 'mobile',
+        serviceType: 'mobile', mobileLocation: 'toronto'
     }];
 };
 
@@ -248,7 +248,7 @@ export default function BookingFlow() {
                               errors={state.errors}
                           />
                       ))}
-                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false, serviceType: 'mobile' }])} className="w-full">
+                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false, serviceType: 'mobile', mobileLocation: 'toronto' }])} className="w-full">
                       <Plus className="mr-2 h-4 w-4" /> Add Another Day
                       </Button>
                     </div>
@@ -333,7 +333,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
     const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     
-    const isOutsideToronto = day.mobileLocation ? day.mobileLocation !== 'toronto' : false;
+    const isOutsideToronto = day.mobileLocation && day.mobileLocation !== 'toronto';
 
     return (
         <div className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
@@ -417,7 +417,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                                 if (value === 'toronto') {
                                     updateDay(day.id, { mobileLocation: 'toronto' });
                                 } else {
-                                    // Default to first 'outside' option if switching from toronto
+                                    // Default to undefined so user has to pick a sub-option
                                     updateDay(day.id, { mobileLocation: undefined });
                                 }
                             }}
@@ -528,9 +528,6 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
   updateBridalPartyQty: (field: keyof BridalPartyServices, increase: boolean) => void;
 }) {
   const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
 
   if (!hasBridalService) {
@@ -719,5 +716,3 @@ function SubmitButton() {
         </Button>
     )
 }
-
-    
