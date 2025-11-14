@@ -85,7 +85,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                         {currentQuote.booking.bridalParty.services.map((partySvc, i) => (
                              <div key={i} className="text-muted-foreground ml-2">- {partySvc.service} (x{partySvc.quantity})</div>
                         ))}
-                        {currentQuote.booking.bridalParty.airbrush && <div className="text-muted-foreground ml-2">- Airbrush Service</div>}
+                        {currentQuote.booking.bridalParty.airbrush > 0 && <div className="text-muted-foreground ml-2">- Airbrush Service (x{currentQuote.booking.bridalParty.airbrush})</div>}
                     </li>
                  )}
               </ul>

@@ -4,9 +4,10 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType } from '@/lib/types';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { saveBooking } from '@/firebase/firestore/bookings';
+import { sendQuoteEmail } from '@/lib/email';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -70,7 +71,7 @@ function parseBridalPartyServicesFromFormData(formData: FormData): BridalPartySe
         hairExtensionInstallation: parseInt(formData.get('party_hairExtensionInstallation') as string || '0', 10),
         partySareeDraping: parseInt(formData.get('party_sareeDraping') as string || '0', 10),
         partyHijabSetting: parseInt(formData.get('party_hijabSetting') as string || '0', 10),
-        airbrush: formData.get('party_airbrush') === 'on',
+        airbrush: parseInt(formData.get('party_airbrush') as string || '0', 10),
     }
 }
 
@@ -123,7 +124,7 @@ export async function generateQuoteAction(
     }
     
     const bridalServiceDay = days.find(d => d.serviceId === 'bridal');
-    if (bridalTrial.addTrial && bridalServiceDay?.date && bridalTrial.date) {
+    if (bridalServiceDay && bridalTrial.addTrial && bridalServiceDay?.date && bridalTrial.date) {
         if (bridalTrial.date >= bridalServiceDay.date) {
             return {
                 status: 'error',
@@ -252,7 +253,7 @@ export async function generateQuoteAction(
         subtotal += ADDON_PRICES.bridalTrial;
     }
     
-    const bridalPartyBookings: {services: PartyBooking[], airbrush: boolean} | undefined = bridalParty.addServices ? { services: [], airbrush: bridalParty.airbrush } : undefined;
+    const bridalPartyBookings: FinalQuote['booking']['bridalParty'] | undefined = bridalParty.addServices ? { services: [], airbrush: bridalParty.airbrush } : undefined;
     
     if (bridalParty.addServices && bridalPartyBookings) {
         if(bridalParty.hairAndMakeup > 0) {
@@ -297,9 +298,10 @@ export async function generateQuoteAction(
             subtotal += price;
             bridalPartyBookings.services.push({ service: 'Hijab Setting', quantity: bridalParty.partyHijabSetting });
         }
-        if(bridalParty.airbrush) {
-            lineItems.push({ description: `Party: Airbrush Service`, price: BRIDAL_PARTY_PRICES.airbrush });
-            subtotal += BRIDAL_PARTY_PRICES.airbrush;
+        if(bridalParty.airbrush > 0) {
+            const price = bridalParty.airbrush * BRIDAL_PARTY_PRICES.airbrush;
+            lineItems.push({ description: `Party: Airbrush Service (x${bridalParty.airbrush})`, price });
+            subtotal += price;
         }
     }
     
@@ -315,7 +317,7 @@ export async function generateQuoteAction(
         booking: {
             days: bookingDays,
             hasMobileService: days.some(d => d.serviceType === 'mobile'),
-            trial: (bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) 
+            trial: (bridalServiceDay && bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) 
                 ? { date: format(bridalTrial.date, "PPP"), time: bridalTrial.time }
                 : undefined,
             bridalParty: bridalPartyBookings,
@@ -329,6 +331,13 @@ export async function generateQuoteAction(
     
     await saveBooking({ id: bookingId, finalQuote, createdAt: new Date() });
     
+    try {
+        await sendQuoteEmail(finalQuote);
+    } catch (e) {
+        console.error("Email failed to send:", e);
+        // We can still show the quote page even if email fails
+    }
+
     return {
         status: 'success',
         message: 'Success',
@@ -359,6 +368,12 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
 
         await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
         
+        try {
+            await sendQuoteEmail(updatedQuote);
+        } catch (e) {
+            console.error("Confirmation email failed to send:", e);
+        }
+
         console.log("Redirecting to Stripe with quote:", updatedQuote);
         return {
             status: 'success',
@@ -396,6 +411,11 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     
     await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
 
+    try {
+        await sendQuoteEmail(updatedQuote);
+    } catch (e) {
+        console.error("Confirmation email failed to send:", e);
+    }
     // This is where you would redirect to Stripe
     console.log("Redirecting to Stripe with quote:", updatedQuote);
 

@@ -63,7 +63,7 @@ const getInitialBridalTrial = (fieldValues: Record<string, any> | undefined): Br
 const getInitialBridalParty = (fieldValues: Record<string, any> | undefined): BridalPartyServices => {
     const defaults = {
         addServices: false, hairAndMakeup: 0, makeupOnly: 0, hairOnly: 0, dupattaSetting: 0,
-        hairExtensionInstallation: 0, partySareeDraping: 0, partyHijabSetting: 0, airbrush: false,
+        hairExtensionInstallation: 0, partySareeDraping: 0, partyHijabSetting: 0, airbrush: 0,
     };
     if (fieldValues && Object.keys(fieldValues).length > 0 && 'addPartyServices' in fieldValues) {
         return {
@@ -75,7 +75,7 @@ const getInitialBridalParty = (fieldValues: Record<string, any> | undefined): Br
             hairExtensionInstallation: parseInt(fieldValues.party_hairExtensionInstallation || '0', 10),
             partySareeDraping: parseInt(fieldValues.party_sareeDraping || '0', 10),
             partyHijabSetting: parseInt(fieldValues.party_hijabSetting || '0', 10),
-            airbrush: fieldValues.party_airbrush === 'on',
+            airbrush: parseInt(fieldValues.party_airbrush || '0', 10),
         };
     }
     return defaults;
@@ -151,18 +151,16 @@ export default function BookingFlow() {
   }
 
   const nextStep = () => {
-    if (currentStep === 1 && !hasBridalService) {
-      setCurrentStep(3); // Skip to contact details
-    } else {
-      setCurrentStep(prev => Math.min(prev + 1, STEPS[STEPS.length - 1].id));
+    const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
+    if (currentStepIndex < STEPS.length - 1) {
+        setCurrentStep(STEPS[currentStepIndex + 1].id);
     }
   };
 
   const prevStep = () => {
-    if (currentStep === 3 && !hasBridalService) {
-      setCurrentStep(1); // Skip back to services
-    } else {
-      setCurrentStep(prev => Math.max(prev - 1, 1));
+    const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
+    if (currentStepIndex > 0) {
+        setCurrentStep(STEPS[currentStepIndex - 1].id);
     }
   };
   
@@ -246,7 +244,7 @@ export default function BookingFlow() {
         <div className={cn(currentStep !== 3 && 'hidden')}>
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">{hasBridalService ? '3.' : '2.'} Contact Details</CardTitle>
+                    <CardTitle className="font-headline text-2xl">{STEPS[STEPS.length -1].name}</CardTitle>
                     <CardDescription>Please provide your contact information to finalize the quote.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
@@ -383,7 +381,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                 <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300 space-y-4">
                     <div>
                         <Label className="text-md font-medium">Mobile Service Location *</Label>
-                        <RadioGroup
+                         <RadioGroup
                             value={isOutsideToronto ? 'outside-gta' : 'toronto'}
                             onValueChange={(value) => {
                                 if (value === 'toronto') {
@@ -502,6 +500,27 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
   const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
+
+  if (!hasBridalService) {
+      return (
+          <div className={cn(currentStep !== 2 && 'hidden', "h-full")}>
+              <Card className="shadow-lg h-full">
+                  <CardHeader>
+                      <CardTitle className="font-headline text-2xl">2. Bridal Options</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <div className="text-center py-10 text-muted-foreground">
+                          <Info className="mx-auto h-8 w-8 mb-2" />
+                          <p>No Bridal Service Selected</p>
+                          <p className="text-sm">Bridal Trial and Bridal Party options are only available when a "Bridal" service is selected for one of the booking days.</p>
+                      </div>
+                  </CardContent>
+              </Card>
+          </div>
+      );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in-50 slide-in-from-top-10 duration-700">
@@ -625,13 +644,14 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
                       onButtonClick={updateBridalPartyQty}
                   />
                   <Separator/>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="party-airbrush" className="flex flex-col gap-1 cursor-pointer">
-                          <span>Air Brush Service</span>
-                          <span className='text-xs text-muted-foreground'>Add airbrushing for a flawless finish.</span>
-                      </Label>
-                      <Switch id="party-airbrush" name="party_airbrush" checked={bridalParty.airbrush} onCheckedChange={(checked) => updateBridalParty({ airbrush: checked })} />
-                  </div>
+                    <PartyServiceInput
+                        name="airbrush"
+                        label="Air Brush Service"
+                        description="Add airbrushing for a flawless finish."
+                        value={bridalParty.airbrush}
+                        onValueChange={(val) => updateBridalParty({ airbrush: val })}
+                        onButtonClick={updateBridalPartyQty}
+                    />
               </CardContent>
           )}
       </Card>

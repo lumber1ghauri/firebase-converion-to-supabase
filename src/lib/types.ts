@@ -28,7 +28,7 @@ export type BridalPartyServices = {
     hairExtensionInstallation: number;
     partySareeDraping: number;
     partyHijabSetting: number;
-    airbrush: boolean;
+    airbrush: number;
 };
 
 export type ServiceType = 'studio' | 'mobile';
@@ -86,7 +86,7 @@ export type FinalQuote = {
     hasMobileService: boolean;
     bridalParty?: {
         services: PartyBooking[];
-        airbrush: boolean;
+        airbrush: number;
     },
     address?: Address;
     trial?: {
