@@ -1,3 +1,4 @@
+
 'use server';
 
 import 'dotenv/config';
@@ -34,6 +35,10 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
 
   } catch (error: any) {
     console.error('Failed to send confirmation email:', error);
-    return { success: false, message: error.message || 'An unknown error occurred.' };
+    // Don't return the raw error message to the client in case it contains sensitive info.
+    if (error.message.includes('A valid Resend API key is not configured')) {
+        return { success: false, message: 'Email server is not configured. Please contact support.' };
+    }
+    return { success: false, message: 'An unknown error occurred while sending the email.' };
   }
 }

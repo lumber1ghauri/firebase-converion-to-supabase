@@ -13,7 +13,7 @@ export async function sendTestEmailAction() {
   console.log('Attempting to send test email...');
   const testQuote: FinalQuote = {
     id: 'TEST-001',
-    contact: { name: 'Test User', email: 'user@example.com' }, // Changed to a placeholder user email
+    contact: { name: 'Test User', email: 'booking@sellaya.ca' },
     booking: {
       days: [
         {
