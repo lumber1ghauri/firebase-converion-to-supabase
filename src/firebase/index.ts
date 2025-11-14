@@ -1,8 +1,8 @@
+
 import { initializeApp, getApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth as getAuthSdk, type Auth } from 'firebase/auth';
 import { getFirestore as getFirestoreSdk, type Firestore } from 'firebase/firestore';
 
-// IMPORTANT: Replace this with your actual Firebase config from your Firebase project settings
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -12,38 +12,49 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | null = null;
-let auth: Auth | null = null;
-let db: Firestore | null = null;
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
 
-function initializeFirebase() {
+export function initializeFirebase() {
   if (!firebaseConfig.projectId) {
     console.warn("Firebase config not found, skipping initialization.");
+    // This is a guard clause for when Firebase is not configured.
+    // In a real app, you'd want to handle this more gracefully.
+    // For now, we return nulls and the client provider will show a loader.
     return { app: null, auth: null, db: null };
   }
 
   if (getApps().length === 0) {
     app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestoreSdk(app);
   } else {
     app = getApp();
-    auth = getAuth(app);
-    db = getFirestoreSdk(app);
   }
+  auth = getAuthSdk(app);
+  db = getFirestoreSdk(app);
+
   return { app, auth, db };
 }
 
-// Client-side hook for getting initialized services
-function useFirebaseClient() {
-    // This ensures Firebase is initialized only on the client-side
-    if (typeof window !== 'undefined') {
-        const { app, auth, db } = initializeFirebase();
-        if (app && auth && db) {
-            return { app, auth, db };
-        }
+
+function getFirebaseInstances() {
+    if (!app) {
+        // This will initialize the app if it hasn't been already.
+        // This is useful for server-side actions that might run before client-side initialization.
+        initializeFirebase();
     }
-    return { app: null, auth: null, db: null };
+    return { app, auth, db };
 }
 
-export { initializeFirebase, useFirebaseClient };
+
+// These are helper functions to be used in server-side code (e.g. server actions)
+// to ensure they get the initialized firebase instances.
+export function getFirebaseApp() {
+    return getFirebaseInstances().app;
+}
+export function getAuth() {
+    return getFirebaseInstances().auth;
+}
+export function getFirestore() {
+    return getFirebaseInstances().db;
+}

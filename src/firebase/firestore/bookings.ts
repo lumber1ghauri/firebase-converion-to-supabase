@@ -2,7 +2,7 @@
 
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
-import { getFirestoreInstance } from '@/firebase/server';
+import { getFirestore } from '@/firebase';
 
 export type BookingDocument = {
     id: string;
@@ -13,7 +13,7 @@ export type BookingDocument = {
 
 // Server-side action helper
 export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
-    const db = getFirestoreInstance();
+    const db = getFirestore();
     if (!db) {
         console.error("Firestore is not initialized. Skipping saveBooking.");
         return;
@@ -27,7 +27,7 @@ export async function saveBooking(booking: Omit<BookingDocument, 'updatedAt'>) {
 
 
 export async function getBooking(bookingId: string): Promise<BookingDocument | null> {
-    const db = getFirestoreInstance();
+    const db = getFirestore();
     if (!db) {
         console.error("Firestore is not initialized. Skipping getBooking.");
         return null;
