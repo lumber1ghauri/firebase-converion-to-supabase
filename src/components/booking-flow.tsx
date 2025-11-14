@@ -110,10 +110,14 @@ export default function BookingFlow() {
   
   const [currentStep, setCurrentStep] = useState(1);
 
-  const [days, setDays] = useState<Day[]>(() => getInitialDays());
+  const [days, setDays] = useState<Day[]>([]);
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
   
+  useEffect(() => {
+    // Initialize state on client to avoid hydration mismatch
+    setDays(getInitialDays());
+  }, []);
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
 
@@ -330,7 +334,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
     const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     
-    const isOutsideToronto = day.mobileLocation && day.mobileLocation !== 'toronto';
+    const isOutsideToronto = useMemo(() => day.mobileLocation !== 'toronto', [day.mobileLocation]);
 
     return (
         <div className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
@@ -414,8 +418,8 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                                 if (value === 'toronto') {
                                     updateDay(day.id, { mobileLocation: 'toronto' });
                                 } else {
-                                    // Default to the first non-toronto option
-                                    const firstOutsideOption = Object.keys(MOBILE_LOCATION_OPTIONS).find(key => key !== 'toronto') as MOBILE_LOCATION_IDS | undefined;
+                                    // Default to the first non-toronto option if switching to outside
+                                    const firstOutsideOption = Object.keys(MOBILE_LOCATION_OPTIONS).find(key => key !== 'toronto') as MOBILE_LOCATION_IDS;
                                     updateDay(day.id, { mobileLocation: firstOutsideOption });
                                 }
                             }}
