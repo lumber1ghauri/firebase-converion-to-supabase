@@ -5,63 +5,67 @@ import { GST_RATE } from '@/lib/services';
 
 interface QuoteEmailTemplateProps {
   quote: FinalQuote;
+  baseUrl: string;
 }
 
-// --- Inline CSS Styles ---
+// --- Inline CSS Styles for a Professional Look ---
 const main = {
-  backgroundColor: '#f9f9f9',
+  backgroundColor: '#f6f9fc',
   fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
-  padding: '20px 0',
+  padding: '24px',
 };
 
 const container = {
   backgroundColor: '#ffffff',
   margin: '0 auto',
-  padding: '20px',
+  padding: '24px',
   width: '100%',
   maxWidth: '600px',
-  border: '1px solid #e0e0e0',
+  border: '1px solid #dfe3e8',
   borderRadius: '8px',
+  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
 };
 
 const header = {
   textAlign: 'center' as const,
   paddingBottom: '20px',
-  borderBottom: '1px solid #e0e0e0',
+  borderBottom: '1px solid #e8e8e8',
 };
 
 const heading = {
-  fontSize: '28px',
-  lineHeight: '1.3',
+  fontSize: '32px',
+  lineHeight: '1.2',
   fontWeight: '700',
-  color: '#333',
+  color: '#212529',
   margin: '0 0 10px 0',
+  fontFamily: 'Georgia, serif',
 };
 
 const paragraph = {
   fontSize: '16px',
-  lineHeight: '1.5',
-  color: '#555',
+  lineHeight: '1.6',
+  color: '#495057',
+  margin: '0 0 24px 0',
 };
 
 const section = {
-  padding: '20px 0',
-  borderBottom: '1px solid #e0e0e0',
+  padding: '24px 0',
+  borderBottom: '1px solid #e8e8e8',
 };
 
 const sectionTitle = {
-  fontSize: '20px',
+  fontSize: '22px',
   fontWeight: 600,
-  color: '#333',
-  marginBottom: '15px',
+  color: '#212529',
+  marginBottom: '20px',
 };
 
 const item = {
   display: 'flex',
   justifyContent: 'space-between',
-  fontSize: '14px',
-  color: '#555',
-  marginBottom: '5px',
+  fontSize: '15px',
+  color: '#495057',
+  marginBottom: '8px',
 };
 
 const itemDescription = {
@@ -70,37 +74,37 @@ const itemDescription = {
 
 const itemPrice = {
   fontWeight: 600,
+  fontFamily: 'monospace',
 };
 
 const subItem = {
   ...item,
   paddingLeft: '20px',
-  color: '#777',
+  color: '#6c757d',
+  fontSize: '14px',
 };
 
 const totalStyle = {
   display: 'flex',
   justifyContent: 'space-between',
-  marginTop: '10px',
-  paddingTop: '10px',
-  borderTop: '1px solid #e0e0e0',
+  marginTop: '16px',
+  paddingTop: '16px',
+  borderTop: '1px solid #e8e8e8',
 };
 
 const grandTotalStyle = {
   ...totalStyle,
-  borderTop: '2px solid #333',
-  marginTop: '10px',
-  paddingTop: '10px',
+  borderTop: '2px solid #212529',
 };
 
 const grandTotalLabel = {
   fontSize: '18px',
   fontWeight: 700,
-  color: '#333',
+  color: '#212529',
 };
 
 const grandTotalPrice = {
-  fontSize: '22px',
+  fontSize: '24px',
   fontWeight: 700,
   color: '#E11D48', // primary color
 };
@@ -113,25 +117,43 @@ const footer = {
 };
 
 const instructionBox = {
-    background: '#fafafa',
-    border: '1px solid #e0e0e0',
+    background: '#fffbe6', // A light yellow
+    border: '1px solid #ffe58f',
     borderRadius: '8px',
-    padding: '20px',
+    padding: '24px',
     textAlign: 'center' as const,
-    margin: '20px 0',
+    margin: '24px 0',
+};
+
+const bookingIdLabel = {
+    fontSize: '16px',
+    color: '#856404',
+    marginBottom: '8px',
 };
 
 const bookingIdText = {
-    fontSize: '18px',
+    fontSize: '24px',
     fontWeight: 700,
-    color: '#333',
-    margin: '0 0 10px 0',
+    color: '#856404',
+    fontFamily: 'monospace',
+    margin: '0 0 20px 0',
 };
 
+const button = {
+  backgroundColor: '#E11D48',
+  borderRadius: '6px',
+  color: '#fff',
+  fontSize: '16px',
+  fontWeight: 'bold',
+  textDecoration: 'none',
+  textAlign: 'center' as const,
+  padding: '14px 24px',
+  display: 'inline-block',
+};
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
-  <div style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px', marginBottom: '20px' }}>
-    <h3 style={{ ...sectionTitle, fontSize: '18px', textAlign: 'center', marginTop: 0 }}>
+  <div style={{ padding: '20px', border: '1px solid #e8e8e8', borderRadius: '8px', marginBottom: '20px' }}>
+    <h3 style={{ ...sectionTitle, fontSize: '18px', textAlign: 'center', marginTop: 0, marginBottom: '16px' }}>
       {title}
     </h3>
     {quote.lineItems.map((lineItem, index) => (
@@ -155,12 +177,12 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
   </div>
 );
 
-const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
+const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote, baseUrl }) => (
   <div style={main}>
     <div style={container}>
       <div style={header}>
         <h1 style={heading}>Looks by Anum</h1>
-        <p style={{...paragraph, color: '#777'}}>Your Personalized Makeup Quote</p>
+        <p style={{...paragraph, color: '#6c757d', marginBottom: 0}}>Your Personalized Makeup Quote</p>
       </div>
 
       <div style={section}>
@@ -174,38 +196,44 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
           </p>
         ) : (
           <p style={paragraph}>
-            Thank you for your interest! Here is the personalized quote you requested. Please review the details below.
+            Thank you for your interest! Here is the personalized quote you requested. Please review the details and follow the instructions below to confirm your booking.
           </p>
         )}
+        
         {quote.status === 'quoted' && (
             <div style={instructionBox}>
-                <p style={{ ...paragraph, marginTop: 0 }}>To confirm your booking, please visit our website and use the "Find Your Quote" feature with your Booking ID:</p>
+                <p style={bookingIdLabel}>Your Booking ID is:</p>
                 <p style={bookingIdText}>{quote.id}</p>
+                <p style={{ ...paragraph, marginTop: 0, marginBottom: '24px', color: '#856404' }}>
+                  To finalize your appointment, please visit our website and use the "Find Your Quote" feature with this ID.
+                </p>
+                <a href={baseUrl} target="_blank" rel="noopener noreferrer" style={button}>
+                    Proceed to Website
+                </a>
             </div>
         )}
       </div>
 
       <div style={section}>
         <h2 style={sectionTitle}>Booking Summary</h2>
-        <p style={{ ...paragraph, fontSize: '12px', color: '#999', margin: '-10px 0 15px 0' }}>Booking ID: {quote.id}</p>
         
         {quote.booking.days.map((day, index) => (
-          <div key={index} style={{ marginBottom: '15px', padding: '10px', background: '#fafafa', borderRadius: '4px' }}>
-            <p style={{...item, fontWeight: 700, color: '#333', fontSize: '15px'}}>
+          <div key={index} style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px dashed #e8e8e8' }}>
+            <p style={{...item, fontWeight: 700, color: '#333', fontSize: '16px'}}>
               <span>Day {index + 1}: {day.serviceName}</span>
               <span>{day.date} at {day.getReadyTime}</span>
             </p>
-            <p style={subItem}>- Style: {day.serviceOption}</p>
-            <p style={subItem}>- Location: {day.location}</p>
+            <p style={subItem}>&bull; Style: {day.serviceOption}</p>
+            <p style={subItem}>&bull; Location: {day.location}</p>
             {day.addOns.length > 0 && day.addOns.map((addon, i) => (
-              <p key={i} style={subItem}>- Add-on: {addon}</p>
+              <p key={i} style={subItem}>&bull; Add-on: {addon}</p>
             ))}
           </div>
         ))}
 
         {quote.booking.trial && (
-          <div style={{ marginBottom: '15px', padding: '10px', background: '#fafafa', borderRadius: '4px' }}>
-            <p style={{...item, fontWeight: 700, color: '#333', fontSize: '15px'}}>
+           <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px dashed #e8e8e8' }}>
+            <p style={{...item, fontWeight: 700, color: '#333', fontSize: '16px'}}>
               <span>Bridal Trial</span>
               <span>{quote.booking.trial.date} at {quote.booking.trial.time}</span>
             </p>
@@ -213,23 +241,23 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
         )}
 
         {quote.booking.bridalParty && quote.booking.bridalParty.services.length > 0 && (
-          <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #e0e0e0' }}>
-            <p style={{...itemDescription, fontWeight: 700, color: '#333', fontSize: '15px', marginBottom: '10px'}}>
+          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #e0e0e0' }}>
+            <p style={{...itemDescription, fontWeight: 700, color: '#333', fontSize: '16px', marginBottom: '10px'}}>
               Bridal Party Services
             </p>
             {quote.booking.bridalParty.services.map((partySvc, i) => (
-              <p key={i} style={subItem}>- {partySvc.service} (x{partySvc.quantity})</p>
+              <p key={i} style={subItem}>&bull; {partySvc.service} (x{partySvc.quantity})</p>
             ))}
-            {quote.booking.bridalParty.airbrush > 0 && <p style={subItem}>- Airbrush Service (x{quote.booking.bridalParty.airbrush})</p>}
+            {quote.booking.bridalParty.airbrush > 0 && <p style={subItem}>&bull; Airbrush Service (x{quote.booking.bridalParty.airbrush})</p>}
           </div>
         )}
 
         {quote.booking.address && (
-          <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #e0e0e0' }}>
-            <p style={{...itemDescription, fontWeight: 700, color: '#333', fontSize: '15px', marginBottom: '5px'}}>
+          <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px dashed #e0e0e0' }}>
+            <p style={{...itemDescription, fontWeight: 700, color: '#333', fontSize: '16px', marginBottom: '5px'}}>
               Service Address
             </p>
-            <p style={{...subItem, fontStyle: 'italic'}}>
+            <p style={{...subItem, fontStyle: 'italic', lineHeight: '1.5'}}>
               {quote.booking.address.street},<br/>
               {quote.booking.address.city}, {quote.booking.address.province}, {quote.booking.address.postalCode}
             </p>
@@ -252,7 +280,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
         )}
       </div>
       
-      <p style={{ ...paragraph, fontSize: '14px', color: '#777', textAlign: 'center' }}>
+      <p style={{ ...paragraph, fontSize: '14px', color: '#6c757d', textAlign: 'center', marginBottom: 0 }}>
         This quote is valid for 7 days. If you have any questions, please reply directly to this email.
       </p>
       
@@ -265,3 +293,5 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
 );
 
 export default QuoteEmailTemplate;
+
+    

@@ -7,6 +7,9 @@ import type { FinalQuote } from './types';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
 
 export async function sendQuoteEmail(quote: FinalQuote) {
+  // Use the correct public URL for the development environment.
+  const baseUrl = 'https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
+
   // Directly using the API key to bypass environment variable issues.
   const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
 
@@ -36,7 +39,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
       from: `Looks by Anum <${fromEmail}>`,
       to: [quote.contact.email],
       subject: clientSubject,
-      react: QuoteEmailTemplate({ quote }),
+      react: QuoteEmailTemplate({ quote, baseUrl }),
     });
 
     if (clientEmail.error) {
@@ -56,7 +59,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
         from: `Looks by Anum Admin <${fromEmail}>`,
         to: [adminEmail],
         subject: adminSubject,
-        react: QuoteEmailTemplate({ quote }),
+        react: QuoteEmailTemplate({ quote, baseUrl }),
     });
 
     if (adminEmailNotification.error) {
@@ -71,3 +74,5 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     // We log it, but we don't want to show a failure to the user if their email went through.
   }
 }
+
+    
