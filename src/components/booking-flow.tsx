@@ -113,6 +113,7 @@ export default function BookingFlow() {
   
   const [serviceType, setServiceType] = useState<ServiceType>((state.fieldValues?.serviceType as ServiceType) || 'studio');
   const [mobileLocation, setMobileLocation] = useState<keyof typeof MOBILE_LOCATION_OPTIONS>((state.fieldValues?.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS) || 'toronto');
+  const [showOutsideTorontoOptions, setShowOutsideTorontoOptions] = useState(false);
   
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
@@ -204,14 +205,21 @@ export default function BookingFlow() {
                     {serviceType === 'mobile' && (
                         <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300">
                             <Label className="text-lg font-medium">Mobile Service Location *</Label>
-                             <RadioGroup name="mobileLocation" value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS) } className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" required>
-                                {Object.values(MOBILE_LOCATION_OPTIONS).map(opt => (
-                                    <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
-                                        <RadioGroupItem value={opt.id} id={`mobile-${opt.id}`} />
-                                        <span>{opt.label}</span>
-                                    </Label>
-                                ))}
-                            </RadioGroup>
+                            <div className="flex items-center gap-4 mt-2">
+                                <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); setMobileLocation('toronto'); }}>Toronto / GTA</Button>
+                                <Button type="button" variant={showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); setMobileLocation('immediate-neighbors'); }}>Outside Toronto / GTA</Button>
+                            </div>
+
+                            {showOutsideTorontoOptions && (
+                                <RadioGroup name="mobileLocation" value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS)} className="grid grid-cols-1 gap-4 mt-4" required>
+                                    {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
+                                        <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                            <RadioGroupItem value={opt.id} id={`mobile-${opt.id}`} />
+                                            <span>{opt.label}</span>
+                                        </Label>
+                                    ))}
+                                </RadioGroup>
+                            )}
                             {state.errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{state.errors.mobileLocation[0]}</p>}
                         </div>
                     )}

@@ -68,10 +68,20 @@ export const MOBILE_LOCATION_OPTIONS = {
     label: 'Toronto / GTA',
     surcharge: 0,
   },
-  'outside-toronto': {
-    id: 'outside-toronto',
-    label: 'Outside Toronto / GTA',
+  'immediate-neighbors': {
+    id: 'immediate-neighbors',
+    label: 'Immediate Neighbors (15-30 Minutes)',
     surcharge: 50,
+  },
+  'moderate-distance': {
+    id: 'moderate-distance',
+    label: 'Moderate Distance (30 Minutes to 1 Hour Drive)',
+    surcharge: 100,
+  },
+  'further-out': {
+    id: 'further-out',
+    label: 'Further Out But Still Reachable (1 Hour Plus)',
+    surcharge: 150,
   },
 };
 
