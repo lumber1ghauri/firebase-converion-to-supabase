@@ -131,7 +131,7 @@ export default function BookingFlow() {
       if (state.errors?.trialDate) {
         setCurrentStep(2);
       } else if (state.errors?.name || state.errors?.email || state.errors?.phone) {
-        setCurrentStep(hasBridalService ? 3 : 2);
+        setCurrentStep(STEPS.find(s => s.name === 'Contact Details')!.id);
       } else {
         setCurrentStep(1);
       }
@@ -143,7 +143,7 @@ export default function BookingFlow() {
         });
       }
     }
-  }, [state, toast, hasBridalService]);
+  }, [state, toast, STEPS]);
 
 
   if (state.status === 'success' && state.quote) {
@@ -151,6 +151,35 @@ export default function BookingFlow() {
   }
 
   const nextStep = () => {
+    // Client-side validation before proceeding
+    if (currentStep === 1) {
+        for (const day of days) {
+            if (!day.serviceId) {
+                toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a service for each booking day.' });
+                return;
+            }
+            if (day.serviceType === 'mobile' && !day.mobileLocation) {
+                toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a mobile service location for all mobile service days.' });
+                return;
+            }
+        }
+    }
+
+    if (currentStep === 2 && hasBridalService) { // Bridal Options step
+        if (bridalTrial.addTrial) {
+            if (!bridalTrial.date || !bridalTrial.time) {
+                toast({ variant: 'destructive', title: 'Validation Error', description: 'Please select a date and time for the bridal trial.' });
+                return;
+            }
+            const bridalDay = days.find(d => d.serviceId === 'bridal');
+            if (bridalDay?.date && bridalTrial.date >= bridalDay.date) {
+                toast({ variant: 'destructive', title: 'Validation Error', description: 'Bridal trial date must be before the main event date.' });
+                return;
+            }
+        }
+    }
+
+
     const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
     if (currentStepIndex < STEPS.length - 1) {
         setCurrentStep(STEPS[currentStepIndex + 1].id);
@@ -177,8 +206,9 @@ export default function BookingFlow() {
                         step.id < currentStep ? "text-primary font-medium" :
                         step.id === currentStep ? "text-primary font-bold" : "text-muted-foreground",
                         `w-1/${STEPS.length}`,
-                        index === 1 ? 'text-center' : '',
-                        index === STEPS.length - 1 ? 'text-right' : '',
+                         STEPS.length > 2 && index === 1 ? 'text-center' : '',
+                         STEPS.length > 2 && index === 2 ? 'text-right' : '',
+                         STEPS.length === 2 && index === 1 ? 'text-right' : '',
                     )}>
                         {step.name}
                     </div>
@@ -241,7 +271,7 @@ export default function BookingFlow() {
           </div>
         )}
 
-        <div className={cn(currentStep !== 3 && 'hidden')}>
+        <div className={cn(currentStep !== STEPS.find(s => s.name === 'Contact Details')?.id && 'hidden')}>
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl">{STEPS[STEPS.length -1].name}</CardTitle>
@@ -388,7 +418,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                                     updateDay(day.id, { mobileLocation: 'toronto' });
                                 } else {
                                     // Default to first 'outside' option if switching from toronto
-                                    updateDay(day.id, { mobileLocation: 'immediate-neighbors' });
+                                    updateDay(day.id, { mobileLocation: undefined });
                                 }
                             }}
                             className="grid grid-cols-2 gap-4 mt-2"
@@ -504,22 +534,7 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
 
   if (!hasBridalService) {
-      return (
-          <div className={cn(currentStep !== 2 && 'hidden', "h-full")}>
-              <Card className="shadow-lg h-full">
-                  <CardHeader>
-                      <CardTitle className="font-headline text-2xl">2. Bridal Options</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                      <div className="text-center py-10 text-muted-foreground">
-                          <Info className="mx-auto h-8 w-8 mb-2" />
-                          <p>No Bridal Service Selected</p>
-                          <p className="text-sm">Bridal Trial and Bridal Party options are only available when a "Bridal" service is selected for one of the booking days.</p>
-                      </div>
-                  </CardContent>
-              </Card>
-          </div>
-      );
+      return null;
   }
 
   return (
@@ -549,6 +564,8 @@ function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, br
                             <PopoverContent className="w-auto p-0">
                             <Calendar mode="single" selected={bridalTrial.date} onSelect={(date) => { updateBridalTrial({ date: date as Date }); setIsTrialPopoverOpen(false); }} disabled={(date) => {
                                 const bridalDay = days.find(d=>d.serviceId === 'bridal')?.date;
+                                const today = new Date();
+                                today.setHours(0,0,0,0);
                                 if (!bridalDay) return date < today;
                                 return date >= bridalDay || date < today;
                             }} initialFocus/>
@@ -702,3 +719,5 @@ function SubmitButton() {
         </Button>
     )
 }
+
+    
