@@ -226,6 +226,8 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       } else {
         setCurrentStep('sign-contract');
       }
+    } else if (currentStep === 'address') {
+        handleSaveAddress();
     } else if (currentStep === 'sign-contract') {
         setCurrentStep('payment');
     }
@@ -239,6 +241,42 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   ];
 
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
+
+  const getFooterButton = () => {
+      let text = 'Proceed';
+      let action: () => void = handleProceed;
+      let disabled = false;
+
+      switch(currentStep) {
+          case 'select-tier':
+              text = 'Proceed';
+              disabled = !selectedTier;
+              break;
+          case 'address':
+              text = 'Save Address & Proceed';
+              action = handleSaveAddress;
+              disabled = isSaving;
+              break;
+          case 'sign-contract':
+              text = 'Proceed to Payment';
+              disabled = !contractSigned;
+              break;
+          case 'payment':
+              text = `Confirm & Pay $${depositAmount.toFixed(2)}`;
+              action = handleFinalizeBooking;
+              disabled = isSaving || !paymentMethod || (paymentMethod === 'interac' && !screenshotFile);
+              break;
+      }
+      
+      const icon = isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowRight className="ml-2 h-5 w-5" />;
+
+      return (
+          <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={disabled} onClick={action}>
+              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : text}
+              {!isSaving && text !== `Confirm & Pay $${depositAmount.toFixed(2)}` && <ArrowRight className="ml-2 h-5 w-5" />}
+          </Button>
+      );
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto py-8 sm:py-12">
@@ -379,7 +417,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           
           <div className={cn(currentStep !== 'address' && 'hidden')}>
             <div className="space-y-6 px-6">
-              <div className="p-4 border rounded-lg bg-background/so">
+              <div className="p-4 border rounded-lg bg-background/50">
                   <h3 className="font-headline text-xl mb-4">Mobile Service Address</h3>
                   <div className='space-y-4'>
                           {addressErrors && Object.keys(addressErrors).length > 0 && (
@@ -410,12 +448,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                           </div>
                       </div>
               </div>
-               <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg mt-6">
-                  <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={isSaving} onClick={handleSaveAddress}>
-                      {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowRight className="ml-2 h-5 w-5" />}
-                      Save Address & Proceed
-                  </Button>
-               </CardFooter>
             </div>
           </div>
 
@@ -536,21 +568,13 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               </div>
             </div>
           )}
-          {!bookingConfirmed && (
-            <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
-                {currentStep !== 'payment' && (
-                    <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={!selectedTier || (currentStep === 'sign-contract' && !contractSigned)} onClick={handleProceed}>
-                        Proceed <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                )}
-                 {currentStep === 'payment' && (
-                    <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={isSaving || !paymentMethod || (paymentMethod === 'interac' && !screenshotFile)} onClick={handleFinalizeBooking}>
-                        {isSaving ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Finalizing...</> : `Confirm & Pay $${depositAmount.toFixed(2)}`}
-                    </Button>
-                )}
-            </CardFooter>
-          )}
         </CardContent>
+
+        {!bookingConfirmed && (
+          <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
+              {getFooterButton()}
+          </CardFooter>
+        )}
       </Card>
     </div>
   );
