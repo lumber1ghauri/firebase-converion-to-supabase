@@ -1,70 +1,233 @@
-
 {
   "entities": {
-    "Booking": {
-      "title": "Booking",
-      "description": "Represents a customer's booking quote and final confirmation details.",
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
       "type": "object",
+      "description": "Represents a client who books appointments.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the booking."
+          "description": "Unique identifier for the client."
         },
-        "contact": {
-            "type": "object",
-            "properties": {
-                "name": { "type": "string" },
-                "email": { "type": "string", "format": "email" },
-                "phone": { "type": "string" }
-            },
-            "required": ["name", "email", "phone"]
-        },
-        "finalQuote": {
-          "type": "object",
-          "description": "The detailed quote object."
-        },
-        "createdAt": {
+        "firstName": {
           "type": "string",
-          "format": "date-time",
-          "description": "The timestamp when the booking was created."
+          "description": "First name of the client."
         },
-        "paymentDetails": {
-          "type": "object",
-          "properties": {
-            "deposit": {
-              "type": "object",
-              "properties": {
-                "status": { "type": "string", "enum": ["pending", "received"] },
-                "amount": { "type": "number" },
-                "screenshotUrl": { "type": "string", "format": "uri" }
-              },
-              "required": ["status", "amount"]
-            },
-            "final": {
-              "type": "object",
-              "properties": {
-                "status": { "type": "string", "enum": ["pending", "received"] },
-                "amount": { "type": "number" },
-                "screenshotUrl": { "type": "string", "format": "uri" }
-              },
-              "required": ["status", "amount"]
-            }
-          },
-          "required": ["deposit", "final"]
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the client."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the client.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number of the client."
         }
       },
-      "required": ["id", "finalQuote", "createdAt", "contact"]
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email",
+        "phone"
+      ]
+    },
+    "Service": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Service",
+      "type": "object",
+      "description": "Represents a makeup service offered.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the service."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the makeup service (e.g., Bridal, Party)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the makeup service."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the service."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "price"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents a booked appointment for a client.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the appointment."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Appointment)"
+        },
+        "serviceId": {
+          "type": "string",
+          "description": "Reference to Service. (Relationship: Service 1:N Appointment)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the appointment.",
+          "format": "date-time"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location of the appointment (Toronto or Outside Toronto)."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration of the appointment in hours."
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "serviceId",
+        "date",
+        "location",
+        "duration"
+      ]
+    },
+    "Quote": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quote",
+      "type": "object",
+      "description": "Represents a quote generated for a booking request.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the quote."
+        },
+        "clientId": {
+          "type": "string",
+          "description": "Reference to Client. (Relationship: Client 1:N Quote)"
+        },
+        "appointmentIds": {
+          "type": "array",
+          "description": "References to Appointments. (Relationship: Quote 1:N Appointment)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "Total price of the quote."
+        },
+        "createdDate": {
+          "type": "string",
+          "description": "Date the quote was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "clientId",
+        "appointmentIds",
+        "totalPrice",
+        "createdDate"
+      ]
     }
   },
   "auth": {
-    "providers": []
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/bookings/{bookingId}": {
-      "schema": {
-        "$ref": "#/entities/Booking"
+    "structure": [
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": {
+            "$ref": "#/backend/entities/Client"
+          },
+          "description": "Stores client profiles. This path uses path-based ownership. Includes 'clientId' in subcollections for authorization independence.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            }
+          ]
+        }
       },
-      "description": "Stores all customer booking quotes and confirmations."
-    }
+      {
+        "path": "/services/{serviceId}",
+        "definition": {
+          "entityName": "Service",
+          "schema": {
+            "$ref": "#/backend/entities/Service"
+          },
+          "description": "Stores the available makeup services.",
+          "params": [
+            {
+              "name": "serviceId",
+              "description": "The unique identifier for the service."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointment bookings for each client.  This path uses path-based ownership.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier for the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/clients/{clientId}/quotes/{quoteId}",
+        "definition": {
+          "entityName": "Quote",
+          "schema": {
+            "$ref": "#/backend/entities/Quote"
+          },
+          "description": "Stores quotes generated for each client. This path uses path-based ownership.",
+          "params": [
+            {
+              "name": "clientId",
+              "description": "The unique identifier for the client."
+            },
+            {
+              "name": "quoteId",
+              "description": "The unique identifier for the quote."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the GlamBook Pro application, focusing on appointment booking and quote generation for makeup services. The structure leverages path-based ownership for user-related data (Clients, Appointments, Quotes) to ensure data isolation and simplified security rules. Services are stored in a top-level collection as they are global and shared across all clients. \n\n*   **Authorization Independence:** The structure enforces authorization independence by avoiding hierarchical `get()` calls in security rules. Client IDs are stored directly within Appointment and Quote documents. This denormalization allows security rules to validate ownership without needing to traverse up the document hierarchy.\n*   **Segregation:** All documents within the Client, Service, Appointment, and Quote collections will have the same security requirements.\n*   **QAPs (Rules are not Filters):** The use of path-based ownership for Clients, Appointments, and Quotes ensures that listing operations can be securely performed. Security rules can efficiently filter data based on the `request.auth.uid` without having to inspect the data itself.\n*   **Invariants:** The structure supports invariants by placing related data (Appointments, Quotes) under the ownership of a specific client. This ensures that only the client (or authorized personnel) can access and modify their own data.\n\nThis structure optimizes for a secure, scalable, and debuggable system, aligned with the application's requirements."
   }
 }

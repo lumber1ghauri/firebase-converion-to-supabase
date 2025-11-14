@@ -1,0 +1,128 @@
+/**
+ * @fileoverview Firestore Security Rules for GlamBook Pro.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for client profiles, appointments, and quotes.
+ * Clients can only access their own data. Services are publicly readable.
+ *
+ * Data Structure:
+ * - /clients/{clientId}: Stores client profiles.
+ * - /services/{serviceId}: Stores available makeup services (publicly readable).
+ * - /clients/{clientId}/appointments/{appointmentId}: Stores appointments for a client.
+ * - /clients/{clientId}/quotes/{quoteId}: Stores quotes for a client.
+ *
+ * Key Security Decisions:
+ * - Clients can only create, read, update, and delete their own profiles and related appointments/quotes.
+ * - Service information is publicly accessible for reading.
+ * - Listing of clients is disallowed to protect user privacy.
+ *
+ * Denormalization for Authorization:
+ * - The clientId is included in the appointment and quote documents to avoid needing to "get()" the parent client document in rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Protects the /clients collection and enforces user-ownership. Clients can only access their own profile.
+     * @path /clients/{clientId}
+     * @allow (create) - A user with UID 'user_abc' can create a client profile if clientId == 'user_abc'.
+     * @allow (get) - A user with UID 'user_abc' can read the client profile if clientId == 'user_abc'.
+     * @allow (update) - A user with UID 'user_abc' can update the client profile if clientId == 'user_abc'.
+     * @allow (delete) - A user with UID 'user_abc' can delete the client profile if clientId == 'user_abc'.
+     * @deny (create) - A user with UID 'user_def' cannot create a client profile with clientId == 'user_abc'.
+     * @deny (get) - A user with UID 'user_def' cannot read the client profile if clientId == 'user_abc'.
+     * @deny (update) - A user with UID 'user_def' cannot update the client profile if clientId == 'user_abc'.
+     * @deny (delete) - A user with UID 'user_def' cannot delete the client profile if clientId == 'user_abc'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /clients/{clientId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(clientId);
+      allow list: if false;
+      allow create: if isOwner(clientId);
+      allow update: if isExistingOwner(clientId);
+      allow delete: if isExistingOwner(clientId);
+    }
+
+    /**
+     * @description Allows public read access to the /services collection.
+     * @path /services/{serviceId}
+     * @allow (get) - Any user (or unauthenticated user) can read service details.
+     * @allow (list) - Any user (or unauthenticated user) can list service details.
+     * @deny (create) - No one can create new services through the client-side app.
+     * @deny (update) - No one can update existing services through the client-side app.
+     * @deny (delete) - No one can delete services through the client-side app.
+     * @principle Allows public read access while restricting write access.
+     */
+    match /services/{serviceId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Protects the /clients/{clientId}/appointments collection and enforces user-ownership. Clients can only access their own appointments.
+     * @path /clients/{clientId}/appointments/{appointmentId}
+     * @allow (create) - A user with UID 'user_abc' can create an appointment under their profile (clientId == 'user_abc').
+     * @allow (get) - A user with UID 'user_abc' can read an appointment under their profile (clientId == 'user_abc').
+     * @allow (update) - A user with UID 'user_abc' can update an appointment under their profile (clientId == 'user_abc').
+     * @allow (delete) - A user with UID 'user_abc' can delete an appointment under their profile (clientId == 'user_abc').
+     * @deny (create) - A user with UID 'user_def' cannot create an appointment under client 'user_abc'.
+     * @deny (get) - A user with UID 'user_def' cannot read an appointment under client 'user_abc'.
+     * @deny (update) - A user with UID 'user_def' cannot update an appointment under client 'user_abc'.
+     * @deny (delete) - A user with UID 'user_def' cannot delete an appointment under client 'user_abc'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /clients/{clientId}/appointments/{appointmentId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(clientId);
+      allow list: if isOwner(clientId);
+      allow create: if isOwner(clientId);
+      allow update: if isExistingOwner(clientId);
+      allow delete: if isExistingOwner(clientId);
+    }
+
+    /**
+     * @description Protects the /clients/{clientId}/quotes collection and enforces user-ownership. Clients can only access their own quotes.
+     * @path /clients/{clientId}/quotes/{quoteId}
+     * @allow (create) - A user with UID 'user_abc' can create a quote under their profile (clientId == 'user_abc').
+     * @allow (get) - A user with UID 'user_abc' can read a quote under their profile (clientId == 'user_abc').
+     * @allow (update) - A user with UID 'user_abc' can update a quote under their profile (clientId == 'user_abc').
+     * @allow (delete) - A user with UID 'user_abc' can delete a quote under their profile (clientId == 'user_abc').
+     * @deny (create) - A user with UID 'user_def' cannot create a quote under client 'user_abc'.
+     * @deny (get) - A user with UID 'user_def' cannot read a quote under client 'user_abc'.
+     * @deny (update) - A user with UID 'user_def' cannot update a quote under client 'user_abc'.
+     * @deny (delete) - A user with UID 'user_def' cannot delete a quote under client 'user_abc'.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /clients/{clientId}/quotes/{quoteId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(clientId);
+      allow list: if isOwner(clientId);
+      allow create: if isOwner(clientId);
+      allow update: if isExistingOwner(clientId);
+      allow delete: if isExistingOwner(clientId);
+    }
+  }
+}
