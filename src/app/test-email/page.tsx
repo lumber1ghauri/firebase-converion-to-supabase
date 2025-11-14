@@ -48,7 +48,7 @@ export default function TestEmailPage() {
             <SubmitButton />
           </form>
           {state.message && (
-            <Alert variant={state.success ? 'default' : 'destructive'} className={state.success ? 'border-green-500/50 bg-green-500/10' : ''}>
+            <Alert variant={state.success ? 'default' : 'destructive'} className={state.success ? 'border-green-500/50 text-green-600 [&>svg]:text-green-600 bg-green-500/10' : ''}>
               {state.success ? <MailCheck className="h-4 w-4" /> : <MailWarning className="h-4 w-4" />}
               <AlertTitle>{state.success ? 'Success' : 'Error'}</AlertTitle>
               <AlertDescription>{state.message}</AlertDescription>

@@ -9,14 +9,15 @@ import QuoteEmailTemplate from '@/app/emails/quote-email';
 export async function sendQuoteEmail(quote: FinalQuote) {
   const apiKey = process.env.RESEND_API_KEY;
 
-  if (!apiKey || apiKey.startsWith('YOUR_API_KEY_HERE') || apiKey.length < 10) {
+  if (!apiKey || apiKey.startsWith('re_') === false || apiKey.length < 20) {
     const errorMessage = `A valid Resend API key is not configured. The current key is either missing, a placeholder, or too short. Email functionality is disabled.`;
     console.error(errorMessage);
-    // In development, we were throwing an error, but that can be disruptive.
-    // Instead, we will now throw an error only from the test action,
-    // and let other parts of the app fail gracefully.
-    // This allows the booking flow to complete even if emails can't be sent.
-    throw new Error(errorMessage);
+    // Throw an error in development to make the issue obvious,
+    // but in production, just log and return to avoid crashing the flow.
+    if (process.env.NODE_ENV === 'development') {
+        throw new Error(errorMessage);
+    }
+    return; // Stop execution if key is invalid in production
   }
   
   const resend = new Resend(apiKey);
@@ -30,11 +31,12 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     : `[ADMIN] New Quote Generated - ${quote.contact.name} (ID: ${quote.id})`;
 
   const adminEmail = "sellayadigital@gmail.com";
+  const fromEmail = 'booking@sellaya.ca';
     
   // Send email to the client
   try {
     const clientEmail = await resend.emails.send({
-      from: 'Sellaya <booking@sellaya.ca>',
+      from: `Sellaya <${fromEmail}>`,
       to: [quote.contact.email],
       subject: clientSubject,
       react: QuoteEmailTemplate({ quote }),
@@ -54,7 +56,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   // Send email to the admin
   try {
     const adminEmailNotification = await resend.emails.send({
-        from: 'Sellaya Admin <booking@sellaya.ca>',
+        from: `Sellaya Admin <${fromEmail}>`,
         to: [adminEmail],
         subject: adminSubject,
         react: QuoteEmailTemplate({ quote }),
