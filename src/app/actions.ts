@@ -6,7 +6,6 @@ import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
 import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
-import { sendQuoteEmail } from '@/lib/email';
 import { saveBooking as saveBookingToDb } from '@/firebase/firestore/bookings';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
@@ -313,10 +312,7 @@ export async function generateQuoteAction(
     };
     
     try {
-        await Promise.all([
-          sendQuoteEmail(finalQuote),
-          saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() })
-        ]);
+        await saveBookingToDb({ id: bookingId, finalQuote, createdAt: new Date() });
     } catch (error: any) {
          return {
             status: 'error',
@@ -376,10 +372,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     };
     
     try {
-        await Promise.all([
-            sendQuoteEmail(updatedQuote),
-            saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() })
-        ]);
+        await saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
     } catch (error: any) {
         return {
             status: 'success', // Keep rendering confirmation page
