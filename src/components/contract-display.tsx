@@ -1,7 +1,12 @@
 
 import type { FinalQuote, PriceTier } from '@/lib/types';
 
-export function ContractDisplay({ quote, selectedTier }: { quote: FinalQuote; selectedTier: PriceTier }) {
+export function ContractDisplay({ quote, selectedTier }: { quote: FinalQuote; selectedTier?: PriceTier }) {
+  // Guard clause to prevent rendering if the tier isn't selected yet.
+  if (!selectedTier) {
+    return null;
+  }
+
   const selectedQuote = quote.quotes[selectedTier];
   const depositAmount = selectedQuote.total * 0.5;
 

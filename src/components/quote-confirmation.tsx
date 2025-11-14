@@ -138,7 +138,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
       <Card className="shadow-2xl border-primary/20 animate-in fade-in zoom-in-95 duration-500">
         <form action={formAction}>
           <input type="hidden" name="finalQuote" value={JSON.stringify({...currentQuote, selectedQuote: selectedTier})} />
-          <input type="hidden" name="selectedQuote" value={selectedTier} />
+          {selectedTier && <input type="hidden" name="selectedQuote" value={selectedTier} />}
 
           <CardHeader className="text-center items-center p-6 sm:p-8">
             {bookingConfirmed ? (
@@ -314,7 +314,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
              {/* Step 2: Contract */}
             <div className={cn('space-y-6', currentStep !== 'sign-contract' && 'hidden')}>
               <h3 className="font-headline text-2xl text-center">Service Agreement</h3>
-              <ContractDisplay quote={currentQuote} selectedTier={selectedTier!} />
+              {selectedTier && <ContractDisplay quote={currentQuote} selectedTier={selectedTier} />}
               <div className="flex items-center space-x-2 p-4 bg-muted rounded-md">
                 <Checkbox id="terms" onCheckedChange={(checked) => setContractSigned(Boolean(checked))} />
                 <Label htmlFor="terms" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
