@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { FinalQuote } from '@/lib/types';
+import type { FinalQuote, Quote, PriceTier } from '@/lib/types';
 
 interface QuoteEmailTemplateProps {
   quote: FinalQuote;
@@ -89,6 +89,27 @@ const button = {
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:9002';
 
 
+const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
+  <div style={{ ...section, marginBottom: '10px' }}>
+    <h2 style={{ ...heading, fontSize: '20px', marginBottom: '15px' }}>
+      {title}
+    </h2>
+    {quote.lineItems.map((item, index) => (
+      <div key={index} style={item}>
+        <p style={{ ...itemDescription, paddingLeft: item.description.startsWith('  -') || item.description.startsWith('Party:') ? '15px' : '0' }}>
+          {item.description}
+        </p>
+        <p style={itemPrice}>${item.price.toFixed(2)}</p>
+      </div>
+    ))}
+    <div style={totalStyle}>
+      <p style={totalDescription}>Grand Total</p>
+      <p style={totalPrice}>${quote.total.toFixed(2)}</p>
+    </div>
+  </div>
+);
+
+
 const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
   <div style={main}>
     <div style={container}>
@@ -96,11 +117,19 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
       <p style={paragraph}>
         Hi {quote.contact.name},
       </p>
-      <p style={paragraph}>
-        Thank you for your interest! Here is the personalized quote you requested.
-        {quote.booking.address && " Your service address has been confirmed."}
-        {quote.status === 'quoted' && " When you're ready, you can confirm your booking details and proceed to payment using the link below."}
-      </p>
+
+      {quote.status === 'confirmed' ? (
+        <p style={paragraph}>
+          Thank you for your booking! Your appointment with {' '}
+          {quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed.
+        </p>
+      ) : (
+        <p style={paragraph}>
+          Thank you for your interest! Here are the personalized quotes you requested.
+          When you're ready, you can confirm your booking details and proceed to payment using the link below.
+        </p>
+      )}
+
 
        {quote.status === 'quoted' && (
         <a href={`${baseUrl}/book/${quote.id}`} style={button}>
@@ -119,6 +148,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
               <span>{day.serviceName}</span>
             </p>
             <p style={{...itemDescription, marginLeft: '10px'}}>- {day.serviceOption}</p>
+            <p style={{...itemDescription, marginLeft: '10px'}}>- Location: {day.location}</p>
             {day.addOns.map((addon, i) => (
               <p key={i} style={{...itemDescription, marginLeft: '10px'}}>- {addon}</p>
             ))}
@@ -139,46 +169,29 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
                 {quote.booking.bridalParty.services.map((partySvc, i) => (
                     <p key={i} style={{...itemDescription, marginLeft: '10px'}}>- {partySvc.service} (x{partySvc.quantity})</p>
                 ))}
-                {quote.booking.bridalParty.airbrush && <p style={{...itemDescription, marginLeft: '10px'}}>- Airbrush Service</p>}
+                {quote.booking.bridalParty.airbrush > 0 && <p style={{...itemDescription, marginLeft: '10px'}}>- Airbrush Service (x{quote.booking.bridalParty.airbrush})</p>}
             </div>
          )}
-         <div style={{...item, marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #e5e5e5'}}>
-             <span style={{...itemDescription, color: '#777'}}>Location:</span>
-             <span style={{...itemPrice, color: '#777'}}>{quote.booking.location}</span>
-         </div>
          {quote.booking.address && (
-              <div style={{...item, marginTop: '5px' }}>
+              <div style={{...item, marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #e5e5e5'}}>
                  <span style={{...itemDescription, color: '#777'}}>Service Address:</span>
                  <span style={{...itemPrice, color: '#777', textAlign: 'right'}}>{quote.booking.address.street},<br/>{quote.booking.address.city}, {quote.booking.address.province}, {quote.booking.address.postalCode}</span>
              </div>
          )}
       </div>
       
-      <div style={section}>
-        <h2 style={{ ...heading, fontSize: '20px', marginBottom: '15px' }}>Price Breakdown</h2>
-        {quote.quote.lineItems.map((item, index) => (
-          <div key={index} style={item}>
-            <p style={{ ...itemDescription, paddingLeft: item.description.startsWith('  -') || item.description.startsWith('Party:') ? '15px' : '0' }}>{item.description}</p>
-            <p style={itemPrice}>${item.price.toFixed(2)}</p>
-          </div>
-        ))}
-        {quote.quote.surcharge && (
-            <>
-                <div style={{height: '1px', backgroundColor: '#e5e5e5', margin: '15px 0'}} />
-                <div style={item}>
-                    <p style={{...itemDescription, fontWeight: 500}}>{quote.quote.surcharge.description}</p>
-                    <p style={itemPrice}>${quote.quote.surcharge.price.toFixed(2)}</p>
-                </div>
-            </>
-        )}
-      </div>
+      {quote.status === 'confirmed' && quote.selectedQuote ? (
+          <PriceBreakdown 
+            quote={quote.quotes[quote.selectedQuote]}
+            title={`Confirmed Quote: ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}`}
+          />
+      ) : (
+        <>
+            <PriceBreakdown quote={quote.quotes.lead} title="Quote: Anum - Lead Artist"/>
+            <PriceBreakdown quote={quote.quotes.team} title="Quote: Team"/>
+        </>
+      )}
 
-      <div style={{...section, backgroundColor: '#f9f9f9'}}>
-         <div style={totalStyle}>
-            <p style={totalDescription}>Grand Total</p>
-            <p style={totalPrice}>${quote.quote.total.toFixed(2)}</p>
-         </div>
-      </div>
       
       <p style={{ ...paragraph, fontSize: '14px', color: '#999' }}>
         This quote is valid for 7 days. If you have any questions, please reply to this email.

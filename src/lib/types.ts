@@ -9,11 +9,18 @@ export const SERVICE_OPTION_DETAILS: Record<ServiceOption, { label: string; pric
     'hair-only': { label: 'Hair Only', priceModifier: 0.5 },
 };
 
+export type PriceTier = 'lead' | 'team';
+
+export type DualPrice = {
+    lead: number;
+    team: number;
+}
+
 export type Service = {
   id: string;
   name: string;
   description: string;
-  basePrice: number; // Changed from price
+  basePrice: DualPrice;
   duration: number; // in minutes
   icon: LucideIcon;
   askServiceType: boolean; // Can choose makeup/hair/both
@@ -94,7 +101,11 @@ export type FinalQuote = {
         time: string;
     }
   };
-  quote: Quote;
+  quotes: {
+    lead: Quote;
+    team: Quote;
+  };
+  selectedQuote?: PriceTier;
   status: 'quoted' | 'confirmed' | 'cancelled';
 };
 

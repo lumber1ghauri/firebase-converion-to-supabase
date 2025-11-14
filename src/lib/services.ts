@@ -6,7 +6,7 @@ export const SERVICES: Service[] = [
     id: "bridal",
     name: "Bridal Makeup",
     description: "Look your absolute best on your special day.",
-    basePrice: 350,
+    basePrice: { lead: 450, team: 350 },
     duration: 120,
     icon: Gem,
     askServiceType: true,
@@ -15,7 +15,7 @@ export const SERVICES: Service[] = [
     id: "semi-bridal",
     name: "Semi-Bridal / Engagement",
     description: "For engagement parties or other pre-wedding events.",
-    basePrice: 250,
+    basePrice: { lead: 350, team: 250 },
     duration: 90,
     icon: Sparkles,
     askServiceType: true,
@@ -24,7 +24,7 @@ export const SERVICES: Service[] = [
     id: "party",
     name: "Party Glam",
     description: "A glamorous look for any party or night out.",
-    basePrice: 150,
+    basePrice: { lead: 200, team: 150 },
     duration: 75,
     icon: PartyPopper,
     askServiceType: true,
@@ -33,7 +33,7 @@ export const SERVICES: Service[] = [
     id: "photoshoot",
     name: "Photoshoot Makeup",
     description: "Camera-ready makeup that looks flawless.",
-    basePrice: 200,
+    basePrice: { lead: 250, team: 200 },
     duration: 90,
     icon: Camera,
     askServiceType: false, // This service might be makeup only by default
@@ -89,20 +89,20 @@ export type MOBILE_LOCATION_IDS = keyof typeof MOBILE_LOCATION_OPTIONS;
 
 
 export const ADDON_PRICES = {
-    hairExtension: 20, // Price per extension
-    jewellerySetting: 15,
-    sareeDraping: 25,
-    hijabSetting: 25,
-    bridalTrial: 100,
+    hairExtension: { lead: 25, team: 20 },
+    jewellerySetting: { lead: 20, team: 15 },
+    sareeDraping: { lead: 30, team: 25 },
+    hijabSetting: { lead: 30, team: 25 },
+    bridalTrial: { lead: 150, team: 100 },
 };
 
 export const BRIDAL_PARTY_PRICES = {
-    hairAndMakeup: 180,
-    makeupOnly: 100,
-    hairOnly: 100,
-    dupattaSetting: 15,
-    hairExtensionInstallation: 20,
-    partySareeDraping: 25,
-    partyHijabSetting: 25,
-    airbrush: 50,
+    hairAndMakeup: { lead: 200, team: 180 },
+    makeupOnly: { lead: 120, team: 100 },
+    hairOnly: { lead: 120, team: 100 },
+    dupattaSetting: { lead: 20, team: 15 },
+    hairExtensionInstallation: { lead: 25, team: 20 },
+    partySareeDraping: { lead: 30, team: 25 },
+    partyHijabSetting: { lead: 30, team: 25 },
+    airbrush: { lead: 60, team: 50 },
 };

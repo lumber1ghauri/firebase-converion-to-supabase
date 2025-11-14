@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking } from '@/lib/types';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, PriceTier, Quote } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { saveBooking } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
@@ -73,6 +73,100 @@ function parseBridalPartyServicesFromFormData(formData: FormData): BridalPartySe
         partyHijabSetting: parseInt(formData.get('party_hijabSetting') as string || '0', 10),
         airbrush: parseInt(formData.get('party_airbrush') as string || '0', 10),
     }
+}
+
+const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalTrial: BridalTrial, bridalParty: BridalPartyServices): Quote => {
+    const lineItems: { description: string; price: number }[] = [];
+    let subtotal = 0;
+
+    days.forEach((day, index) => {
+        const service = SERVICES.find((s) => s.id === day.serviceId);
+        if (service && day.date && day.getReadyTime) {
+          const serviceOption = service.askServiceType && day.serviceOption ? SERVICE_OPTION_DETAILS[day.serviceOption] : SERVICE_OPTION_DETAILS['makeup-hair'];
+          let price = service.basePrice[tier] * (service.askServiceType ? serviceOption.priceModifier : 1);
+          
+          lineItems.push({
+            description: `Day ${index + 1}: ${service.name} (${service.askServiceType ? serviceOption.label : 'Standard'})`,
+            price: price,
+          });
+          subtotal += price;
+
+          if (day.hairExtensions > 0) {
+              const extensionPrice = day.hairExtensions * ADDON_PRICES.hairExtension[tier];
+              lineItems.push({ description: `  - Bride's Hair Extensions (x${day.hairExtensions})`, price: extensionPrice });
+              subtotal += extensionPrice;
+          }
+          if (day.jewellerySetting) {
+              lineItems.push({ description: `  - Bride's Jewellery Setting`, price: ADDON_PRICES.jewellerySetting[tier] });
+              subtotal += ADDON_PRICES.jewellerySetting[tier];
+          }
+          if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.sareeDraping) {
+              lineItems.push({ description: `  - Bride's Saree Draping`, price: ADDON_PRICES.sareeDraping[tier] });
+              subtotal += ADDON_PRICES.sareeDraping[tier];
+          }
+           if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.hijabSetting) {
+              lineItems.push({ description: `  - Bride's Hijab Setting`, price: ADDON_PRICES.hijabSetting[tier] });
+              subtotal += ADDON_PRICES.hijabSetting[tier];
+          }
+          
+          const daySurcharge = day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].surcharge : 0;
+          if (daySurcharge > 0) {
+              const locationLabel = MOBILE_LOCATION_OPTIONS[day.mobileLocation].label;
+              lineItems.push({ description: `  - Travel Surcharge (${locationLabel})`, price: daySurcharge });
+              subtotal += daySurcharge;
+          }
+        }
+    });
+
+    if (bridalTrial.addTrial) {
+        lineItems.push({ description: 'Bridal Trial', price: ADDON_PRICES.bridalTrial[tier] });
+        subtotal += ADDON_PRICES.bridalTrial[tier];
+    }
+    
+    if (bridalParty.addServices) {
+        if(bridalParty.hairAndMakeup > 0) {
+            const price = bridalParty.hairAndMakeup * BRIDAL_PARTY_PRICES.hairAndMakeup[tier];
+            lineItems.push({ description: `Party: Hair & Makeup (x${bridalParty.hairAndMakeup})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.makeupOnly > 0) {
+            const price = bridalParty.makeupOnly * BRIDAL_PARTY_PRICES.makeupOnly[tier];
+            lineItems.push({ description: `Party: Makeup Only (x${bridalParty.makeupOnly})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.hairOnly > 0) {
+            const price = bridalParty.hairOnly * BRIDAL_PARTY_PRICES.hairOnly[tier];
+            lineItems.push({ description: `Party: Hair Only (x${bridalParty.hairOnly})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.dupattaSetting > 0) {
+            const price = bridalParty.dupattaSetting * BRIDAL_PARTY_PRICES.dupattaSetting[tier];
+            lineItems.push({ description: `Party: Dupatta Setting (x${bridalParty.dupattaSetting})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.hairExtensionInstallation > 0) {
+            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRICES.hairExtensionInstallation[tier];
+            lineItems.push({ description: `Party: Hair Extensions (x${bridalParty.hairExtensionInstallation})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.partySareeDraping > 0) {
+            const price = bridalParty.partySareeDraping * BRIDAL_PARTY_PRICES.partySareeDraping[tier];
+            lineItems.push({ description: `Party: Saree Draping (x${bridalParty.partySareeDraping})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.partyHijabSetting > 0) {
+            const price = bridalParty.partyHijabSetting * BRIDAL_PARTY_PRICES.partyHijabSetting[tier];
+            lineItems.push({ description: `Party: Hijab Setting (x${bridalParty.partyHijabSetting})`, price });
+            subtotal += price;
+        }
+        if(bridalParty.airbrush > 0) {
+            const price = bridalParty.airbrush * BRIDAL_PARTY_PRICES.airbrush[tier];
+            lineItems.push({ description: `Party: Airbrush Service (x${bridalParty.airbrush})`, price });
+            subtotal += price;
+        }
+    }
+    
+    return { lineItems, total: subtotal };
 }
 
 
@@ -185,125 +279,48 @@ export async function generateQuoteAction(
     } catch (error) {
         console.error("AI availability check failed:", error);
     }
+    
+    const quoteLead = calculateQuoteForTier('lead', days, bridalTrial, bridalParty);
+    const quoteTeam = calculateQuoteForTier('team', days, bridalTrial, bridalParty);
 
-
-    const lineItems: { description: string; price: number }[] = [];
-    let subtotal = 0;
     const bookingDays: FinalQuote['booking']['days'] = [];
+    const addOnsByDay: Record<number, string[]> = {};
 
     days.forEach((day, index) => {
         const service = SERVICES.find((s) => s.id === day.serviceId);
         if (service && day.date && day.getReadyTime) {
-          const serviceOption = service.askServiceType && day.serviceOption ? SERVICE_OPTION_DETAILS[day.serviceOption] : SERVICE_OPTION_DETAILS['makeup-hair'];
-          let price = service.basePrice * (service.askServiceType ? serviceOption.priceModifier : 1);
-          
-          const addOns: string[] = [];
-          
-          lineItems.push({
-            description: `Day ${index + 1}: ${service.name} (${service.askServiceType ? serviceOption.label : 'Standard'})`,
-            price: price,
-          });
-          subtotal += price;
+            const serviceOption = service.askServiceType && day.serviceOption ? SERVICE_OPTION_DETAILS[day.serviceOption] : SERVICE_OPTION_DETAILS['makeup-hair'];
+            addOnsByDay[index] = [];
+            
+            if (day.hairExtensions > 0) addOnsByDay[index].push(`Bride's Hair Extensions (x${day.hairExtensions})`);
+            if (day.jewellerySetting) addOnsByDay[index].push("Bride's Jewellery Setting");
+            if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.sareeDraping) addOnsByDay[index].push("Bride's Saree Draping");
+            if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.hijabSetting) addOnsByDay[index].push("Bride's Hijab Setting");
 
-          if (day.hairExtensions > 0) {
-              const extensionPrice = day.hairExtensions * ADDON_PRICES.hairExtension;
-              lineItems.push({ description: `  - Bride's Hair Extensions (x${day.hairExtensions})`, price: extensionPrice });
-              subtotal += extensionPrice;
-              addOns.push(`Bride's Hair Extensions (x${day.hairExtensions})`);
-          }
-          if (day.jewellerySetting) {
-              lineItems.push({ description: `  - Bride's Jewellery Setting`, price: ADDON_PRICES.jewellerySetting });
-              subtotal += ADDON_PRICES.jewellerySetting;
-              addOns.push("Bride's Jewellery Setting");
-          }
-          if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.sareeDraping) {
-              lineItems.push({ description: `  - Bride's Saree Draping`, price: ADDON_PRICES.sareeDraping });
-              subtotal += ADDON_PRICES.sareeDraping;
-              addOns.push("Bride's Saree Draping");
-          }
-           if ((service.id === 'bridal' || service.id === 'semi-bridal') && day.hijabSetting) {
-              lineItems.push({ description: `  - Bride's Hijab Setting`, price: ADDON_PRICES.hijabSetting });
-              subtotal += ADDON_PRICES.hijabSetting;
-              addOns.push("Bride's Hijab Setting");
-          }
-          
-          const daySurcharge = day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].surcharge : 0;
-          if (daySurcharge > 0) {
-              const locationLabel = MOBILE_LOCATION_OPTIONS[day.mobileLocation].label;
-              lineItems.push({ description: `  - Travel Surcharge (${locationLabel})`, price: daySurcharge });
-              subtotal += daySurcharge;
-          }
-
-          bookingDays.push({ 
-              date: format(day.date, "PPP"), 
-              getReadyTime: day.getReadyTime,
-              serviceName: service.name,
-              serviceType: day.serviceType,
-              location: day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].label : "Studio",
-              serviceOption: service.askServiceType ? serviceOption.label : 'Standard',
-              addOns
-          });
+            bookingDays.push({ 
+                date: format(day.date, "PPP"), 
+                getReadyTime: day.getReadyTime,
+                serviceName: service.name,
+                serviceType: day.serviceType,
+                location: day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].label : "Studio",
+                serviceOption: service.askServiceType ? serviceOption.label : 'Standard',
+                addOns: addOnsByDay[index]
+            });
         }
     });
 
-    if (bridalTrial.addTrial) {
-        lineItems.push({ description: 'Bridal Trial', price: ADDON_PRICES.bridalTrial });
-        subtotal += ADDON_PRICES.bridalTrial;
-    }
-    
     const bridalPartyBookings: FinalQuote['booking']['bridalParty'] | undefined = bridalParty.addServices ? { services: [], airbrush: bridalParty.airbrush } : undefined;
     
     if (bridalParty.addServices && bridalPartyBookings) {
-        if(bridalParty.hairAndMakeup > 0) {
-            const price = bridalParty.hairAndMakeup * BRIDAL_PARTY_PRICES.hairAndMakeup;
-            lineItems.push({ description: `Party: Hair & Makeup (x${bridalParty.hairAndMakeup})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Hair & Makeup', quantity: bridalParty.hairAndMakeup });
-        }
-        if(bridalParty.makeupOnly > 0) {
-            const price = bridalParty.makeupOnly * BRIDAL_PARTY_PRICES.makeupOnly;
-            lineItems.push({ description: `Party: Makeup Only (x${bridalParty.makeupOnly})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Makeup Only', quantity: bridalParty.makeupOnly });
-        }
-        if(bridalParty.hairOnly > 0) {
-            const price = bridalParty.hairOnly * BRIDAL_PARTY_PRICES.hairOnly;
-            lineItems.push({ description: `Party: Hair Only (x${bridalParty.hairOnly})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Hair Only', quantity: bridalParty.hairOnly });
-        }
-        if(bridalParty.dupattaSetting > 0) {
-            const price = bridalParty.dupattaSetting * BRIDAL_PARTY_PRICES.dupattaSetting;
-            lineItems.push({ description: `Party: Dupatta Setting (x${bridalParty.dupattaSetting})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Dupatta/Veil Setting', quantity: bridalParty.dupattaSetting });
-        }
-        if(bridalParty.hairExtensionInstallation > 0) {
-            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRICES.hairExtensionInstallation;
-            lineItems.push({ description: `Party: Hair Extensions (x${bridalParty.hairExtensionInstallation})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Hair Extension Installation', quantity: bridalParty.hairExtensionInstallation });
-        }
-        if(bridalParty.partySareeDraping > 0) {
-            const price = bridalParty.partySareeDraping * BRIDAL_PARTY_PRICES.partySareeDraping;
-            lineItems.push({ description: `Party: Saree Draping (x${bridalParty.partySareeDraping})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Saree Draping', quantity: bridalParty.partySareeDraping });
-        }
-        if(bridalParty.partyHijabSetting > 0) {
-            const price = bridalParty.partyHijabSetting * BRIDAL_PARTY_PRICES.partyHijabSetting;
-            lineItems.push({ description: `Party: Hijab Setting (x${bridalParty.partyHijabSetting})`, price });
-            subtotal += price;
-            bridalPartyBookings.services.push({ service: 'Hijab Setting', quantity: bridalParty.partyHijabSetting });
-        }
-        if(bridalParty.airbrush > 0) {
-            const price = bridalParty.airbrush * BRIDAL_PARTY_PRICES.airbrush;
-            lineItems.push({ description: `Party: Airbrush Service (x${bridalParty.airbrush})`, price });
-            subtotal += price;
-        }
+        if(bridalParty.hairAndMakeup > 0) bridalPartyBookings.services.push({ service: 'Hair & Makeup', quantity: bridalParty.hairAndMakeup });
+        if(bridalParty.makeupOnly > 0) bridalPartyBookings.services.push({ service: 'Makeup Only', quantity: bridalParty.makeupOnly });
+        if(bridalParty.hairOnly > 0) bridalPartyBookings.services.push({ service: 'Hair Only', quantity: bridalParty.hairOnly });
+        if(bridalParty.dupattaSetting > 0) bridalPartyBookings.services.push({ service: 'Dupatta/Veil Setting', quantity: bridalParty.dupattaSetting });
+        if(bridalParty.hairExtensionInstallation > 0) bridalPartyBookings.services.push({ service: 'Hair Extension Installation', quantity: bridalParty.hairExtensionInstallation });
+        if(bridalParty.partySareeDraping > 0) bridalPartyBookings.services.push({ service: 'Saree Draping', quantity: bridalParty.partySareeDraping });
+        if(bridalParty.partyHijabSetting > 0) bridalPartyBookings.services.push({ service: 'Hijab Setting', quantity: bridalParty.partyHijabSetting });
     }
     
-    const total = subtotal; // Surcharges are now part of line items
     const bookingId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     const finalQuote: FinalQuote = {
@@ -320,9 +337,9 @@ export async function generateQuoteAction(
                 : undefined,
             bridalParty: bridalPartyBookings,
         },
-        quote: {
-            lineItems,
-            total,
+        quotes: {
+            lead: quoteLead,
+            team: quoteTeam,
         },
         status: 'quoted'
     };
@@ -333,7 +350,6 @@ export async function generateQuoteAction(
         await sendQuoteEmail(finalQuote);
     } catch (e) {
         console.error("Email failed to send:", e);
-        // We can still show the quote page even if email fails
     }
 
     return {
@@ -348,6 +364,7 @@ export async function generateQuoteAction(
 export async function confirmBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
 
     const finalQuoteString = formData.get('finalQuote') as string;
+    const selectedQuote = formData.get('selectedQuote') as PriceTier;
     let finalQuote: FinalQuote;
 
     try {
@@ -361,10 +378,10 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         }
     }
     
-    if (!finalQuote) {
+    if (!finalQuote || !selectedQuote) {
         return {
             status: 'error',
-            message: 'Quote data is missing. Please generate a quote first.',
+            message: 'Quote data is missing or quote tier was not selected. Please generate a quote first.',
             quote: null,
             errors: { form: ['Quote data is missing.'] },
         }
@@ -374,6 +391,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     if (!finalQuote.booking.hasMobileService) {
         const updatedQuote: FinalQuote = {
             ...finalQuote,
+            selectedQuote,
             status: 'confirmed'
         };
 
@@ -405,7 +423,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         return {
             status: 'success', // Keep rendering the confirmation page
             message: 'Please correct the address errors.',
-            quote: finalQuote,
+            quote: { ...finalQuote, selectedQuote },
             errors: validatedAddress.error.flatten().fieldErrors,
         }
     }
@@ -416,6 +434,7 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             ...finalQuote.booking,
             address: validatedAddress.data,
         },
+        selectedQuote,
         status: 'confirmed'
     };
     
@@ -426,13 +445,11 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     } catch (e) {
         console.error("Confirmation email failed to send:", e);
     }
-    // This is where you would redirect to Stripe
-    console.log("Redirecting to Stripe with quote:", updatedQuote);
 
      return {
         status: 'success',
         message: 'Booking Confirmed! A confirmation email with the address has been sent.',
-        quote: updatedQuote, // Return the updated quote
+        quote: updatedQuote,
         errors: null,
     };
 }

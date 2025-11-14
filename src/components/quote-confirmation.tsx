@@ -1,17 +1,18 @@
 'use client';
 
-import { useActionState, useMemo } from 'react';
+import { useActionState, useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { CheckCircle2, IndianRupee, Loader2, MapPin } from "lucide-react";
-import type { FinalQuote } from "@/lib/types";
+import { CheckCircle2, User, Users, Loader2, MapPin } from "lucide-react";
+import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { confirmBookingAction } from '@/app/actions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { STUDIO_ADDRESS } from '@/lib/services';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { cn } from '@/lib/utils';
 
 
 const initialState = {
@@ -21,9 +22,52 @@ const initialState = {
   errors: null,
 };
 
+function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: { 
+  title: string; 
+  icon: React.ReactNode;
+  quote: Quote;
+  tier: PriceTier;
+  selectedTier: PriceTier | undefined;
+  onSelect: (tier: PriceTier) => void;
+}) {
+  const isSelected = selectedTier === tier;
+  return (
+    <Label htmlFor={`tier-${tier}`} className={cn(
+      "block border rounded-lg cursor-pointer transition-all",
+      isSelected ? "border-primary ring-2 ring-primary shadow-lg" : "border-border hover:border-primary/50"
+    )}>
+        <Card className="shadow-none border-none">
+            <CardHeader className="flex-row items-center gap-4 space-y-0">
+                {icon}
+                <div>
+                  <CardTitle className="font-headline text-2xl">{title}</CardTitle>
+                </div>
+                <RadioGroupItem value={tier} id={`tier-${tier}`} className="ml-auto w-6 h-6" />
+            </CardHeader>
+            <CardContent>
+                <ul className="space-y-1 text-sm">
+                    {quote.lineItems.map((item, index) => (
+                    <li key={index} className="flex justify-between">
+                        <span className={item.description.startsWith('  -') || item.description.startsWith('Party:') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
+                        <span className="font-medium">${item.price.toFixed(2)}</span>
+                    </li>
+                    ))}
+                </ul>
+            </CardContent>
+            <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">
+                <div className="w-full flex justify-between items-baseline">
+                <span className="text-lg font-bold font-headline">Total</span>
+                <span className="text-2xl font-bold text-primary">${quote.total.toFixed(2)}</span>
+                </div>
+            </CardFooter>
+        </Card>
+    </Label>
+  )
+}
 
 export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const [state, formAction] = useActionState(confirmBookingAction, { ...initialState, quote });
+  const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(quote.selectedQuote || 'lead');
 
   const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const currentQuote = state.quote || quote;
@@ -31,10 +75,12 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
 
 
   return (
-    <div className="w-full max-w-3xl mx-auto py-8 sm:py-12">
+    <div className="w-full max-w-5xl mx-auto py-8 sm:py-12">
       <Card className="shadow-2xl border-primary/20 animate-in fade-in zoom-in-95 duration-500">
         <form action={formAction}>
           <input type="hidden" name="finalQuote" value={JSON.stringify(currentQuote)} />
+          <input type="hidden" name="selectedQuote" value={selectedTier} />
+
           <CardHeader className="text-center items-center p-6 sm:p-8">
             <CheckCircle2 className="h-16 w-16 text-primary animate-in fade-in zoom-in-50 duration-700 delay-200" />
             <CardTitle className="font-headline text-3xl sm:text-4xl mt-4">
@@ -42,8 +88,8 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             </CardTitle>
             <CardDescription className="text-base sm:text-lg max-w-prose">
               {bookingConfirmed 
-                ? `Thank you, ${currentQuote.contact.name}. Your booking is confirmed.`
-                : `Thank you, ${currentQuote.contact.name}. Your quote is ready. A summary has been sent to ${currentQuote.contact.email}.`
+                ? `Thank you, ${currentQuote.contact.name}. Your booking with ${currentQuote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed.`
+                : `Thank you, ${currentQuote.contact.name}. Please review your quotes below. A summary has been sent to ${currentQuote.contact.email}.`
               }
             </CardDescription>
              {state.message && state.message.startsWith('Booking Confirmed!') && (
@@ -91,10 +137,10 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
               </ul>
             </div>
 
-            {currentQuote.booking.days.some(d => d.serviceType === 'studio') && (
+            {currentQuote.booking.days.some(d => d.serviceType === 'studio') && !bookingConfirmed && (
                 <div className="p-4 border rounded-lg bg-background/50">
                     <h3 className="font-headline text-xl mb-4">Studio Address</h3>
-                    <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group hover:bg-accent p-2 rounded-md transition-colors">
+                    <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group hover:bg-accent p-2 rounded-md transition-colors inline-block">
                         <p className='font-medium group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
                         <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
                         <div className='flex items-center gap-2 pt-1'>
@@ -140,36 +186,81 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                 </div>
             )}
             
-            {bookingConfirmed && currentQuote.booking.address && (
-                 <div className="p-4 border rounded-lg bg-background/50">
-                    <h3 className="font-headline text-xl mb-4">Service Address</h3>
-                    <div className='text-sm space-y-1'>
-                        <p className='font-medium'>{currentQuote.booking.address.street}</p>
-                        <p className='text-muted-foreground'>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>
+            {bookingConfirmed && (
+              <div className="p-6 border rounded-lg bg-background/50">
+                <h3 className="font-headline text-2xl text-center mb-4">Your Confirmed Package</h3>
+                <Card className="max-w-md mx-auto">
+                   <CardHeader>
+                      <CardTitle className='text-center'>{currentQuote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}</CardTitle>
+                   </CardHeader>
+                   <CardContent>
+                      <ul className="space-y-1 text-sm">
+                        {(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).lineItems.map((item, index) => (
+                          <li key={index} className="flex justify-between">
+                            <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
+                            <span className="font-medium">${item.price.toFixed(2)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                   </CardContent>
+                   <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">
+                      <div className="w-full flex justify-between items-baseline">
+                        <span className="text-lg font-bold font-headline">Total</span>
+                        <span className="text-2xl font-bold text-primary">${(currentQuote.selectedQuote ? currentQuote.quotes[currentQuote.selectedQuote] : currentQuote.quotes.lead).total.toFixed(2)}</span>
+                      </div>
+                   </CardFooter>
+                </Card>
+                 {currentQuote.booking.address && (
+                     <div className="mt-6 text-center">
+                        <h4 className="font-headline text-lg mb-2">Service Address</h4>
+                        <div className='text-sm space-y-1 text-muted-foreground'>
+                            <p>{currentQuote.booking.address.street}</p>
+                            <p>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>
+                        </div>
                     </div>
-                </div>
+                )}
+                 {currentQuote.booking.days.some(d => d.serviceType === 'studio') && (
+                     <div className="mt-6 text-center">
+                        <h4 className="font-headline text-lg mb-2">Studio Address</h4>
+                         <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group">
+                            <p className='font-medium text-foreground group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
+                            <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
+                        </a>
+                    </div>
+                 )}
+              </div>
             )}
 
 
-            <div className="p-4 border rounded-lg bg-background/50">
-              <h3 className="font-headline text-xl mb-3">Price Breakdown</h3>
-              <ul className="space-y-1 text-sm">
-                {currentQuote.quote.lineItems.map((item, index) => (
-                  <li key={index} className="flex justify-between">
-                    <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
-                    <span className="font-medium">${item.price.toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {!bookingConfirmed && (
+                <div className="p-4">
+                    <h3 className="font-headline text-2xl text-center mb-4">Please Select Your Artist Tier</h3>
+                    <RadioGroup value={selectedTier} onValueChange={(val) => setSelectedTier(val as PriceTier)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <QuoteTierCard 
+                          title="Anum - Lead Artist"
+                          icon={<User className="w-8 h-8 text-primary" />}
+                          quote={currentQuote.quotes.lead}
+                          tier="lead"
+                          selectedTier={selectedTier}
+                          onSelect={setSelectedTier}
+                        />
+                        <QuoteTierCard 
+                          title="Team"
+                          icon={<Users className="w-8 h-8 text-primary" />}
+                          quote={currentQuote.quotes.team}
+                          tier="team"
+                          selectedTier={selectedTier}
+                          onSelect={setSelectedTier}
+                        />
+                    </RadioGroup>
+                </div>
+            )}
           </CardContent>
-          <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
-            <div className="w-full flex justify-between items-baseline">
-              <span className="text-xl font-bold font-headline">Grand Total</span>
-              <span className="text-4xl font-bold text-primary">${currentQuote.quote.total.toFixed(2)}</span>
-            </div>
-            <SubmitButton disabled={bookingConfirmed} />
-          </CardFooter>
+          {!bookingConfirmed && (
+            <CardFooter className="flex-col gap-4 bg-secondary/50 p-6 rounded-b-lg">
+                <SubmitButton disabled={bookingConfirmed || !selectedTier} />
+            </CardFooter>
+          )}
         </form>
       </Card>
     </div>
@@ -189,7 +280,7 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
                 </>
             ) : (
                 <>
-                    <IndianRupee className="mr-2 h-5 w-5" /> Proceed to Payment (Coming Soon)
+                   Confirm Booking & Proceed to Payment
                 </>
             )}
         </Button>
