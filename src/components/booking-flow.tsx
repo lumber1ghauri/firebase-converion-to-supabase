@@ -6,8 +6,6 @@ import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { saveBooking } from '@/firebase/firestore/bookings';
 import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
@@ -24,7 +22,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Progress } from './ui/progress';
@@ -108,15 +105,12 @@ export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
-  const firestore = useFirestore();
-  const { user } = useUser();
   
   const [currentStep, setCurrentStep] = useState(1);
 
   const [days, setDays] = useState<Day[]>([]);
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
-  const [isSubmittingClient, setIsSubmittingClient] = useState(false);
   
   useEffect(() => {
     // Initialize state on client to avoid hydration mismatch
@@ -148,44 +142,9 @@ export default function BookingFlow() {
           title: 'Booking Error',
           description: state.message,
       });
-    } else if (state.status === 'success' && state.quote) {
-        if (!user || !firestore) {
-            toast({
-                variant: 'destructive',
-                title: 'Could not save booking',
-                description: 'User not authenticated or database not available.',
-            });
-            return;
-        }
-
-        setIsSubmittingClient(true);
-        const dataToSave = {
-            id: state.quote.id,
-            uid: user.uid, // Add the user's ID
-            finalQuote: state.quote,
-            contact: state.quote.contact,
-            phone: state.quote.contact.phone,
-        };
-
-        saveBooking(firestore, dataToSave)
-            .catch((error) => {
-                console.error("Client-side save failed:", error);
-                toast({
-                    variant: 'destructive',
-                    title: 'Could not save booking',
-                    description: error.message || 'An unexpected error occurred.',
-                });
-            })
-            .finally(() => {
-                setIsSubmittingClient(false);
-            });
     }
-  }, [state, toast, STEPS, firestore, user]);
+  }, [state, toast, STEPS]);
 
-
-  if (state.status === 'success' && state.quote) {
-    return <QuoteConfirmation quote={state.quote} />;
-  }
 
   const nextStep = () => {
     if (currentStep === 1) {
@@ -349,7 +308,7 @@ export default function BookingFlow() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <SubmitButton isSubmittingClient={isSubmittingClient} />
+            <SubmitButton />
           )}
         </div>
       </form>
@@ -733,15 +692,14 @@ function PartyServiceInput({ name, label, description, value, onValueChange, onB
 }
 
 
-function SubmitButton({ isSubmittingClient }: { isSubmittingClient: boolean }) {
+function SubmitButton() {
     const { pending } = useFormStatus();
-    const isSubmitting = pending || isSubmittingClient;
 
     return (
-        <Button type="submit" size="lg" className="font-bold" disabled={isSubmitting}>
-            {isSubmitting ? <>
+        <Button type="submit" size="lg" className="font-bold" disabled={pending}>
+            {pending ? <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                {pending ? 'Generating...' : 'Saving...'}
+                Generating...
             </> : <>
                 Generate My Quote
                 <Send className="ml-2 h-4 w-4" />

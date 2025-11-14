@@ -8,6 +8,9 @@ import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPa
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
+import { initializeFirebase } from '@/firebase';
+import { saveBooking } from '@/firebase/firestore/bookings';
+import { redirect } from 'next/navigation';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -351,12 +354,32 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    return {
-        status: 'success',
-        message: 'Success',
-        quote: finalQuote,
-        errors: null,
-    };
-}
+    try {
+        const { firestore, auth } = initializeFirebase();
+        const user = auth.currentUser;
+        if (!user) {
+             throw new Error('User not authenticated.');
+        }
 
-    
+        await saveBooking(firestore, {
+            id: finalQuote.id,
+            uid: user.uid,
+            finalQuote: finalQuote,
+            contact: finalQuote.contact,
+            phone: finalQuote.contact.phone,
+        });
+
+    } catch (error: any) {
+         console.error("Error saving booking:", error);
+         return {
+            status: 'error',
+            message: `There was an issue saving your quote: ${error.message}`,
+            quote: null,
+            errors: null,
+            fieldValues
+        };
+    }
+
+    // Redirect to the new booking confirmation page
+    redirect(`/book/${finalQuote.id}`);
+}

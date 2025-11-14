@@ -38,15 +38,13 @@ export async function saveBooking(
     };
 
     try {
-        // Use a standard `await` for the setDoc operation.
         await setDoc(bookingRef, dataToSave, { merge: true });
 
-        // If the quote is being created for the first time, send the initial quote email.
+        // If the quote is being created for the first time (status 'quoted'), send the email.
         if (booking.finalQuote.status === 'quoted') {
             await sendQuoteEmail(booking.finalQuote);
         }
     } catch (error) {
-        // If an error occurs (like a permission error), emit it for debugging.
         errorEmitter.emit(
           'permission-error',
           new FirestorePermissionError({
@@ -55,7 +53,6 @@ export async function saveBooking(
             requestResourceData: dataToSave,
           })
         );
-        // Re-throw the error so the calling function knows the operation failed.
         throw error;
     }
 }
