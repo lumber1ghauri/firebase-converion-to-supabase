@@ -5,6 +5,7 @@ import { GST_RATE } from '@/lib/services';
 
 interface QuoteEmailTemplateProps {
   quote: FinalQuote;
+  baseUrl: string;
 }
 
 const main = {
@@ -89,8 +90,6 @@ const button = {
   margin: '20px auto',
 };
 
-const baseUrl = "https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev";
-
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
   <div style={{ ...section, marginBottom: '10px' }}>
@@ -121,7 +120,7 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
 );
 
 
-const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
+const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote, baseUrl }) => (
   <div style={main}>
     <div style={container}>
       <h1 style={heading}>Looks by Anum</h1>
