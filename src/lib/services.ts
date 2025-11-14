@@ -44,7 +44,7 @@ export const SERVICE_TYPE_OPTIONS = {
   studio: {
     id: 'studio',
     label: 'Studio Service',
-    description: 'Visit our professional studio for your makeup session.',
+    description: 'You come to us.',
   },
   mobile: {
     id: 'mobile',

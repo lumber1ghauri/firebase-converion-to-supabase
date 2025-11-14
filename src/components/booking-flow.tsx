@@ -209,9 +209,11 @@ export default function BookingFlow() {
                                 <Button type="button" variant={!showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(false); setMobileLocation('toronto'); }}>Toronto / GTA</Button>
                                 <Button type="button" variant={showOutsideTorontoOptions ? 'secondary': 'outline'} onClick={() => { setShowOutsideTorontoOptions(true); setMobileLocation('immediate-neighbors'); }}>Outside Toronto / GTA</Button>
                             </div>
+                            
+                            <input type="hidden" name="mobileLocation" value={mobileLocation} />
 
                             {showOutsideTorontoOptions && (
-                                <RadioGroup name="mobileLocation" value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS)} className="grid grid-cols-1 gap-4 mt-4" required>
+                                <RadioGroup value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS)} className="grid grid-cols-1 gap-4 mt-4" required>
                                     {Object.values(MOBILE_LOCATION_OPTIONS).filter(opt => opt.id !== 'toronto').map(opt => (
                                         <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
                                             <RadioGroupItem value={opt.id} id={`mobile-${opt.id}`} />
