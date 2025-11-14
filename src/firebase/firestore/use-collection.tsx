@@ -59,7 +59,6 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (err: FirestoreError) => {
-        console.error(`Error fetching collection ${path}:`, err);
         const contextualError = new FirestorePermissionError({
           path: path,
           operation: 'list',

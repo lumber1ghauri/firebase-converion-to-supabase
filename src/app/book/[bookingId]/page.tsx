@@ -7,7 +7,7 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 
 export default function BookPage({ params }: { params: { bookingId: string } }) {
-  const { firestore } = useFirebase();
+  const firestore = useFirestore();
   const [error, setError] = useState<string | null>(null);
 
   const docRef = useMemo(() => {
@@ -15,13 +15,16 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
     return doc(firestore, 'bookings', params.bookingId);
   }, [firestore, params.bookingId]);
 
-  const { data: booking, isLoading } = useDoc<BookingDocument>(docRef);
+  const { data: booking, isLoading, error: docError } = useDoc<BookingDocument>(docRef);
 
   useEffect(() => {
     if (!isLoading && !booking) {
       setError('Booking not found. It may have expired or been removed.');
     }
-  }, [isLoading, booking]);
+     if (docError) {
+      setError(docError.message);
+    }
+  }, [isLoading, booking, docError]);
 
   if (isLoading) {
     return (
@@ -32,19 +35,18 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
     );
   }
 
-  if (error) {
+  if (error && !booking) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center">
-        <h1 className="text-2xl font-bold text-destructive">Error</h1>
-        <p className="mt-4 text-muted-foreground">{error}</p>
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <AlertTriangle className="w-12 h-12 text-destructive mt-4" />
+        <h1 className="text-2xl font-bold text-destructive mt-4">Error Loading Booking</h1>
+        <p className="mt-2 text-muted-foreground">Could not load the requested booking. It may have been removed or you may not have permission to view it.</p>
+        <p className="mt-1 text-xs text-muted-foreground">ID: {params.bookingId}</p>
       </div>
     );
   }
 
   if (booking) {
-    // The data from useDoc is just the document data, not the full BookingDocument type with methods
-    // We need to ensure the finalQuote object is what QuoteConfirmation expects
     return <QuoteConfirmation quote={booking.finalQuote} />;
   }
 

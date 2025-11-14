@@ -10,6 +10,7 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { sendQuoteEmail } from '@/lib/email';
 
 export type BookingDocument = {
     id: string;
@@ -34,9 +35,21 @@ export async function saveBooking(
         ...(booking.createdAt ? {} : { createdAt: serverTimestamp() }),
     };
 
+    // Non-blocking write with error handling
     setDoc(bookingRef, dataToSave, { merge: true })
+      .then(async () => {
+          // Send email only when a quote is first created
+          if (booking.finalQuote.status === 'quoted') {
+              try {
+                  await sendQuoteEmail(booking.finalQuote);
+              } catch (emailError) {
+                  console.error("Failed to send quote email:", emailError);
+                  // Optional: You could add more robust error handling here,
+                  // like logging this failure to a specific monitoring service.
+              }
+          }
+      })
       .catch((error) => {
-        console.error("Error saving booking: ", error);
         errorEmitter.emit(
           'permission-error',
           new FirestorePermissionError({
@@ -45,7 +58,6 @@ export async function saveBooking(
             requestResourceData: dataToSave,
           })
         );
-        throw error;
       });
 }
 
@@ -73,7 +85,7 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
             operation: 'get'
         });
         errorEmitter.emit('permission-error', permissionError);
-        throw error;
+        throw permissionError; // re-throw the contextual error
     }
 }
 
