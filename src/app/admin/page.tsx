@@ -1,22 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getAllBookings } from '@/firebase/firestore/bookings';
 import type { BookingDocument } from '@/firebase/firestore/bookings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, MoreHorizontal, AlertTriangle, Eye } from 'lucide-react';
+import { Loader2, AlertTriangle, Eye, Search } from 'lucide-react';
 import { format } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
+import { Input } from '@/components/ui/input';
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<BookingDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     getAllBookings()
@@ -33,6 +34,16 @@ export default function AdminDashboard() {
         setLoading(false);
       });
   }, []);
+  
+  const filteredBookings = useMemo(() => {
+    if (!searchTerm) return bookings;
+    const lowercasedTerm = searchTerm.toLowerCase();
+    return bookings.filter(booking => 
+        booking.id.toLowerCase().includes(lowercasedTerm) || 
+        booking.finalQuote.contact.name.toLowerCase().includes(lowercasedTerm)
+    );
+  }, [searchTerm, bookings]);
+
 
   const getStatusVariant = (status: BookingDocument['finalQuote']['status']) => {
     switch (status) {
@@ -74,8 +85,22 @@ export default function AdminDashboard() {
       <main className="flex flex-1 flex-col gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
         <Card>
           <CardHeader>
-            <CardTitle>Bookings</CardTitle>
-            <CardDescription>A list of all quotes and confirmed bookings.</CardDescription>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <CardTitle>Bookings</CardTitle>
+                    <CardDescription>A list of all quotes and confirmed bookings.</CardDescription>
+                </div>
+                 <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search by name or ID..."
+                        className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -94,7 +119,7 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings.map(booking => (
+                  {filteredBookings.map(booking => (
                     <TableRow key={booking.id}>
                       <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
                       <TableCell>
@@ -141,7 +166,7 @@ export default function AdminDashboard() {
                 </TableBody>
               </Table>
             </div>
-             {bookings.length === 0 && (
+             {filteredBookings.length === 0 && (
                 <div className="py-20 text-center text-muted-foreground">
                     No bookings found.
                 </div>
