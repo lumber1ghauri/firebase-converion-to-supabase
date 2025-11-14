@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Loader2, AlertTriangle, Eye, Search, CalendarClock } from 'lucide-react';
+import { Loader2, AlertTriangle, Eye, Search, CalendarClock, User, Users } from 'lucide-react';
 import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
-import type { FinalQuote } from '@/lib/types';
+import type { FinalQuote, PriceTier } from '@/lib/types';
 
 
 function getTimeToEvent(eventDateStr: string): string {
@@ -188,6 +188,7 @@ export default function AdminDashboard() {
                   <TableRow>
                     <TableHead className="hidden sm:table-cell">Booking ID</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Artist</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead className="hidden md:table-cell">Time to Event</TableHead>
@@ -200,12 +201,23 @@ export default function AdminDashboard() {
                 <TableBody>
                   {filteredBookings.map(booking => {
                      const paymentStatus = getPaymentStatus(booking);
+                     const artistTier = booking.finalQuote.selectedQuote;
                      return (
                         <TableRow key={booking.id}>
                           <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
                           <TableCell>
                             <div className="font-medium">{booking.finalQuote.contact.name}</div>
                             <div className="text-sm text-muted-foreground">{booking.finalQuote.contact.email}</div>
+                          </TableCell>
+                          <TableCell>
+                            {artistTier ? (
+                                <div className='flex items-center gap-2'>
+                                    {artistTier === 'lead' ? <User className="h-4 w-4 text-primary" /> : <Users className="h-4 w-4 text-primary" />}
+                                    <span className="capitalize text-sm font-medium">{artistTier}</span>
+                                </div>
+                            ) : (
+                                <span className='text-sm text-muted-foreground'>N/A</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize">
@@ -264,3 +276,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+    

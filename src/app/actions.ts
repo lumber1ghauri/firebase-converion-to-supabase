@@ -68,6 +68,8 @@ function parseBridalPartyServicesFromFormData(formData: FormData): BridalPartySe
     }
 }
 
+type PriceTier = 'lead' | 'team';
+
 const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalTrial: BridalTrial, bridalParty: BridalPartyServices): Quote => {
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
@@ -357,71 +359,4 @@ message: 'Please select a date and time for the bridal trial.',
     };
 }
 
-
-// This server action is now only used for updating status from the admin panel
-export async function updateBookingStatusAction(
-  bookingId: string,
-  update: {
-    status?: FinalQuote['status'];
-    depositStatus?: PaymentStatus;
-    finalStatus?: PaymentStatus;
-  }
-): Promise<{ success: boolean; message: string; booking?: FinalQuote }> {
-  try {
-    // NOTE: This uses firebase-admin and will fail if not run in a server environment
-    // with appropriate authentication. For client-side updates, use the client SDK.
-    const { adminDb } = await import('@/firebase/admin-app');
-    const { Timestamp } = await import('firebase-admin/firestore');
-
-    const bookingRef = adminDb.collection('bookings').doc(bookingId);
-    const docSnap = await bookingRef.get();
-
-    if (!docSnap.exists) {
-      return { success: false, message: 'Booking not found.' };
-    }
     
-    const existingData = docSnap.data();
-    if (!existingData) {
-       return { success: false, message: 'Booking data is corrupt.' };
-    }
-
-    let finalQuote = { ...existingData.finalQuote } as FinalQuote;
-
-    if (update.status) {
-      finalQuote.status = update.status;
-    }
-
-    if (update.depositStatus && finalQuote.paymentDetails) {
-      finalQuote.paymentDetails.deposit.status = update.depositStatus;
-    }
-    
-    if (update.finalStatus && finalQuote.paymentDetails) {
-      finalQuote.paymentDetails.final.status = update.finalStatus;
-    }
-
-    if (update.finalStatus === 'received' && finalQuote.paymentDetails) {
-        finalQuote.paymentDetails.deposit.status = 'received';
-    }
-
-
-    await bookingRef.update({
-      finalQuote: finalQuote,
-      updatedAt: Timestamp.now(),
-    });
-    
-    revalidatePath('/admin');
-    
-    // Re-fetch to return the full updated booking
-    const updatedDoc = await bookingRef.get();
-    const updatedBookingData = updatedDoc.data();
-    if (!updatedBookingData) {
-        return { success: false, message: 'Failed to re-fetch updated booking.' };
-    }
-
-    return { success: true, message: 'Booking updated successfully.', booking: updatedBookingData.finalQuote };
-  } catch (error) {
-    console.error('Failed to update booking:', error);
-    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
-    return { success: false, message };
-  }
-}

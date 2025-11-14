@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
 import { Button } from './ui/button';
-import { updateBookingStatusAction } from '@/app/actions';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -131,6 +130,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       }
 
       try {
+          // Use the client-side saveBooking function
           await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           onUpdate(updatedQuote);
           toast({
@@ -372,3 +372,5 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
     </div>
   );
 }
+
+    
