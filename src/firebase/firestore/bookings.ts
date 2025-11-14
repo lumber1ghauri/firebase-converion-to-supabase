@@ -86,7 +86,7 @@ export async function saveBookingAndSendEmail(
 }
 
 
-export async function getBooking(firestore: Firestore, bookingId: string): Promise<BookingDocument | null> {
+export async function getBookingClient(firestore: Firestore, bookingId: string): Promise<BookingDocument | null> {
     const bookingRef = doc(firestore, 'bookings', bookingId);
     
     try {

@@ -2,8 +2,7 @@
 'use server';
 
 import 'dotenv/config';
-import { getBooking } from '@/firebase/firestore/bookings';
-import { initializeServerFirebase } from '@/firebase/server-init';
+import { getBooking } from '@/firebase/server-actions';
 import { sendQuoteEmail, sendFollowUpEmail } from '@/lib/email';
 
 
@@ -20,9 +19,7 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
   }
 
   try {
-    // We must initialize firebase on the server to interact with Firestore.
-    const { firestore } = await initializeServerFirebase();
-    const bookingDoc = await getBooking(firestore, bookingId);
+    const bookingDoc = await getBooking(bookingId);
 
     if (!bookingDoc) {
       return { success: false, message: `Booking with ID ${bookingId} not found.` };
@@ -49,8 +46,7 @@ export async function sendFollowUpEmailAction(bookingId: string): Promise<Action
   }
 
   try {
-    const { firestore } = await initializeServerFirebase();
-    const bookingDoc = await getBooking(firestore, bookingId);
+    const bookingDoc = await getBooking(bookingId);
 
     if (!bookingDoc) {
       return { success: false, message: `Booking with ID ${bookingId} not found.` };

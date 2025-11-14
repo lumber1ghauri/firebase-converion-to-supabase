@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
-import { getBooking, type BookingDocument } from '@/firebase/firestore/bookings';
+import { getBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { useFirestore, useDoc } from '@/firebase';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { Loader2, AlertTriangle } from 'lucide-react';
