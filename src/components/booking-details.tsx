@@ -1,14 +1,18 @@
 
 'use client';
 
-import type { FinalQuote, PaymentInfo, PriceTier } from '@/lib/types';
+import type { FinalQuote, PaymentInfo, PaymentStatus, PriceTier } from '@/lib/types';
 import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
-import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
 import { Button } from './ui/button';
+import { updateBookingStatusAction } from '@/app/actions';
+import { useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -39,15 +43,39 @@ function generateWhatsAppLink(phone: string | undefined): string | null {
 }
 
 
-const PaymentDetailCard = ({ title, paymentInfo }: { title: string; paymentInfo: PaymentInfo; }) => {
+const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, bookingId }: { 
+    title: string; 
+    paymentInfo: PaymentInfo; 
+    bookingId: string;
+    onStatusChange: (update: { depositStatus?: PaymentStatus; finalStatus?: PaymentStatus }) => void;
+}) => {
     const isPending = paymentInfo.status === 'pending';
     const variant = isPending ? "destructive" : "success";
+    const paymentType = title.toLowerCase().includes('deposit') ? 'deposit' : 'final';
+
     return (
         <Card className={isPending ? "bg-destructive/10 border-destructive/30" : "bg-green-500/10 border-green-500/30"}>
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-base">{title}</CardTitle>
-                    <Badge variant={variant} className="capitalize">{paymentInfo.status}</Badge>
+                    <Select 
+                        value={paymentInfo.status} 
+                        onValueChange={(newStatus: PaymentStatus) => {
+                            if(paymentType === 'deposit') {
+                                onStatusChange({ depositStatus: newStatus });
+                            } else {
+                                onStatusChange({ finalStatus: newStatus });
+                            }
+                        }}
+                    >
+                        <SelectTrigger className="w-[120px] h-8 text-xs capitalize">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="pending" className="capitalize text-xs">Pending</SelectItem>
+                            <SelectItem value="received" className="capitalize text-xs">Received</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </CardHeader>
             <CardContent className="text-sm space-y-3">
@@ -65,7 +93,10 @@ const PaymentDetailCard = ({ title, paymentInfo }: { title: string; paymentInfo:
     )
 }
 
-export function BookingDetails({ quote }: { quote: FinalQuote }) {
+export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; }) {
+  const [isUpdating, setIsUpdating] = useState(false);
+  const { toast } = useToast();
+
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
   const whatsappLink = generateWhatsAppLink(quote.contact.phone);
@@ -81,9 +112,39 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
         return 'secondary';
     }
   };
+  
+  const handleStatusChange = async (update: {
+      status?: FinalQuote['status'];
+      depositStatus?: PaymentStatus;
+      finalStatus?: PaymentStatus;
+  }) => {
+      setIsUpdating(true);
+      const result = await updateBookingStatusAction(quote.id, update);
+      setIsUpdating(false);
+
+      if (result.success && result.booking) {
+          onUpdate(result.booking);
+          toast({
+              title: "Status Updated",
+              description: "The booking has been successfully updated.",
+          });
+      } else {
+          toast({
+              variant: "destructive",
+              title: "Update Failed",
+              description: result.message,
+          });
+      }
+  };
+
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {isUpdating && (
+        <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      )}
        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <Card className="md:col-span-2">
           <CardHeader>
@@ -114,22 +175,30 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
         </Card>
         <div className="space-y-6">
             <Card>
-            <CardHeader className='pb-2'>
-                <CardTitle className="text-lg">Booking Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Badge variant={getStatusVariant(quote.status)} className="capitalize text-base">
-                {quote.status}
-                </Badge>
-                {quote.selectedQuote && (
-                    <div className="flex items-center gap-2 pt-3">
-                        {quote.selectedQuote === 'lead' ? <User className="h-5 w-5 text-primary" /> : <Users className="h-5 w-5 text-primary" />}
-                        <p className="font-semibold text-sm">
-                            {quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}
-                        </p>
-                    </div>
-                )}
-            </CardContent>
+                <CardHeader className='pb-2'>
+                    <CardTitle className="text-lg">Booking Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Select value={quote.status} onValueChange={(newStatus: FinalQuote['status']) => handleStatusChange({ status: newStatus })}>
+                        <SelectTrigger className="w-[150px] capitalize text-base font-semibold">
+                            <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="quoted" className="capitalize">Quoted</SelectItem>
+                            <SelectItem value="confirmed" className="capitalize">Confirmed</SelectItem>
+                            <SelectItem value="cancelled" className="capitalize">Cancelled</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    {quote.selectedQuote && (
+                        <div className="flex items-center gap-2 pt-3">
+                            {quote.selectedQuote === 'lead' ? <User className="h-5 w-5 text-primary" /> : <Users className="h-5 w-5 text-primary" />}
+                            <p className="font-semibold text-sm">
+                                {quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
             </Card>
              <Card>
                 <CardHeader className='pb-2'>
@@ -236,8 +305,18 @@ export function BookingDetails({ quote }: { quote: FinalQuote }) {
                 <CardContent>
                 {quote.paymentDetails ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <PaymentDetailCard title="50% Deposit" paymentInfo={quote.paymentDetails.deposit} />
-                        <PaymentDetailCard title="Final Payment" paymentInfo={quote.paymentDetails.final} />
+                        <PaymentDetailCard 
+                            title="50% Deposit" 
+                            paymentInfo={quote.paymentDetails.deposit}
+                            bookingId={quote.id}
+                            onStatusChange={handleStatusChange}
+                        />
+                        <PaymentDetailCard 
+                            title="Final Payment" 
+                            paymentInfo={quote.paymentDetails.final}
+                            bookingId={quote.id}
+                            onStatusChange={handleStatusChange}
+                        />
                     </div>
                 ) : (
                     <div className="text-center py-4 px-2 bg-muted rounded-md text-muted-foreground flex items-center justify-center gap-2">

@@ -56,6 +56,7 @@ const createDummyBooking = (id: string, name: string, status: FinalQuote['status
         id,
         createdAt: new Date(),
         contact,
+        phone: contact.phone,
         finalQuote: {
             id,
             contact,
@@ -135,6 +136,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
 
   useEffect(() => {
     // Using dummy data for testing
@@ -189,6 +191,15 @@ export default function AdminDashboard() {
         return 'secondary';
     }
   };
+  
+  const handleUpdateBooking = (updatedQuote: FinalQuote) => {
+      setBookings(currentBookings => 
+          currentBookings.map(b => b.id === updatedQuote.id ? { ...b, finalQuote: updatedQuote } : b)
+      );
+       setSelectedBooking(currentBooking => 
+          currentBooking && currentBooking.id === updatedQuote.id ? { ...currentBooking, finalQuote: updatedQuote } : currentBooking
+      );
+  }
 
   if (loading) {
     return (
@@ -284,7 +295,7 @@ export default function AdminDashboard() {
                             }
                           </TableCell>
                           <TableCell className="text-right">
-                            <Dialog>
+                            <Dialog open={selectedBooking?.id === booking.id} onOpenChange={(isOpen) => setSelectedBooking(isOpen ? booking : null)}>
                                 <DialogTrigger asChild>
                                     <Button variant="ghost" size="icon">
                                         <Eye className="h-4 w-4" />
@@ -293,10 +304,10 @@ export default function AdminDashboard() {
                                 </DialogTrigger>
                                  <DialogContent className="sm:max-w-3xl">
                                     <DialogHeader>
-                                    <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
+                                        <DialogTitle>Booking Details (ID: {booking.id})</DialogTitle>
                                     </DialogHeader>
                                     <div className="max-h-[80vh] overflow-y-auto p-1 pr-4">
-                                        <BookingDetails quote={booking.finalQuote} />
+                                        {selectedBooking && <BookingDetails quote={selectedBooking.finalQuote} onUpdate={handleUpdateBooking} />}
                                     </div>
                                 </DialogContent>
                             </Dialog>

@@ -5,10 +5,11 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
 import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES, GST_RATE } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, PriceTier, Quote } from '@/lib/types';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, ServiceType, PartyBooking, PriceTier, Quote, PaymentStatus } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { saveBooking } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
+import { revalidatePath } from 'next/cache';
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -351,7 +352,7 @@ message: 'Please select a date and time for the bridal trial.',
         status: 'quoted'
     };
     
-    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact });
+    await saveBooking({ id: bookingId, finalQuote, createdAt: new Date(), contact: finalQuote.contact, phone: finalQuote.contact.phone });
     await sendQuoteEmail(finalQuote);
 
     return {
@@ -402,7 +403,7 @@ export async function saveAddressAction(prevState: any, formData: FormData): Pro
         },
     };
     
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
 
     return {
         status: 'success',
@@ -453,7 +454,7 @@ export async function finalizeBookingAction(prevState: any, formData: FormData):
         }
     };
     
-    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact });
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date(), contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
     await sendQuoteEmail(updatedQuote);
 
      return {
@@ -462,4 +463,59 @@ export async function finalizeBookingAction(prevState: any, formData: FormData):
         quote: updatedQuote,
         errors: null,
     };
+}
+
+
+export async function updateBookingStatusAction(
+  bookingId: string,
+  update: {
+    status?: FinalQuote['status'];
+    depositStatus?: PaymentStatus;
+    finalStatus?: PaymentStatus;
+  }
+): Promise<{ success: boolean; message: string; booking?: FinalQuote }> {
+  try {
+    const { getBooking, saveBooking } = await import('@/firebase/firestore/bookings');
+    const existingBooking = await getBooking(bookingId);
+
+    if (!existingBooking) {
+      return { success: false, message: 'Booking not found.' };
+    }
+
+    let finalQuote = { ...existingBooking.finalQuote };
+
+    if (update.status) {
+      finalQuote.status = update.status;
+    }
+
+    if (update.depositStatus && finalQuote.paymentDetails) {
+      finalQuote.paymentDetails.deposit.status = update.depositStatus;
+    }
+    
+    if (update.finalStatus && finalQuote.paymentDetails) {
+      finalQuote.paymentDetails.final.status = update.finalStatus;
+    }
+
+    // Special case: If final is 'received', deposit must also be 'received'.
+    if (update.finalStatus === 'received' && finalQuote.paymentDetails) {
+        finalQuote.paymentDetails.deposit.status = 'received';
+    }
+
+
+    await saveBooking({
+      id: existingBooking.id,
+      createdAt: existingBooking.createdAt,
+      contact: finalQuote.contact,
+      phone: finalQuote.contact.phone,
+      finalQuote: finalQuote,
+    });
+    
+    revalidatePath('/admin');
+    
+    return { success: true, message: 'Booking updated successfully.', booking: finalQuote };
+  } catch (error) {
+    console.error('Failed to update booking:', error);
+    const message = error instanceof Error ? error.message : 'An unknown error occurred.';
+    return { success: false, message };
+  }
 }

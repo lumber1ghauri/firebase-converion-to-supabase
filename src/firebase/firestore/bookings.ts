@@ -11,6 +11,7 @@ export type BookingDocument = {
     createdAt: Date;
     updatedAt?: Date;
     contact: FinalQuote['contact'];
+    phone: string;
 }
 
 // Server-side action helper
