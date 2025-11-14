@@ -55,8 +55,8 @@ export async function sendTestEmailAction() {
     await sendQuoteEmail(testQuote);
     console.log('Test email action completed successfully.');
     return { success: true, message: 'Test email sent successfully! Please check your inboxes.' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Test email action failed:', error);
-    return { success: false, message: 'Failed to send test email.' };
+    return { success: false, message: `Failed to send test email: ${error.message}` };
   }
 }
