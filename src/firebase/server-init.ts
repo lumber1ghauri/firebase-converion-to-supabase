@@ -7,11 +7,10 @@ let app: App;
 
 export async function initializeServerFirebase() {
   if (!getApps().length) {
-    app = initializeApp({
-      // Use the client-side config for project details
-      projectId: firebaseConfig.projectId,
-      storageBucket: firebaseConfig.storageBucket,
-    });
+    // When no configuration is provided, the Admin SDK automatically looks for 
+    // Application Default Credentials, which is the correct way to authenticate in
+    // a managed Google Cloud environment like App Hosting.
+    app = initializeApp();
   } else {
     app = getApp();
   }
