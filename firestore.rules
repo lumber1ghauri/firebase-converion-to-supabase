@@ -16,20 +16,23 @@ service cloud.firestore {
         return isSignedIn() && request.auth.uid == userId;
     }
 
-    match /bookings {
-      allow list: if isAdmin();
-    }
-
-    // Rules for individual booking documents.
     match /bookings/{bookingId} {
+      // ANYONE can read booking data. This is insecure for production.
+      allow read: if true;
+
       // Any signed-in user can create a booking if they are the owner of the new document.
       allow create: if isOwner(request.resource.data.uid);
       
-      // The owner or an admin can read or update a booking.
-      allow read, update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
+      // The owner or an admin can update a booking.
+      allow update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
       
       // Admins can delete any booking.
       allow delete: if isAdmin();
+    }
+    
+    match /bookings {
+        // ANYONE can list all bookings. This is insecure for production.
+        allow list: if true;
     }
   }
 }
