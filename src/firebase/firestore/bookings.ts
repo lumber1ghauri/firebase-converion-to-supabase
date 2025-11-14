@@ -19,20 +19,19 @@ export type BookingDocument = {
     id: string;
     uid: string; // User ID of the owner
     finalQuote: FinalQuote;
-    createdAt: Timestamp | Date;
+    createdAt?: Timestamp | Date;
     updatedAt?: Timestamp;
     contact: FinalQuote['contact'];
     phone: string;
 }
 
-// Client-side saveBooking for UI interactions like the admin panel
-export async function saveBooking(
+// Client-side saveBooking for UI interactions like the admin panel or user-side updates
+export async function saveBookingClient(
     firestore: Firestore,
     booking: Omit<BookingDocument, 'createdAt' | 'updatedAt'> & { uid: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
-    // Create a deep copy to avoid modifying the original object
     const bookingData = JSON.parse(JSON.stringify(booking));
 
     const dataToSave = {
@@ -40,25 +39,24 @@ export async function saveBooking(
         updatedAt: serverTimestamp(),
     };
 
-    try {
-        await setDoc(bookingRef, dataToSave, { merge: true });
-    } catch (error) {
+    setDoc(bookingRef, dataToSave, { merge: true }).catch(error => {
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
-            path: bookingRef.path,
-            operation: 'write',
-            requestResourceData: dataToSave,
+                path: bookingRef.path,
+                operation: 'write',
+                requestResourceData: dataToSave,
             })
         );
+        // We throw the error here so the calling UI can handle it (e.g., show a toast)
         throw error;
-    }
+    });
 }
 
 // Function to be called from the client after the server action returns the quote
 export async function saveBookingAndSendEmail(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt'> & { uid: string }
+    booking: Omit<BookingDocument, 'updatedAt'>
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
@@ -71,7 +69,6 @@ export async function saveBookingAndSendEmail(
     try {
         await setDoc(bookingRef, dataToSave, { merge: true });
         
-        // Send email only when a quote is first created
         if (booking.finalQuote.status === 'quoted') {
             await sendQuoteEmail(booking.finalQuote);
         }

@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
+import { saveBookingClient, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -145,7 +145,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       setError(null);
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
       try {
-          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -189,7 +189,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               }
           };
 
-          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
 
           setQuote(updatedQuote);
           setCurrentStep('confirmed');
@@ -574,5 +574,3 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
-
-    
