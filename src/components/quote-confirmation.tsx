@@ -67,11 +67,16 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
 
 export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const [state, formAction] = useActionState(confirmBookingAction, { ...initialState, quote });
-  const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(quote.selectedQuote || 'lead');
 
-  const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const currentQuote = state.quote || quote;
+  const bookingConfirmed = useMemo(() => state.quote?.status === 'confirmed', [state.quote]);
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
+
+  const showLeadArtistOption = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
+  
+  const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(
+      quote.selectedQuote || (showLeadArtistOption ? 'lead' : 'team')
+  );
 
 
   return (
@@ -152,7 +157,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             )}
             
             {requiresAddress && !bookingConfirmed && (
-                <div className="p-4 border rounded-lg bg-background/50">
+                <div className="p-4 border rounded-lg bg-background/so">
                     <h3 className="font-headline text-xl mb-4">Mobile Service Address</h3>
                     <div className='space-y-4'>
                             {state.status !== 'idle' && state.errors && (
@@ -235,15 +240,21 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
             {!bookingConfirmed && (
                 <div className="p-4">
                     <h3 className="font-headline text-2xl text-center mb-4">Please Select Your Artist Tier</h3>
-                    <RadioGroup value={selectedTier} onValueChange={(val) => setSelectedTier(val as PriceTier)} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <QuoteTierCard 
-                          title="Anum - Lead Artist"
-                          icon={<User className="w-8 h-8 text-primary" />}
-                          quote={currentQuote.quotes.lead}
-                          tier="lead"
-                          selectedTier={selectedTier}
-                          onSelect={setSelectedTier}
-                        />
+                     <RadioGroup 
+                        value={selectedTier} 
+                        onValueChange={(val) => setSelectedTier(val as PriceTier)} 
+                        className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && "md:grid-cols-2")}
+                    >
+                        {showLeadArtistOption && (
+                            <QuoteTierCard 
+                            title="Anum - Lead Artist"
+                            icon={<User className="w-8 h-8 text-primary" />}
+                            quote={currentQuote.quotes.lead}
+                            tier="lead"
+                            selectedTier={selectedTier}
+                            onSelect={setSelectedTier}
+                            />
+                        )}
                         <QuoteTierCard 
                           title="Team"
                           icon={<Users className="w-8 h-8 text-primary" />}
