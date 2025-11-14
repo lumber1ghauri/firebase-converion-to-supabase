@@ -18,18 +18,18 @@ service cloud.firestore {
 
     // --- Rules for the 'bookings' collection ---
 
-    // Rule for listing all documents in the collection
-    // This is required for the admin dashboard
+    // Rule for listing all documents in the collection.
+    // This is required for the admin dashboard.
     match /bookings {
         allow list: if isAdmin();
     }
 
-    // Rules for individual booking documents
+    // Rules for individual booking documents.
     match /bookings/{bookingId} {
-      // Any signed-in user can create a booking if they are the owner of the document.
+      // Any signed-in user can create a booking if they are the owner of the new document.
       allow create: if isOwner(request.resource.data.uid);
       
-      // The owner or an admin can read or update their own booking.
+      // The owner or an admin can read or update a booking.
       allow read, update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
       
       // Admins can delete any booking.
