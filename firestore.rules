@@ -17,11 +17,12 @@ service cloud.firestore {
     }
 
     match /bookings/{bookingId} {
-      // ANYONE can read booking data. This is insecure for production.
-      allow read: if true;
+      // Allow read access for the owner or an admin
+      allow read: if isOwner(resource.data.uid) || isAdmin();
 
       // Any signed-in user can create a booking if they are the owner of the new document.
-      allow create: if isOwner(request.resource.data.uid);
+      // Admins can also create bookings.
+      allow create: if isOwner(request.resource.data.uid) || isAdmin();
       
       // The owner or an admin can update a booking.
       allow update: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
@@ -30,9 +31,9 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
     
-    match /bookings {
-        // ANYONE can list all bookings. This is insecure for production.
-        allow list: if true;
+    match /bookings/{booking} {
+        // Only admins can list all bookings
+        allow list: if isAdmin();
     }
   }
 }

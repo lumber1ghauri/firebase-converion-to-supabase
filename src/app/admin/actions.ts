@@ -3,7 +3,7 @@
 
 import 'dotenv/config';
 import { getBooking } from '@/firebase/firestore/bookings';
-import { initializeFirebase } from '@/firebase';
+import { initializeServerFirebase } from '@/firebase/server-init';
 import { sendQuoteEmail } from '@/lib/email';
 
 
@@ -21,7 +21,7 @@ export async function sendConfirmationEmailAction(bookingId: string): Promise<Ac
 
   try {
     // We must initialize firebase on the server to interact with Firestore.
-    const { firestore } = initializeFirebase();
+    const { firestore } = await initializeServerFirebase();
     const bookingDoc = await getBooking(firestore, bookingId);
 
     if (!bookingDoc) {

@@ -15,7 +15,7 @@ import { sendQuoteEmail } from '@/lib/email';
 
 export type BookingDocument = {
     id: string;
-    uid: string; // User ID of the owner
+    uid?: string; // User ID of the owner
     finalQuote: FinalQuote;
     createdAt: Timestamp;
     updatedAt?: Timestamp;
@@ -25,34 +25,40 @@ export type BookingDocument = {
 
 export async function saveBooking(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { createdAt?: Date | Timestamp }
+    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt' | 'uid'> & { uid?: string; createdAt?: Date | Timestamp }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
     const dataToSave = {
         ...booking,
-        uid: booking.uid,
+        uid: booking.uid || 'anonymous', // Assign uid, default to anonymous
         updatedAt: serverTimestamp(),
-        // Preserve original createdAt timestamp if it exists, otherwise create it.
         ...(booking.createdAt ? { createdAt: booking.createdAt } : { createdAt: serverTimestamp() }),
     };
 
     try {
-        await setDoc(bookingRef, dataToSave, { merge: true });
-
-        // If the quote is being created for the first time (status 'quoted'), send the email.
+        // On the server, we save with admin privileges so we don't need a try/catch
+        // On the client, we need to handle permissions errors
+        if (typeof window !== 'undefined') { // Check if running on client
+             await setDoc(bookingRef, dataToSave, { merge: true });
+        } else {
+             await setDoc(bookingRef, dataToSave, { merge: true });
+        }
+        // Send email only when a quote is first created
         if (booking.finalQuote.status === 'quoted') {
             await sendQuoteEmail(booking.finalQuote);
         }
     } catch (error) {
-        errorEmitter.emit(
-          'permission-error',
-          new FirestorePermissionError({
-            path: bookingRef.path,
-            operation: 'write',
-            requestResourceData: dataToSave,
-          })
-        );
+        if (typeof window !== 'undefined') {
+            errorEmitter.emit(
+              'permission-error',
+              new FirestorePermissionError({
+                path: bookingRef.path,
+                operation: 'write',
+                requestResourceData: dataToSave,
+              })
+            );
+        }
         throw error;
     }
 }
@@ -75,12 +81,15 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
             return null;
         }
     } catch (error: any) {
-        const permissionError = new FirestorePermissionError({
-            path: bookingRef.path,
-            operation: 'get'
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        throw permissionError; // re-throw the contextual error
+         if (typeof window !== 'undefined') { // Only create contextual error on client
+            const permissionError = new FirestorePermissionError({
+                path: bookingRef.path,
+                operation: 'get'
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError; // re-throw the contextual error
+         }
+         throw error; // On server, just throw original error
     }
 }
 

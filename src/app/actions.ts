@@ -8,7 +8,7 @@ import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPa
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
-import { initializeFirebase } from '@/firebase';
+import { initializeServerFirebase } from '@/firebase/server-init';
 import { saveBooking } from '@/firebase/firestore/bookings';
 import { redirect } from 'next/navigation';
 
@@ -355,15 +355,10 @@ message: 'Please select a date and time for the bridal trial.',
     };
     
     try {
-        const { firestore, auth } = initializeFirebase();
-        const user = auth.currentUser;
-        if (!user) {
-             throw new Error('User not authenticated.');
-        }
+        const { firestore } = await initializeServerFirebase();
 
         await saveBooking(firestore, {
             id: finalQuote.id,
-            uid: user.uid,
             finalQuote: finalQuote,
             contact: finalQuote.contact,
             phone: finalQuote.contact.phone,

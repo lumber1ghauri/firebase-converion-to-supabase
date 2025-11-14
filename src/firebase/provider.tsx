@@ -8,9 +8,9 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 export interface FirebaseContextValue {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
   user: User | null;
   isUserLoading: boolean;
 }
@@ -29,12 +29,17 @@ export function FirebaseProvider({ children, firebaseApp, firestore, auth }: Fir
   const [isUserLoading, setIsUserLoading] = useState(true);
 
   useEffect(() => {
-    initiateAnonymousSignIn(auth); // Initiate sign-in on mount
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsUserLoading(false);
-    });
-    return () => unsubscribe();
+    // Only run auth logic on the client
+    if (typeof window !== 'undefined') {
+      initiateAnonymousSignIn(auth); // Initiate sign-in on mount
+      const unsubscribe = onAuthStateChanged(auth, (user) => {
+        setUser(user);
+        setIsUserLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+        setIsUserLoading(false);
+    }
   }, [auth]);
 
   const contextValue = useMemo(() => ({
