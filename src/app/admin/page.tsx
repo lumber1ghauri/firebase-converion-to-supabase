@@ -72,14 +72,10 @@ export default function AdminDashboard() {
   const sortedBookings = useMemo(() => {
     if (!bookings) return [];
     return [...bookings].sort((a, b) => {
-        try {
-            const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
-            const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
-            if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-            return dateA.getTime() - dateB.getTime();
-        } catch (e) {
-            return 0;
-        }
+        // Handle Firestore Timestamps by converting to JS Dates
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+        return dateB.getTime() - dateA.getTime(); // Sort descending (newest first)
     });
   }, [bookings]);
 
@@ -143,7 +139,7 @@ export default function AdminDashboard() {
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <CardTitle>Bookings</CardTitle>
-                    <CardDescription>A list of all quotes and confirmed bookings.</CardDescription>
+                    <CardDescription>A list of all quotes and confirmed bookings, sorted by newest first.</CardDescription>
                 </div>
                  <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -162,12 +158,13 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="hidden sm:table-cell">Booking ID</TableHead>
+                    <TableHead className="w-[60px]">Sr. No.</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Artist</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Payment</TableHead>
-                    <TableHead className="hidden md:table-cell">Time to Event</TableHead>
+                    <TableHead className="hidden md:table-cell">Booking Date</TableHead>
+                    <TableHead className="hidden md:table-cell">Event</TableHead>
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>
                       <span className="sr-only">Actions</span>
@@ -175,15 +172,15 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map(booking => {
+                  {filteredBookings.map((booking, index) => {
                      const paymentStatus = getPaymentStatus(booking);
                      const artistTier = booking.finalQuote.selectedQuote;
                      return (
                         <TableRow key={booking.id}>
-                          <TableCell className="hidden sm:table-cell font-medium">{booking.id}</TableCell>
+                           <TableCell className="font-medium">{index + 1}</TableCell>
                           <TableCell>
                             <div className="font-medium">{booking.finalQuote.contact.name}</div>
-                            <div className="text-sm text-muted-foreground">{booking.finalQuote.contact.email}</div>
+                            <div className="text-sm text-muted-foreground">{booking.id}</div>
                           </TableCell>
                           <TableCell>
                             {artistTier ? (
@@ -204,6 +201,9 @@ export default function AdminDashboard() {
                                <Badge variant={paymentStatus.variant} className="capitalize whitespace-nowrap">
                                 {paymentStatus.text}
                             </Badge>
+                          </TableCell>
+                           <TableCell className="hidden md:table-cell text-sm">
+                             {booking.createdAt?.toDate ? format(booking.createdAt.toDate(), 'PPp') : 'N/A'}
                           </TableCell>
                            <TableCell className="hidden md:table-cell">
                                 <div className="flex items-center gap-2">

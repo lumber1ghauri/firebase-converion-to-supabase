@@ -5,6 +5,7 @@ import {
   setDoc,
   serverTimestamp,
   type Firestore,
+  type Timestamp,
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
@@ -16,15 +17,15 @@ export type BookingDocument = {
     id: string;
     uid: string; // User ID of the owner
     finalQuote: FinalQuote;
-    createdAt: Date;
-    updatedAt?: Date;
+    createdAt: Timestamp;
+    updatedAt?: Timestamp;
     contact: FinalQuote['contact'];
     phone: string;
 }
 
 export async function saveBooking(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { createdAt?: Date }
+    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { createdAt?: Date | Timestamp }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
@@ -75,8 +76,6 @@ export async function getBooking(firestore: Firestore, bookingId: string): Promi
             return {
                 ...data,
                 id: docSnap.id,
-                createdAt: data.createdAt?.toDate(),
-                updatedAt: data.updatedAt?.toDate(),
             } as BookingDocument;
         } else {
             return null;
