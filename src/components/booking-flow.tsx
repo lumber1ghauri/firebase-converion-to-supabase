@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send, Building, Car } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
@@ -95,9 +95,9 @@ function generateTimeSlots() {
 const timeSlots = generateTimeSlots();
 
 const STEPS = [
-  { id: 1, name: 'Services & Dates' },
+  { id: 1, name: 'Location & Services' },
   { id: 2, name: 'Makeup Services' },
-  { id: 3, name: 'Location & Details' },
+  { id: 3, name: 'Contact Details' },
 ];
 
 export default function BookingFlow() {
@@ -121,7 +121,7 @@ export default function BookingFlow() {
     if (state.status === 'error') {
       if (state.errors?.trialDate) {
         setCurrentStep(2);
-      } else if (state.errors?.name || state.errors?.email || state.errors?.phone || state.errors?.serviceType || state.errors?.mobileLocation) {
+      } else if (state.errors?.name || state.errors?.email || state.errors?.phone) {
         setCurrentStep(3);
       } else {
         setCurrentStep(1);
@@ -181,46 +181,8 @@ export default function BookingFlow() {
         <div className={cn(currentStep !== 1 && 'hidden')}>
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">1. Services & Dates</CardTitle>
-                    <CardDescription>Select services, dates, and times for your booking. Add multiple days if needed.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    {days.map((day, index) => (
-                        <BookingDayCard
-                            key={day.id}
-                            day={day}
-                            index={index}
-                            updateDay={(id, data) => setDays(days.map(d => d.id === id ? {...d, ...data} : d))}
-                            removeDay={(id) => setDays(days.filter(d => d.id !== id))}
-                            isOnlyDay={days.length <= 1}
-                        />
-                    ))}
-                    <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false }])} className="w-full">
-                    <Plus className="mr-2 h-4 w-4" /> Add Another Day
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-
-
-        <div className={cn(currentStep !== 2 && 'hidden')}>
-            <BridalServiceOptions
-              hasBridalService={hasBridalService}
-              bridalTrial={bridalTrial}
-              updateBridalTrial={(data) => setBridalTrial(prev => ({...prev, ...data}))}
-              days={days}
-              errors={state.errors}
-              bridalParty={bridalParty}
-              updateBridalParty={(data) => setBridalParty(prev => ({...prev, ...data}))}
-              updateBridalPartyQty={(field, increase) => setBridalParty(prev => ({ ...prev, [field]: Math.max(0, (prev[field] as number) + (increase ? 1 : -1)) }))}
-            />
-        </div>
-
-        <div className={cn(currentStep !== 3 && 'hidden')}>
-            <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
-                <CardHeader>
-                    <CardTitle className="font-headline text-2xl">3. Location & Contact</CardTitle>
-                    <CardDescription>Choose your service type. Travel fees may apply for mobile services.</CardDescription>
+                    <CardTitle className="font-headline text-2xl">1. Location & Services</CardTitle>
+                    <CardDescription>First, choose your service type, then select services, dates, and times for your booking.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                      <div>
@@ -253,12 +215,50 @@ export default function BookingFlow() {
                             {state.errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{state.errors.mobileLocation[0]}</p>}
                         </div>
                     )}
-
-
-                    <Separator />
                     
+                    <Separator />
+
+                    <div className="space-y-6">
+                      {days.map((day, index) => (
+                          <BookingDayCard
+                              key={day.id}
+                              day={day}
+                              index={index}
+                              updateDay={(id, data) => setDays(days.map(d => d.id === id ? {...d, ...data} : d))}
+                              removeDay={(id) => setDays(days.filter(d => d.id !== id))}
+                              isOnlyDay={days.length <= 1}
+                          />
+                      ))}
+                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false }])} className="w-full">
+                      <Plus className="mr-2 h-4 w-4" /> Add Another Day
+                      </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+
+
+        <div className={cn(currentStep !== 2 && 'hidden')}>
+            <BridalServiceOptions
+              hasBridalService={hasBridalService}
+              bridalTrial={bridalTrial}
+              updateBridalTrial={(data) => setBridalTrial(prev => ({...prev, ...data}))}
+              days={days}
+              errors={state.errors}
+              bridalParty={bridalParty}
+              updateBridalParty={(data) => setBridalParty(prev => ({...prev, ...data}))}
+              updateBridalPartyQty={(field, increase) => setBridalParty(prev => ({ ...prev, [field]: Math.max(0, (prev[field] as number) + (increase ? 1 : -1)) }))}
+            />
+        </div>
+
+        <div className={cn(currentStep !== 3 && 'hidden')}>
+            <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
+                <CardHeader>
+                    <CardTitle className="font-headline text-2xl">3. Contact Details</CardTitle>
+                    <CardDescription>Please provide your contact information to finalize the quote.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
                     <div>
-                         <Label className="text-lg font-medium">Your Details</Label>
                         <div className="space-y-4 mt-2">
                             <div>
                                 <Label htmlFor="name">Full Name *</Label>
