@@ -5,7 +5,6 @@ import { GST_RATE } from '@/lib/services';
 
 interface QuoteEmailTemplateProps {
   quote: FinalQuote;
-  baseUrl: string;
 }
 
 // --- Inline CSS Styles ---
@@ -106,26 +105,29 @@ const grandTotalPrice = {
   color: '#E11D48', // primary color
 };
 
-const button = {
-  backgroundColor: '#E11D48', // primary color
-  borderRadius: '8px',
-  color: '#fff',
-  fontSize: '16px',
-  fontWeight: 'bold',
-  textDecoration: 'none',
-  textAlign: 'center' as const,
-  padding: '14px 24px',
-  display: 'block',
-  margin: '20px auto',
-  width: 'fit-content',
-};
-
 const footer = {
   padding: '20px 0 0 0',
   textAlign: 'center' as const,
   fontSize: '12px',
   color: '#999',
 };
+
+const instructionBox = {
+    background: '#fafafa',
+    border: '1px solid #e0e0e0',
+    borderRadius: '8px',
+    padding: '20px',
+    textAlign: 'center' as const,
+    margin: '20px 0',
+};
+
+const bookingIdText = {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#333',
+    margin: '0 0 10px 0',
+};
+
 
 const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
   <div style={{ padding: '15px', border: '1px solid #eee', borderRadius: '8px', marginBottom: '20px' }}>
@@ -153,7 +155,7 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
   </div>
 );
 
-const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote, baseUrl }) => (
+const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
   <div style={main}>
     <div style={container}>
       <div style={header}>
@@ -172,13 +174,14 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
           </p>
         ) : (
           <p style={paragraph}>
-            Thank you for your interest! Here is the personalized quote you requested. Please review the details below. When you're ready, you can confirm your booking and proceed to payment using the secure link.
+            Thank you for your interest! Here is the personalized quote you requested. Please review the details below.
           </p>
         )}
         {quote.status === 'quoted' && (
-          <a href={`${baseUrl}/book/${quote.id}/`} style={button}>
-            View and Confirm Your Booking
-          </a>
+            <div style={instructionBox}>
+                <p style={{ ...paragraph, marginTop: 0 }}>To confirm your booking, please visit our website and use the "Find Your Quote" feature with your Booking ID:</p>
+                <p style={bookingIdText}>{quote.id}</p>
+            </div>
         )}
       </div>
 
@@ -262,5 +265,3 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
 );
 
 export default QuoteEmailTemplate;
-
-    

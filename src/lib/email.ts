@@ -6,9 +6,6 @@ import { Resend } from 'resend';
 import type { FinalQuote } from './types';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
 
-
-const baseUrl = "https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev";
-
 export async function sendQuoteEmail(quote: FinalQuote) {
   // Directly using the API key to bypass environment variable issues.
   const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
@@ -39,7 +36,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
       from: `Looks by Anum <${fromEmail}>`,
       to: [quote.contact.email],
       subject: clientSubject,
-      react: QuoteEmailTemplate({ quote, baseUrl }),
+      react: QuoteEmailTemplate({ quote }),
     });
 
     if (clientEmail.error) {
@@ -59,7 +56,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
         from: `Looks by Anum Admin <${fromEmail}>`,
         to: [adminEmail],
         subject: adminSubject,
-        react: QuoteEmailTemplate({ quote, baseUrl }),
+        react: QuoteEmailTemplate({ quote }),
     });
 
     if (adminEmailNotification.error) {
