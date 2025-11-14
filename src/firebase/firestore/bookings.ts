@@ -1,3 +1,4 @@
+
 'use client';
 import {
   doc,
@@ -16,7 +17,7 @@ import { sendQuoteEmail } from '@/lib/email';
 
 export type BookingDocument = {
     id: string;
-    uid?: string; // User ID of the owner
+    uid: string; // User ID of the owner
     finalQuote: FinalQuote;
     createdAt: Timestamp | Date;
     updatedAt?: Timestamp;
@@ -27,12 +28,15 @@ export type BookingDocument = {
 // Client-side saveBooking for UI interactions like the admin panel
 export async function saveBooking(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt'> & { uid: string }
+    booking: Omit<BookingDocument, 'createdAt' | 'updatedAt'> & { uid: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
+    // Create a deep copy to avoid modifying the original object
+    const bookingData = JSON.parse(JSON.stringify(booking));
+
     const dataToSave = {
-        ...booking,
+        ...bookingData,
         updatedAt: serverTimestamp(),
     };
 

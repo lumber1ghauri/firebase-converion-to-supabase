@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBooking as saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
-import { sendFollowUpEmailAction } from '@/app/admin/actions';
+import { sendConfirmationEmailAction, sendFollowUpEmailAction } from '@/app/admin/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,6 +141,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
           if (update.finalStatus) {
               updatedQuote.paymentDetails.final.status = update.finalStatus;
           }
+          // Ensure if final is received, deposit is also marked as received
           if (update.finalStatus === 'received') {
               updatedQuote.paymentDetails.deposit.status = 'received';
           }
@@ -156,10 +157,19 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
           
           const isDepositNowReceived = updatedQuote.paymentDetails?.deposit.status === 'received';
           if (wasDepositPending && isDepositNowReceived) {
-               toast({
-                    title: "Action Required",
-                    description: "Deposit approved. A confirmation email has not been sent automatically. Please handle communication with the client.",
-                });
+                const result = await sendConfirmationEmailAction(updatedQuote.id);
+                if (result.success) {
+                    toast({
+                        title: "Action Complete",
+                        description: "Deposit approved and confirmation email sent to the client.",
+                    });
+                } else {
+                     toast({
+                        variant: "destructive",
+                        title: "Email Failed",
+                        description: result.message,
+                    });
+                }
           }
 
       } catch (error: any) {
