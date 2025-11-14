@@ -11,7 +11,6 @@ import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { FinalQuote } from '@/lib/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { sendQuoteEmail } from '@/lib/email';
 
 export type BookingDocument = {
     id: string;
@@ -23,42 +22,29 @@ export type BookingDocument = {
     phone: string;
 }
 
+// Client-side saveBooking for UI interactions like the admin panel
 export async function saveBooking(
     firestore: Firestore,
-    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt' | 'uid'> & { uid?: string; createdAt?: Date | Timestamp }
+    booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { uid: string, createdAt: Timestamp | Date }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
     const dataToSave = {
         ...booking,
-        uid: booking.uid || 'anonymous', // Assign uid, default to anonymous
         updatedAt: serverTimestamp(),
-        ...(booking.createdAt ? { createdAt: booking.createdAt } : { createdAt: serverTimestamp() }),
     };
 
     try {
-        // On the server, we save with admin privileges so we don't need a try/catch
-        // On the client, we need to handle permissions errors
-        if (typeof window !== 'undefined') { // Check if running on client
-             await setDoc(bookingRef, dataToSave, { merge: true });
-        } else {
-             await setDoc(bookingRef, dataToSave, { merge: true });
-        }
-        // Send email only when a quote is first created
-        if (booking.finalQuote.status === 'quoted') {
-            await sendQuoteEmail(booking.finalQuote);
-        }
+        await setDoc(bookingRef, dataToSave, { merge: true });
     } catch (error) {
-        if (typeof window !== 'undefined') {
-            errorEmitter.emit(
-              'permission-error',
-              new FirestorePermissionError({
-                path: bookingRef.path,
-                operation: 'write',
-                requestResourceData: dataToSave,
-              })
-            );
-        }
+        errorEmitter.emit(
+            'permission-error',
+            new FirestorePermissionError({
+            path: bookingRef.path,
+            operation: 'write',
+            requestResourceData: dataToSave,
+            })
+        );
         throw error;
     }
 }

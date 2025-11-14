@@ -8,9 +8,9 @@ import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPa
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { sendQuoteEmail } from '@/lib/email';
 import { revalidatePath } from 'next/cache';
-import { initializeServerFirebase } from '@/firebase/server-init';
-import { saveBooking } from '@/firebase/firestore/bookings';
 import { redirect } from 'next/navigation';
+import { saveBooking as saveBookingServer } from '@/firebase/firestore/server-actions';
+
 
 const phoneRegex = /^(?:\+?1\s?)?\(?([2-9][0-8][0-9])\)?\s?-?([2-9][0-9]{2})\s?-?([0-9]{4})$/;
 const postalCodeRegex = /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/;
@@ -355,9 +355,7 @@ message: 'Please select a date and time for the bridal trial.',
     };
     
     try {
-        const { firestore } = await initializeServerFirebase();
-
-        await saveBooking(firestore, {
+        await saveBookingServer({
             id: finalQuote.id,
             finalQuote: finalQuote,
             contact: finalQuote.contact,

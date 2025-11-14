@@ -12,8 +12,8 @@ import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
-import { saveBooking, type BookingDocument } from '@/firebase/firestore/bookings';
-import { sendConfirmationEmailAction } from '@/app/admin/actions';
+import { saveBooking as saveBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
+import { sendQuoteEmail } from '@/lib/email';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -135,7 +135,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQu
 
       try {
           // Use the client-side saveBooking function
-          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone, createdAt: bookingDoc.createdAt });
+          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone, createdAt: bookingDoc.createdAt });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
@@ -145,19 +145,11 @@ export function BookingDetails({ quote, onUpdate, bookingDoc }: { quote: FinalQu
           // Check if the deposit was just approved
           const isDepositNowReceived = updatedQuote.paymentDetails?.deposit.status === 'received';
           if (wasDepositPending && isDepositNowReceived) {
-              const result = await sendConfirmationEmailAction(updatedQuote.id);
-              if (result.success) {
-                toast({
+              await sendQuoteEmail(updatedQuote);
+               toast({
                     title: "Confirmation Sent",
                     description: "The booking confirmation email has been sent to the client.",
                 });
-              } else {
-                toast({
-                    variant: "destructive",
-                    title: "Email Failed",
-                    description: result.message,
-                });
-              }
           }
       } catch (error: any) {
           toast({
