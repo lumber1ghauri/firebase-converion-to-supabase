@@ -196,12 +196,12 @@ export default function AdminDashboard() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize">
+                            <Badge variant={getStatusVariant(booking.finalQuote.status)} className="capitalize whitespace-nowrap">
                               {booking.finalQuote.status}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                               <Badge variant={paymentStatus.variant} className="capitalize">
+                               <Badge variant={paymentStatus.variant} className="capitalize whitespace-nowrap">
                                 {paymentStatus.text}
                             </Badge>
                           </TableCell>
