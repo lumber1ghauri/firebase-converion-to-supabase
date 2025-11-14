@@ -1,4 +1,4 @@
-import { Camera, Gem, PartyPopper, Sparkles } from "lucide-react";
+import { Camera, Gem, PartyPopper, Sparkles, MapPin } from "lucide-react";
 import type { Service } from "./types";
 
 export const SERVICES: Service[] = [
@@ -41,15 +41,15 @@ export const SERVICES: Service[] = [
 ];
 
 export const SERVICE_TYPE_OPTIONS = {
-  studio: {
-    id: 'studio',
-    label: 'Studio Service',
-    description: 'You come to us.',
-  },
   mobile: {
     id: 'mobile',
     label: 'Mobile Service',
     description: 'We come to you.',
+  },
+  studio: {
+    id: 'studio',
+    label: 'Studio Service',
+    description: 'You come to us.',
   }
 }
 

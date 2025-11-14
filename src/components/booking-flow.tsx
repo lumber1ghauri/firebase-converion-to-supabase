@@ -4,12 +4,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
-import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS } from '@/lib/services';
+import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import type { MOBILE_LOCATION_IDS } from '@/lib/services';
 
@@ -41,7 +41,7 @@ const getInitialDays = (): Day[] => {
     return [{ 
         id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair',
         hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false,
-        serviceType: 'studio',
+        serviceType: 'mobile',
     }];
 };
 
@@ -196,7 +196,7 @@ export default function BookingFlow() {
                               errors={state.errors}
                           />
                       ))}
-                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false, serviceType: 'studio' }])} className="w-full">
+                      <Button type="button" variant="outline" onClick={() => setDays([...days, { id: Date.now(), date: new Date(), getReadyTime: '10:00', serviceId: null, serviceOption: 'makeup-hair', hairExtensions: 0, jewellerySetting: false, sareeDraping: false, hijabSetting: false, serviceType: 'mobile' }])} className="w-full">
                       <Plus className="mr-2 h-4 w-4" /> Add Another Day
                       </Button>
                     </div>
@@ -339,6 +339,20 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                 </RadioGroup>
                 {errors?.serviceType && <p className="text-sm text-destructive mt-2">{errors.serviceType[0]}</p>}
             </div>
+            
+            {day.serviceType === 'studio' && (
+                 <div className="p-4 border rounded-lg bg-accent/50 animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                    <h3 className="font-medium text-sm mb-2">Studio Location</h3>
+                    <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group">
+                        <p>{STUDIO_ADDRESS.street}</p>
+                        <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
+                        <div className='flex items-center gap-2 pt-1'>
+                            <MapPin className='w-4 h-4 text-primary'/>
+                            <span className='text-primary font-medium group-hover:underline'>View on Google Maps</span>
+                        </div>
+                    </a>
+                </div>
+            )}
 
             {day.serviceType === 'mobile' && (
                 <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300 space-y-4">
