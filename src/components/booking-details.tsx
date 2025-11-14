@@ -362,7 +362,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
                             {quote.quotes[tier].lineItems.map((item, index) => (
                                 <li key={index} className="flex justify-between">
                                     <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
-                                    <span>${item.price.toFixed(2)}</span>
+                                    <span>${quote.quotes[tier].lineItems[index].price.toFixed(2)}</span>
                                 </li>
                             ))}
                         </ul>
@@ -380,5 +380,3 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
     </div>
   );
 }
-
-    
