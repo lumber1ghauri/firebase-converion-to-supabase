@@ -1,4 +1,5 @@
 import BookingFlow from '@/components/booking-flow';
+import Link from 'next/link';
 
 export default function Home() {
 
@@ -21,7 +22,13 @@ export default function Home() {
       </main>
 
       <footer className="py-6 text-center text-muted-foreground text-sm font-body">
-        <p>&copy; {new Date().getFullYear()} Sellaya.ca. All rights reserved.</p></footer>
+        <p>&copy; {new Date().getFullYear()} Sellaya.ca. All rights reserved.</p>
+        <div className="mt-2">
+            <Link href="/admin" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                Admin Dashboard
+            </Link>
+        </div>
+      </footer>
     </div>
   );
 }
