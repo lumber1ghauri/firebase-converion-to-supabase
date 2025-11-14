@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="py-8 px-4 md:px-8">
-        <h1 className="font-headline text-5xl md:text-6xl font-bold text-primary text-center tracking-wider animate-in fade-in slide-in-from-top-4 duration-1000">Sellaya</h1>
+        <h1 className="font-headline text-5xl md:text-6xl font-bold text-primary text-center tracking-wider animate-in fade-in slide-in-from-top-4 duration-1000">Looks by Anum</h1>
         <p className="text-center text-lg text-muted-foreground mt-2 font-body animate-in fade-in slide-in-from-top-4 duration-1000 delay-200">Your personal makeup artist for every occasion.</p>
       </header>
 
@@ -22,7 +22,7 @@ export default function Home() {
       </main>
 
       <footer className="py-6 text-center text-muted-foreground text-sm font-body">
-        <p>&copy; {new Date().getFullYear()} Sellaya.ca. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by Sellaya.</p>
         <div className="mt-2">
             <Link href="/admin" className="text-xs text-muted-foreground hover:text-primary transition-colors">
                 Admin Dashboard

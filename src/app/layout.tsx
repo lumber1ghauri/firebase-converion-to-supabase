@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'Sellaya',
-  description: 'Book your makeup artist for any occasion.',
+  title: 'Looks by Anum',
+  description: 'Book your makeup artist for any occasion with Looks by Anum.',
 };
 
 export default function RootLayout({

@@ -130,7 +130,7 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote, title: string }) => (
 const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote }) => (
   <div style={main}>
     <div style={container}>
-      <h1 style={heading}>Sellaya</h1>
+      <h1 style={heading}>Looks by Anum</h1>
       <p style={paragraph}>
         Hi {quote.contact.name},
       </p>
@@ -214,7 +214,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
         This quote is valid for 7 days. If you have any questions, please reply to this email.
       </p>
       <p style={{ ...paragraph, fontSize: '12px', color: '#ccc' }}>
-        &copy; {new Date().getFullYear()} sellaya.ca. All rights reserved.
+        &copy; {new Date().getFullYear()} Looks by Anum. All rights reserved. Powered by Sellaya.
       </p>
     </div>
   </div>

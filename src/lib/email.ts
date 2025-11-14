@@ -20,8 +20,8 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   const resend = new Resend(apiKey);
     
   const clientSubject = quote.status === 'confirmed' 
-    ? `Booking Confirmed! - sellaya.ca (ID: ${quote.id})`
-    : `Your Makeup Quote from sellaya.ca (ID: ${quote.id})`;
+    ? `Booking Confirmed! - Looks by Anum (ID: ${quote.id})`
+    : `Your Makeup Quote from Looks by Anum (ID: ${quote.id})`;
 
   const adminSubject = quote.status === 'confirmed'
     ? `[ADMIN] Booking Confirmed - ${quote.contact.name} (ID: ${quote.id})`
@@ -33,7 +33,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   // Send email to the client
   try {
     const clientEmail = await resend.emails.send({
-      from: `Sellaya <${fromEmail}>`,
+      from: `Looks by Anum <${fromEmail}>`,
       to: [quote.contact.email],
       subject: clientSubject,
       react: QuoteEmailTemplate({ quote }),
@@ -53,7 +53,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   // Send email to the admin
   try {
     const adminEmailNotification = await resend.emails.send({
-        from: `Sellaya Admin <${fromEmail}>`,
+        from: `Looks by Anum Admin <${fromEmail}>`,
         to: [adminEmail],
         subject: adminSubject,
         react: QuoteEmailTemplate({ quote }),
