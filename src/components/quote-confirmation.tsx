@@ -73,7 +73,8 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
   const requiresAddress = useMemo(() => currentQuote.booking.hasMobileService && !currentQuote.booking.address, [currentQuote]);
 
   const showLeadArtistOption = useMemo(() => currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
-  
+  const showTeamOption = useMemo(() => !currentQuote.booking.days.some(d => d.serviceType === 'studio'), [currentQuote.booking.days]);
+
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(
       quote.selectedQuote || (showLeadArtistOption ? 'lead' : 'team')
   );
@@ -243,7 +244,7 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                      <RadioGroup 
                         value={selectedTier} 
                         onValueChange={(val) => setSelectedTier(val as PriceTier)} 
-                        className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && "md:grid-cols-2")}
+                        className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && showTeamOption && "md:grid-cols-2")}
                     >
                         {showLeadArtistOption && (
                             <QuoteTierCard 
@@ -255,14 +256,16 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
                             onSelect={setSelectedTier}
                             />
                         )}
-                        <QuoteTierCard 
-                          title="Team"
-                          icon={<Users className="w-8 h-8 text-primary" />}
-                          quote={currentQuote.quotes.team}
-                          tier="team"
-                          selectedTier={selectedTier}
-                          onSelect={setSelectedTier}
-                        />
+                        {showTeamOption && (
+                            <QuoteTierCard 
+                            title="Team"
+                            icon={<Users className="w-8 h-8 text-primary" />}
+                            quote={currentQuote.quotes.team}
+                            tier="team"
+                            selectedTier={selectedTier}
+                            onSelect={setSelectedTier}
+                            />
+                        )}
                     </RadioGroup>
                 </div>
             )}
