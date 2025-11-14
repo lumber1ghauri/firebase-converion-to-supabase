@@ -238,7 +238,7 @@ export async function generateQuoteAction(
     if (bridalServiceDay && bridalTrial.addTrial && (!bridalTrial.date || !bridalTrial.time)) {
         return {
             status: 'error',
-            message: 'Please select a date and time for the bridal trial.',
+message: 'Please select a date and time for the bridal trial.',
             quote: null,
             errors: { trialDate: ['Please select a date and time for the trial.'] },
             fieldValues
@@ -362,13 +362,10 @@ export async function generateQuoteAction(
 }
 
 
-export async function confirmBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
-
+export async function saveAddressAction(prevState: any, formData: FormData): Promise<ActionState> {
     const finalQuoteString = formData.get('finalQuote') as string;
-    const selectedQuote = formData.get('selectedQuote') as PriceTier;
     let finalQuote: FinalQuote;
-
-    try {
+     try {
         finalQuote = JSON.parse(finalQuoteString);
     } catch (error) {
          return {
@@ -377,34 +374,6 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             quote: null,
             errors: { form: ['Invalid quote data.'] },
         }
-    }
-    
-    if (!finalQuote || !selectedQuote) {
-        return {
-            status: 'error',
-            message: 'Quote data is missing or quote tier was not selected. Please generate a quote first.',
-            quote: null,
-            errors: { form: ['Quote data is missing.'] },
-        }
-    }
-    
-
-    if (!finalQuote.booking.hasMobileService) {
-        const updatedQuote: FinalQuote = {
-            ...finalQuote,
-            selectedQuote,
-            status: 'confirmed'
-        };
-
-        await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
-        await sendQuoteEmail(updatedQuote);
-
-        return {
-            status: 'success',
-            message: 'Booking Confirmed! A confirmation email with payment details has been sent.',
-            quote: updatedQuote,
-            errors: null,
-        };
     }
 
     const addressData = {
@@ -417,9 +386,9 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
     const validatedAddress = AddressSchema.safeParse(addressData);
     if (!validatedAddress.success) {
         return {
-            status: 'success', // Keep rendering the confirmation page
+            status: 'error', // Keep rendering the address page
             message: 'Please correct the address errors.',
-            quote: { ...finalQuote, selectedQuote },
+            quote: finalQuote,
             errors: validatedAddress.error.flatten().fieldErrors,
         }
     }
@@ -430,7 +399,43 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
             ...finalQuote.booking,
             address: validatedAddress.data,
         },
-        selectedQuote,
+    };
+    
+    await saveBooking({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
+
+    return {
+        status: 'success',
+        message: 'Address saved.',
+        quote: updatedQuote,
+        errors: null,
+    };
+}
+
+export async function finalizeBookingAction(prevState: any, formData: FormData): Promise<ActionState> {
+    const finalQuoteString = formData.get('finalQuote') as string;
+    let finalQuote: FinalQuote;
+     try {
+        finalQuote = JSON.parse(finalQuoteString);
+    } catch (error) {
+         return {
+            status: 'error',
+            message: 'Invalid quote data. Please try generating the quote again.',
+            quote: null,
+            errors: { form: ['Invalid quote data.'] },
+        }
+    }
+
+     if (!finalQuote || !finalQuote.selectedQuote) {
+        return {
+            status: 'error',
+            message: 'Quote data is missing or quote tier was not selected. Please generate a quote first.',
+            quote: null,
+            errors: { form: ['Quote data is missing.'] },
+        }
+    }
+
+    const updatedQuote: FinalQuote = {
+        ...finalQuote,
         status: 'confirmed'
     };
     
