@@ -3,16 +3,89 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { getAllBookings } from '@/firebase/firestore/bookings';
-import type { BookingDocument } from '@/firebase/firestore/bookings';
+import type { BookingDocument, } from '@/firebase/firestore/bookings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, AlertTriangle, Eye, Search, CalendarClock } from 'lucide-react';
-import { format, differenceInDays, parse } from 'date-fns';
+import { format, differenceInDays, parse, addDays, subDays } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
 import { Input } from '@/components/ui/input';
+import type { FinalQuote } from '@/lib/types';
+
+const createDummyBooking = (id: string, name: string, status: FinalQuote['status'], eventDate: Date, selectedQuote: FinalQuote['selectedQuote'], paymentStatus: 'paid' | 'deposit' | 'pending'): BookingDocument => {
+    const quoteTier = selectedQuote || 'lead';
+    const total = paymentStatus === 'paid' ? (quoteTier === 'lead' ? 508.50 : 395.50) : (quoteTier === 'lead' ? 508.50 : 395.50);
+    const depositAmount = total * 0.5;
+
+    let paymentDetails: FinalQuote['paymentDetails'];
+    if (status === 'confirmed') {
+        switch (paymentStatus) {
+            case 'paid':
+                paymentDetails = {
+                    deposit: { status: 'received', amount: depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' },
+                    final: { status: 'received', amount: total - depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' }
+                };
+                break;
+            case 'deposit':
+                paymentDetails = {
+                    deposit: { status: 'received', amount: depositAmount, screenshotUrl: 'https://placehold.co/600x400/png' },
+                    final: { status: 'pending', amount: total - depositAmount }
+                };
+                break;
+            case 'pending':
+            default:
+                paymentDetails = {
+                    deposit: { status: 'pending', amount: depositAmount },
+                    final: { status: 'pending', amount: total - depositAmount }
+                };
+                break;
+        }
+    }
+
+
+    return {
+        id,
+        createdAt: new Date(),
+        finalQuote: {
+            id,
+            contact: { name, email: `${name.toLowerCase().replace(' ', '.')}@example.com` },
+            booking: {
+                days: [{
+                    date: format(eventDate, 'PPP'),
+                    getReadyTime: '10:00 AM',
+                    serviceName: 'Bridal Makeup',
+                    serviceOption: 'Makeup & Hair',
+                    serviceType: 'mobile',
+                    location: 'Toronto / GTA',
+                    addOns: ["Bride's Jewellery Setting"]
+                }],
+                hasMobileService: true,
+                address: { street: '123 Test St', city: 'Toronto', province: 'ON', postalCode: 'M1M 1M1' }
+            },
+            quotes: {
+                lead: { lineItems: [], subtotal: 450, tax: 58.50, total: 508.50 },
+                team: { lineItems: [], subtotal: 350, tax: 45.50, total: 395.50 }
+            },
+            status,
+            selectedQuote,
+            paymentDetails,
+        }
+    };
+};
+
+const dummyBookings: BookingDocument[] = [
+    createDummyBooking('BK-001', 'Alice Johnson', 'confirmed', addDays(new Date(), 3), 'lead', 'paid'),
+    createDummyBooking('BK-002', 'Bob Williams', 'confirmed', addDays(new Date(), 10), 'team', 'deposit'),
+    createDummyBooking('BK-003', 'Charlie Brown', 'confirmed', addDays(new Date(), 1), 'lead', 'pending'),
+    createDummyBooking('BK-004', 'Diana Prince', 'quoted', addDays(new Date(), 30), undefined, 'pending'),
+    createDummyBooking('BK-005', 'Ethan Hunt', 'cancelled', subDays(new Date(), 5), 'lead', 'deposit'),
+    createDummyBooking('BK-006', 'Fiona Glenanne', 'confirmed', subDays(new Date(), 2), 'team', 'paid'),
+    createDummyBooking('BK-007', 'George Costanza', 'confirmed', new Date(), 'lead', 'deposit'),
+];
+
 
 function getTimeToEvent(eventDateStr: string): string {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -57,6 +130,17 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
+    // Using dummy data for testing
+    const sortedData = dummyBookings.sort((a, b) => {
+        const dateA = parse(a.finalQuote.booking.days[0].date, 'PPP', new Date());
+        const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
+        return dateA.getTime() - dateB.getTime();
+    });
+    setBookings(sortedData);
+    setLoading(false);
+
+    /*
+    // Original Firestore fetching logic
     getAllBookings()
       .then(data => {
         // Sort bookings by event date, soonest first
@@ -74,6 +158,7 @@ export default function AdminDashboard() {
       .finally(() => {
         setLoading(false);
       });
+    */
   }, []);
   
   const filteredBookings = useMemo(() => {
