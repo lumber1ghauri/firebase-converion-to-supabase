@@ -1,5 +1,5 @@
 import { Camera, Gem, PartyPopper, Sparkles, MapPin } from "lucide-react";
-import type { Service } from "./types";
+import type { Service, DualPrice } from "./types";
 
 export const SERVICES: Service[] = [
   {
@@ -62,26 +62,26 @@ export const STUDIO_ADDRESS: {street: string, city: string, province: string, po
     googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=123+Glamour+Lane+Toronto+ON"
 }
 
-export const MOBILE_LOCATION_OPTIONS = {
+export const MOBILE_LOCATION_OPTIONS: Record<string, { id: string; label: string; surcharge: DualPrice }> = {
   toronto: {
     id: 'toronto',
     label: 'Toronto / GTA',
-    surcharge: 0,
+    surcharge: { lead: 60, team: 25 },
   },
   'immediate-neighbors': {
     id: 'immediate-neighbors',
     label: 'Immediate Neighbors (15-30 Minutes)',
-    surcharge: 50,
+    surcharge: { lead: 80, team: 45 },
   },
   'moderate-distance': {
     id: 'moderate-distance',
     label: 'Moderate Distance (30 Minutes to 1 Hour Drive)',
-    surcharge: 100,
+    surcharge: { lead: 120, team: 70 },
   },
   'further-out': {
     id: 'further-out',
     label: 'Further Out But Still Reachable (1 Hour Plus)',
-    surcharge: 150,
+    surcharge: { lead: 180, team: 100 },
   },
 };
 

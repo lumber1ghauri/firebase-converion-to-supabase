@@ -109,11 +109,13 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
               subtotal += ADDON_PRICES.hijabSetting[tier];
           }
           
-          const daySurcharge = day.serviceType === 'mobile' && day.mobileLocation ? MOBILE_LOCATION_OPTIONS[day.mobileLocation].surcharge : 0;
-          if (daySurcharge > 0) {
-              const locationLabel = MOBILE_LOCATION_OPTIONS[day.mobileLocation].label;
-              lineItems.push({ description: `  - Travel Surcharge (${locationLabel})`, price: daySurcharge });
-              subtotal += daySurcharge;
+          if (day.serviceType === 'mobile' && day.mobileLocation && MOBILE_LOCATION_OPTIONS[day.mobileLocation]) {
+              const locationInfo = MOBILE_LOCATION_OPTIONS[day.mobileLocation];
+              const daySurcharge = locationInfo.surcharge[tier];
+              if (daySurcharge > 0) {
+                  lineItems.push({ description: `  - Travel Surcharge (${locationInfo.label})`, price: daySurcharge });
+                  subtotal += daySurcharge;
+              }
           }
         }
     });
@@ -145,7 +147,7 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
             subtotal += price;
         }
         if(bridalParty.hairExtensionInstallation > 0) {
-            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRICES.hairExtensionInstallation[tier];
+            const price = bridalParty.hairExtensionInstallation * BRIDAL_PARTY_PRices.hairExtensionInstallation[tier];
             lineItems.push({ description: `Party: Hair Extensions (x${bridalParty.hairExtensionInstallation})`, price });
             subtotal += price;
         }
