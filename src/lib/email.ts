@@ -5,22 +5,34 @@ import 'dotenv/config';
 import { Resend } from 'resend';
 import type { FinalQuote } from './types';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
+import FollowUpEmailTemplate from '@/app/emails/follow-up-email';
+
+
+const getBaseUrl = () => {
+    if (process.env.NODE_ENV === 'production') {
+        return 'https://your-production-url.com'; // Replace with your actual production URL
+    }
+    return 'https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
+}
+
+const getResend = () => {
+    const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
+    if (!apiKey || apiKey.startsWith('re_') === false || apiKey.length < 20) {
+        console.error('A valid Resend API key is not configured. Email functionality is disabled.');
+        return null;
+    }
+    return new Resend(apiKey);
+}
+
 
 export async function sendQuoteEmail(quote: FinalQuote) {
-  // Use the correct public URL for the development environment.
-  const baseUrl = 'https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
-
-  // Directly using the API key to bypass environment variable issues.
-  const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
-
-  if (!apiKey || apiKey.startsWith('re_') === false || apiKey.length < 20) {
-    const errorMessage = `A valid Resend API key is not configured. The current key is either missing, a placeholder, or too short. Email functionality is disabled.`;
-    console.error(errorMessage);
-    // Return to avoid crashing, but log the issue.
+  const baseUrl = getBaseUrl();
+  const resend = getResend();
+  
+  if (!resend) {
+    // Silently fail but log the error if Resend isn't configured
     return;
   }
-  
-  const resend = new Resend(apiKey);
     
   const clientSubject = quote.status === 'confirmed' 
     ? `Booking Confirmed! - Looks by Anum (ID: ${quote.id})`
@@ -50,7 +62,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     }
   } catch (error: any) {
     console.error('Error sending client email:', error.message);
-    throw error;
+    throw error; // Re-throw to be caught by the caller
   }
 
   // Send email to the admin
@@ -71,8 +83,39 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   } catch (error: any) {
     console.error('Error sending admin email:', error.message);
     // Don't re-throw here, as the client email might have succeeded.
-    // We log it, but we don't want to show a failure to the user if their email went through.
   }
 }
 
+
+export async function sendFollowUpEmail(quote: FinalQuote) {
+  const baseUrl = getBaseUrl();
+  const resend = getResend();
+  
+  if (!resend) {
+    throw new Error('Resend is not configured. Cannot send follow-up email.');
+  }
+
+  const subject = `Your Makeup Quote from Looks by Anum is Waiting!`;
+  const fromEmail = 'booking@sellaya.ca';
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `Looks by Anum <${fromEmail}>`,
+      to: [quote.contact.email],
+      subject: subject,
+      react: FollowUpEmailTemplate({ quote, baseUrl }),
+    });
+
+    if (error) {
+      console.error('Follow-up email sending error:', error);
+      throw new Error(`Failed to send follow-up email: ${error.message}`);
+    }
+
+    console.log('Follow-up email sent successfully for booking ID:', quote.id, 'to:', quote.contact.email);
+    return data;
     
+  } catch (error: any) {
+    console.error('Error in sendFollowUpEmail:', error.message);
+    throw error; // Re-throw to be caught by the server action
+  }
+}

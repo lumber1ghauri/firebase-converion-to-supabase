@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { FinalQuote, PaymentInfo, PaymentStatus, PriceTier } from '@/lib/types';
@@ -5,7 +6,7 @@ import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2, Mail, Trash2 } from 'lucide-react';
+import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2, Mail, Trash2, Send } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
 import { Button } from './ui/button';
 import { useState } from 'react';
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBooking as saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
-import { sendQuoteEmail } from '@/lib/email';
+import { sendFollowUpEmailAction } from '@/app/admin/actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -107,6 +108,7 @@ const PaymentDetailCard = ({ title, paymentInfo, onStatusChange, isUpdating }: {
 
 export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }: { quote: FinalQuote; onUpdate: (updatedQuote: FinalQuote) => void; bookingDoc: BookingDocument | undefined; onBookingDeleted: (bookingId: string) => void; }) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
@@ -145,23 +147,21 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
       }
 
       try {
-          // Use the client-side saveBooking function
           await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone, createdAt: bookingDoc.createdAt });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
               description: "The booking has been successfully updated.",
           });
-
-          // Check if the deposit was just approved
+          
           const isDepositNowReceived = updatedQuote.paymentDetails?.deposit.status === 'received';
           if (wasDepositPending && isDepositNowReceived) {
-              await sendQuoteEmail(updatedQuote);
                toast({
-                    title: "Confirmation Sent",
-                    description: "The booking confirmation email has been sent to the client.",
+                    title: "Action Required",
+                    description: "Deposit approved. A confirmation email has not been sent automatically. Please handle communication with the client.",
                 });
           }
+
       } catch (error: any) {
           toast({
               variant: "destructive",
@@ -197,10 +197,28 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
     }
   }
 
+  const handleSendFollowUp = async () => {
+    setIsSendingFollowUp(true);
+    const result = await sendFollowUpEmailAction(quote.id);
+    if (result.success) {
+      toast({
+        title: "Follow-up Sent!",
+        description: result.message,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Failed to Send",
+        description: result.message,
+      });
+    }
+    setIsSendingFollowUp(false);
+  };
+
 
   return (
     <div className="space-y-6 relative">
-      {isUpdating && (
+      {(isUpdating || isSendingFollowUp) && (
         <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -428,10 +446,21 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
          </div>
       )}
       
-       <div className="pt-6 border-t mt-6">
+       <div className="pt-6 border-t mt-6 flex flex-wrap gap-4 items-center">
+            {quote.status === 'quoted' && (
+                <Button 
+                    variant="secondary" 
+                    className="w-full md:w-auto" 
+                    onClick={handleSendFollowUp}
+                    disabled={isSendingFollowUp || isUpdating}
+                >
+                    {isSendingFollowUp ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Send Follow-up Email
+                </Button>
+            )}
             <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full md:w-auto" disabled={isUpdating}>
+                    <Button variant="destructive" className="w-full md:w-auto" disabled={isUpdating || isSendingFollowUp}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete Booking
                     </Button>
