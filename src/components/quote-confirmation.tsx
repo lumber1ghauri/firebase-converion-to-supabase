@@ -19,7 +19,7 @@ import { Separator } from './ui/separator';
 import { ContractDisplay } from './contract-display';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { sendConfirmationEmailAction } from '@/app/admin/actions';
+import { sendConfirmationEmailAction, sendAdminScreenshotNotificationAction } from '@/app/admin/actions';
 
 type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'payment' | 'confirmed';
 
@@ -209,6 +209,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         // If Stripe was used, it's auto-confirmed, so we can try to send the email.
         if (paymentMethod === 'stripe') {
             await sendConfirmationEmailAction(updatedQuote.id);
+        } else if (paymentMethod === 'interac') {
+            // Send a notification to the admin
+            await sendAdminScreenshotNotificationAction(updatedQuote.id);
         }
 
     } catch (err: any) {
@@ -268,10 +271,8 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               break;
       }
       
-      const icon = isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <ArrowRight className="ml-2 h-5 w-5" />;
-
       return (
-          <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={disabled} onClick={action}>
+          <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={disabled || isSaving} onClick={action}>
               {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : text}
               {!isSaving && text !== `Confirm & Pay $${depositAmount.toFixed(2)}` && <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>

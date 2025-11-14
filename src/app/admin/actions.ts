@@ -3,7 +3,7 @@
 
 import 'dotenv/config';
 import { getBooking } from '@/firebase/server-actions';
-import { sendQuoteEmail, sendFollowUpEmail } from '@/lib/email';
+import { sendQuoteEmail, sendFollowUpEmail, sendAdminScreenshotNotification } from '@/lib/email';
 
 
 type ActionResult = {
@@ -81,4 +81,24 @@ export async function sendFollowUpEmailAction(bookingId: string): Promise<Action
     // Return the actual error message for better debugging.
     return { success: false, message: error.message || 'An unknown error occurred while sending the follow-up email.' };
   }
+}
+
+export async function sendAdminScreenshotNotificationAction(bookingId: string): Promise<ActionResult> {
+    if (!bookingId) {
+        return { success: false, message: 'Booking ID is missing for admin notification.' };
+    }
+
+    try {
+        const bookingDoc = await getBooking(bookingId);
+        if (!bookingDoc) {
+            return { success: false, message: `Booking with ID ${bookingId} not found.` };
+        }
+
+        await sendAdminScreenshotNotification(bookingDoc.finalQuote);
+        return { success: true, message: 'Admin notification sent.' };
+
+    } catch (error: any) {
+        console.error('Failed to send admin notification email:', error);
+        return { success: false, message: error.message || 'An unknown error occurred while sending the admin notification.' };
+    }
 }

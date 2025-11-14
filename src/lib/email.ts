@@ -6,6 +6,7 @@ import { Resend } from 'resend';
 import type { FinalQuote } from './types';
 import QuoteEmailTemplate from '@/app/emails/quote-email';
 import FollowUpEmailTemplate from '@/app/emails/follow-up-email';
+import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-email';
 
 
 const getBaseUrl = () => {
@@ -108,5 +109,38 @@ export async function sendFollowUpEmail(quote: FinalQuote) {
   } catch (error: any) {
     console.error('Error in sendFollowUpEmail:', error.message);
     throw error; // Re-throw to be caught by the server action
+  }
+}
+
+export async function sendAdminScreenshotNotification(quote: FinalQuote) {
+  const baseUrl = getBaseUrl();
+  const resend = getResend();
+  
+  if (!resend) {
+    throw new Error('Resend is not configured. Cannot send admin notification email.');
+  }
+
+  const adminEmail = "sellayadigital@gmail.com";
+  const fromEmail = 'booking@sellaya.ca';
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: `GlamBook Pro Admin <${fromEmail}>`,
+      to: [adminEmail],
+      subject: `[ACTION REQUIRED] E-Transfer Submitted for Booking #${quote.id}`,
+      react: AdminNotificationEmailTemplate({ quote, baseUrl }),
+    });
+
+    if (error) {
+      console.error('Admin notification email sending error:', error);
+      throw new Error(`Failed to send admin notification email: ${error.message}`);
+    }
+
+    console.log('Admin notification email sent successfully for booking ID:', quote.id);
+    return data;
+    
+  } catch (error: any) {
+    console.error('Error in sendAdminScreenshotNotification:', error.message);
+    throw error;
   }
 }
