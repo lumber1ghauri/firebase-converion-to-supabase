@@ -96,11 +96,12 @@ function generateTimeSlots() {
 
 const timeSlots = generateTimeSlots();
 
-const STEPS = [
+const BASE_STEPS = [
   { id: 1, name: 'Services & Dates' },
-  { id: 2, name: 'Bridal Options' },
   { id: 3, name: 'Contact Details' },
 ];
+
+const BRIDAL_STEP = { id: 2, name: 'Bridal Options' };
 
 export default function BookingFlow() {
   const [state, formAction] = useActionState(generateQuoteAction, initialState);
@@ -115,13 +116,22 @@ export default function BookingFlow() {
   
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
+
+  const STEPS = useMemo(() => {
+    if (hasBridalService) {
+      const steps = [...BASE_STEPS];
+      steps.splice(1, 0, BRIDAL_STEP);
+      return steps;
+    }
+    return BASE_STEPS;
+  }, [hasBridalService]);
   
   useEffect(() => {
     if (state.status === 'error') {
       if (state.errors?.trialDate) {
         setCurrentStep(2);
       } else if (state.errors?.name || state.errors?.email || state.errors?.phone) {
-        setCurrentStep(3);
+        setCurrentStep(hasBridalService ? 3 : 2);
       } else {
         setCurrentStep(1);
       }
@@ -133,30 +143,44 @@ export default function BookingFlow() {
         });
       }
     }
-  }, [state, toast]);
+  }, [state, toast, hasBridalService]);
 
 
   if (state.status === 'success' && state.quote) {
     return <QuoteConfirmation quote={state.quote} />;
   }
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length));
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+  const nextStep = () => {
+    if (currentStep === 1 && !hasBridalService) {
+      setCurrentStep(3); // Skip to contact details
+    } else {
+      setCurrentStep(prev => Math.min(prev + 1, STEPS[STEPS.length - 1].id));
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep === 3 && !hasBridalService) {
+      setCurrentStep(1); // Skip back to services
+    } else {
+      setCurrentStep(prev => Math.max(prev - 1, 1));
+    }
+  };
   
-  const progress = ((currentStep) / (STEPS.length)) * 100;
+  const progress = ((STEPS.findIndex(s => s.id === currentStep) + 1) / STEPS.length) * 100;
 
   return (
     <div className="max-w-4xl mx-auto">
         <div className="mb-8 px-2 animate-in fade-in duration-500">
             <Progress value={progress} className="h-2" />
             <div className="flex justify-between mt-2">
-                {STEPS.map(step => (
+                {STEPS.map((step, index) => (
                     <div key={step.id} className={cn(
-                        "text-sm w-1/3",
+                        "text-sm",
                         step.id < currentStep ? "text-primary font-medium" :
                         step.id === currentStep ? "text-primary font-bold" : "text-muted-foreground",
-                        step.id === 2 ? 'text-center' : '',
-                        step.id === 3 ? 'text-right' : '',
+                        `w-1/${STEPS.length}`,
+                        index === 1 ? 'text-center' : '',
+                        index === STEPS.length - 1 ? 'text-right' : '',
                     )}>
                         {step.name}
                     </div>
@@ -205,23 +229,24 @@ export default function BookingFlow() {
         </div>
 
 
-        <div className={cn(currentStep !== 2 && 'hidden')}>
-            <BridalServiceOptions
-              hasBridalService={hasBridalService}
-              bridalTrial={bridalTrial}
-              updateBridalTrial={(data) => setBridalTrial(prev => ({...prev, ...data}))}
-              days={days}
-              errors={state.errors}
-              bridalParty={bridalParty}
-              updateBridalParty={(data) => setBridalParty(prev => ({...prev, ...data}))}
-              updateBridalPartyQty={(field, increase) => setBridalParty(prev => ({ ...prev, [field]: Math.max(0, (prev[field] as number) + (increase ? 1 : -1)) }))}
-            />
-        </div>
+        {hasBridalService && (
+          <div className={cn(currentStep !== 2 && 'hidden')}>
+              <BridalServiceOptions
+                bridalTrial={bridalTrial}
+                updateBridalTrial={(data) => setBridalTrial(prev => ({...prev, ...data}))}
+                days={days}
+                errors={state.errors}
+                bridalParty={bridalParty}
+                updateBridalParty={(data) => setBridalParty(prev => ({...prev, ...data}))}
+                updateBridalPartyQty={(field, increase) => setBridalParty(prev => ({ ...prev, [field]: Math.max(0, (prev[field] as number) + (increase ? 1 : -1)) }))}
+              />
+          </div>
+        )}
 
         <div className={cn(currentStep !== 3 && 'hidden')}>
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
-                    <CardTitle className="font-headline text-2xl">3. Contact Details</CardTitle>
+                    <CardTitle className="font-headline text-2xl">{hasBridalService ? '3.' : '2.'} Contact Details</CardTitle>
                     <CardDescription>Please provide your contact information to finalize the quote.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
@@ -254,7 +279,7 @@ export default function BookingFlow() {
             Back
           </Button>
 
-          {currentStep < STEPS.length ? (
+          {currentStep < STEPS[STEPS.length - 1].id ? (
             <Button type="button" onClick={nextStep}>
               Next
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -280,7 +305,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
     const showAddons = service?.id === 'bridal' || service?.id === 'semi-bridal';
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     
-    const isOutsideToronto = day.mobileLocation && day.mobileLocation !== 'toronto';
+    const isOutsideToronto = day.mobileLocation ? day.mobileLocation !== 'toronto' : false;
 
     return (
         <div className="space-y-6 p-4 rounded-lg border bg-card/50 relative animate-in fade-in-50">
@@ -364,6 +389,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
                                 if (value === 'toronto') {
                                     updateDay(day.id, { mobileLocation: 'toronto' });
                                 } else {
+                                    // Default to first 'outside' option if switching from toronto
                                     updateDay(day.id, { mobileLocation: 'immediate-neighbors' });
                                 }
                             }}
@@ -464,8 +490,7 @@ function BookingDayCard({ day, index, updateDay, removeDay, isOnlyDay, errors }:
     );
 }
 
-function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial, days, errors, bridalParty, updateBridalParty, updateBridalPartyQty }: {
-  hasBridalService: boolean;
+function BridalServiceOptions({ bridalTrial, updateBridalTrial, days, errors, bridalParty, updateBridalParty, updateBridalPartyQty }: {
   bridalTrial: BridalTrial;
   updateBridalTrial: (data: Partial<BridalTrial>) => void;
   days: Day[];
@@ -477,25 +502,6 @@ function BridalServiceOptions({ hasBridalService, bridalTrial, updateBridalTrial
   const [isTrialPopoverOpen, setIsTrialPopoverOpen] = useState(false);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  
-  if (!hasBridalService) {
-      return (
-        <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
-            <CardHeader>
-                <CardTitle className="font-headline text-2xl">2. Bridal Options</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>No Bridal Service Selected</AlertTitle>
-                    <AlertDescription>
-                        Bridal Trial and Bridal Party options are only available when a "Bridal" service is selected for one of the booking days.
-                    </AlertDescription>
-                </Alert>
-            </CardContent>
-        </Card>
-      )
-  }
 
   return (
     <div className="space-y-8 animate-in fade-in-50 slide-in-from-top-10 duration-700">
