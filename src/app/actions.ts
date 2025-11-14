@@ -3,8 +3,8 @@
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { updateAvailability } from '@/ai/flows/intelligent-availability';
-import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
-import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking } from '@/lib/types';
+import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
+import type { ActionState, FinalQuote, Day, BridalTrial, ServiceOption, BridalPartyServices, PartyBooking, ServiceType } from '@/lib/types';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { saveBooking as saveBookingToDb } from '@/firebase/firestore/bookings';
 
@@ -16,7 +16,11 @@ const FormSchema = z.object({
   name: z.string().min(2, { message: 'Please enter your full name.' }),
   email: z.string().email({ message: 'Please enter a valid email address.' }),
   phone: z.string().regex(phoneRegex, { message: 'Please enter a valid phone number.' }),
-  location: z.enum(['toronto', 'outside-toronto'], { required_error: 'Please select a location.' }),
+  serviceType: z.enum(['studio', 'mobile'], { required_error: 'Please select a service type.' }),
+  mobileLocation: z.string().optional(),
+}).refine(data => data.serviceType !== 'mobile' || !!data.mobileLocation, {
+    message: 'Please select a mobile service location.',
+    path: ['mobileLocation'],
 });
 
 const AddressSchema = z.object({
@@ -82,7 +86,8 @@ export async function generateQuoteAction(
         name: formData.get('name') as string,
         email: formData.get('email') as string,
         phone: formData.get('phone') as string,
-        location: formData.get('location') as 'toronto' | 'outside-toronto',
+        serviceType: formData.get('serviceType') as ServiceType,
+        mobileLocation: formData.get('mobileLocation') as keyof typeof MOBILE_LOCATION_OPTIONS,
         // We will pass the rest of the form data to fieldValues to repopulate the form
         ...Object.fromEntries(formData.entries()),
     };
@@ -284,7 +289,9 @@ export async function generateQuoteAction(
     }
 
 
-    const locationSurcharge = LOCATION_OPTIONS[validatedFields.data.location].surcharge;
+    const locationSurcharge = validatedFields.data.serviceType === 'mobile' && validatedFields.data.mobileLocation ? MOBILE_LOCATION_OPTIONS[validatedFields.data.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS].surcharge : 0;
+    const locationLabel = validatedFields.data.serviceType === 'mobile' && validatedFields.data.mobileLocation ? MOBILE_LOCATION_OPTIONS[validatedFields.data.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS].label : "Studio Service";
+    
     const total = subtotal + locationSurcharge;
     
     const bookingId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -296,8 +303,9 @@ export async function generateQuoteAction(
             email: validatedFields.data.email,
         },
         booking: {
+            serviceType: validatedFields.data.serviceType,
             days: bookingDays,
-            location: LOCATION_OPTIONS[validatedFields.data.location].label,
+            location: locationLabel,
             trial: (bridalTrial.addTrial && bridalTrial.date && bridalTrial.time) 
                 ? { date: format(bridalTrial.date, "PPP"), time: bridalTrial.time }
                 : undefined,
@@ -344,6 +352,33 @@ export async function confirmBookingAction(prevState: any, formData: FormData): 
         }
     }
     const finalQuote: FinalQuote = JSON.parse(finalQuoteString);
+
+    if (finalQuote.booking.serviceType === 'studio') {
+        const updatedQuote: FinalQuote = {
+            ...finalQuote,
+            status: 'confirmed'
+        };
+
+        try {
+            await saveBookingToDb({ id: updatedQuote.id, finalQuote: updatedQuote, createdAt: new Date() });
+        } catch (error: any) {
+             return {
+                status: 'success',
+                message: `Failed to confirm booking: ${error.message}`,
+                quote: finalQuote,
+                errors: { form: [`Failed to confirm booking: ${error.message}`] },
+            }
+        }
+        
+        console.log("Redirecting to Stripe with quote:", updatedQuote);
+        return {
+            status: 'success',
+            message: 'Booking Confirmed! A confirmation email with the studio address has been sent.',
+            quote: updatedQuote,
+            errors: null,
+        };
+    }
+
 
     const addressData = {
         street: formData.get('street'),

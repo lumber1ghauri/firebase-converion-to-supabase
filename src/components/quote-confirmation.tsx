@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { STUDIO_ADDRESS } from '@/lib/services';
 
 
 const initialState = {
@@ -92,7 +93,13 @@ export function QuoteConfirmation({ quote }: { quote: FinalQuote }) {
 
             <div className="p-4 border rounded-lg bg-background/50">
                 <h3 className="font-headline text-xl mb-4">Service Address</h3>
-                {bookingConfirmed && currentQuote.booking.address ? (
+                 {currentQuote.booking.serviceType === 'studio' ? (
+                    <div className='text-sm space-y-1'>
+                        <p className='font-medium'>{STUDIO_ADDRESS.street}</p>
+                        <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
+                        <p className='text-muted-foreground'>{STUDIO_ADDRESS.country}</p>
+                    </div>
+                ) : bookingConfirmed && currentQuote.booking.address ? (
                     <div className='text-sm space-y-1'>
                         <p className='font-medium'>{currentQuote.booking.address.street}</p>
                         <p className='text-muted-foreground'>{currentQuote.booking.address.city}, {currentQuote.booking.address.province} {currentQuote.booking.address.postalCode}</p>

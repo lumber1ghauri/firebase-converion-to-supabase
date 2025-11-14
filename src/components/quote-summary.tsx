@@ -1,20 +1,21 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Day, BridalTrial, BridalPartyServices } from '@/lib/types';
-import { SERVICES, LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
+import type { Day, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
+import { SERVICES, MOBILE_LOCATION_OPTIONS, ADDON_PRICES, BRIDAL_PARTY_PRICES } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 interface QuoteSummaryProps {
   days: Day[];
-  location: keyof typeof LOCATION_OPTIONS;
+  serviceType: ServiceType;
+  mobileLocation: keyof typeof MOBILE_LOCATION_OPTIONS;
   bridalTrial: BridalTrial;
   bridalParty: BridalPartyServices;
 }
 
-export function QuoteSummary({ days, location, bridalTrial, bridalParty }: QuoteSummaryProps) {
+export function QuoteSummary({ days, serviceType, mobileLocation, bridalTrial, bridalParty }: QuoteSummaryProps) {
   const quote = useMemo(() => {
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
@@ -101,11 +102,11 @@ export function QuoteSummary({ days, location, bridalTrial, bridalParty }: Quote
     }
 
 
-    const surcharge = LOCATION_OPTIONS[location].surcharge;
+    const surcharge = serviceType === 'mobile' ? MOBILE_LOCATION_OPTIONS[mobileLocation].surcharge : 0;
     const total = subtotal + surcharge;
 
     return { lineItems, surcharge, total };
-  }, [days, location, bridalTrial, bridalParty]);
+  }, [days, serviceType, mobileLocation, bridalTrial, bridalParty]);
 
   const hasSelections = days.some(d => d.serviceId);
 

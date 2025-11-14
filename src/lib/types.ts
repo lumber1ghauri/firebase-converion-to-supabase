@@ -66,10 +66,13 @@ export type PartyBooking = {
     quantity: number;
 };
 
+export type ServiceType = 'studio' | 'mobile';
+
 export type FinalQuote = {
   id: string; // Unique booking ID
   contact: { name: string; email: string };
   booking: {
+    serviceType: ServiceType;
     days: { 
         date: string; 
         getReadyTime: string;

@@ -40,7 +40,29 @@ export const SERVICES: Service[] = [
   },
 ];
 
-export const LOCATION_OPTIONS = {
+export const SERVICE_TYPE_OPTIONS = {
+  studio: {
+    id: 'studio',
+    label: 'Studio Service',
+    description: 'Visit our professional studio for your makeup session.',
+  },
+  mobile: {
+    id: 'mobile',
+    label: 'Mobile Service',
+    description: 'We travel to your location (additional fees may apply).',
+  }
+}
+
+export const STUDIO_ADDRESS: {street: string, city: string, province: string, postalCode: string, country: string} = {
+    street: "123 Glamour Lane",
+    city: "Toronto",
+    province: "ON",
+    postalCode: "M5V 2T6",
+    country: "Canada",
+}
+
+
+export const MOBILE_LOCATION_OPTIONS = {
   toronto: {
     id: 'toronto',
     label: 'Toronto / GTA',

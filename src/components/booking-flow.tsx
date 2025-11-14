@@ -4,12 +4,12 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
-import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Info, Users, ArrowLeft, ArrowRight, Send, Building, Car } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 import { generateQuoteAction } from '@/app/actions';
-import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices } from '@/lib/types';
-import { SERVICES, LOCATION_OPTIONS } from '@/lib/services';
+import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
+import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 
 import { Button } from '@/components/ui/button';
@@ -110,7 +110,9 @@ export default function BookingFlow() {
   const [days, setDays] = useState<Day[]>(() => getInitialDays());
   const [bridalTrial, setBridalTrial] = useState<BridalTrial>(() => getInitialBridalTrial(state.fieldValues));
   const [bridalParty, setBridalParty] = useState<BridalPartyServices>(() => getInitialBridalParty(state.fieldValues));
-  const [location, setLocation] = useState<keyof typeof LOCATION_OPTIONS>((state.fieldValues?.location as keyof typeof LOCATION_OPTIONS) || 'toronto');
+  
+  const [serviceType, setServiceType] = useState<ServiceType>((state.fieldValues?.serviceType as ServiceType) || 'studio');
+  const [mobileLocation, setMobileLocation] = useState<keyof typeof MOBILE_LOCATION_OPTIONS>((state.fieldValues?.mobileLocation as keyof typeof MOBILE_LOCATION_OPTIONS) || 'toronto');
   
 
   const hasBridalService = useMemo(() => days.some(day => day.serviceId === 'bridal'), [days]);
@@ -119,7 +121,7 @@ export default function BookingFlow() {
     if (state.status === 'error') {
       if (state.errors?.trialDate) {
         setCurrentStep(2);
-      } else if (state.errors?.name || state.errors?.email || state.errors?.phone || state.errors?.location) {
+      } else if (state.errors?.name || state.errors?.email || state.errors?.phone || state.errors?.serviceType || state.errors?.mobileLocation) {
         setCurrentStep(3);
       } else {
         setCurrentStep(1);
@@ -218,21 +220,40 @@ export default function BookingFlow() {
             <Card className="shadow-lg animate-in fade-in-50 slide-in-from-top-10 duration-700">
                 <CardHeader>
                     <CardTitle className="font-headline text-2xl">3. Location & Contact</CardTitle>
-                    <CardDescription>Travel fees may apply for locations outside the GTA. Finally, enter your contact information.</CardDescription>
+                    <CardDescription>Choose your service type. Travel fees may apply for mobile services.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
                      <div>
-                        <Label className="text-lg font-medium">Your Location</Label>
-                        <RadioGroup name="location" value={location} onValueChange={(value) => setLocation(value as keyof typeof LOCATION_OPTIONS) } className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" required>
-                            {Object.values(LOCATION_OPTIONS).map(opt => (
-                                <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
-                                    <RadioGroupItem value={opt.id} id={opt.id} />
-                                    <span>{opt.label}</span>
+                        <Label className="text-lg font-medium">Service Type *</Label>
+                        <RadioGroup name="serviceType" value={serviceType} onValueChange={(value) => setServiceType(value as ServiceType)} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" required>
+                            {Object.values(SERVICE_TYPE_OPTIONS).map(opt => (
+                                <Label key={opt.id} className="flex flex-col items-start space-y-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                    <div className="flex items-center gap-2">
+                                        <RadioGroupItem value={opt.id} id={opt.id} />
+                                        <span className="font-semibold">{opt.label}</span>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground ml-6">{opt.description}</p>
                                 </Label>
                             ))}
                         </RadioGroup>
-                        {state.errors?.location && <p className="text-sm text-destructive mt-2">{state.errors.location[0]}</p>}
+                        {state.errors?.serviceType && <p className="text-sm text-destructive mt-2">{state.errors.serviceType[0]}</p>}
                     </div>
+
+                    {serviceType === 'mobile' && (
+                        <div className="animate-in fade-in-0 slide-in-from-top-5 duration-300">
+                            <Label className="text-lg font-medium">Mobile Service Location *</Label>
+                             <RadioGroup name="mobileLocation" value={mobileLocation} onValueChange={(value) => setMobileLocation(value as keyof typeof MOBILE_LOCATION_OPTIONS) } className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2" required>
+                                {Object.values(MOBILE_LOCATION_OPTIONS).map(opt => (
+                                    <Label key={opt.id} className="flex items-center space-x-2 border rounded-md p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[[data-state=checked]]:bg-accent has-[[data-state=checked]]:text-accent-foreground has-[[data-state=checked]]:border-primary transition-colors">
+                                        <RadioGroupItem value={opt.id} id={`mobile-${opt.id}`} />
+                                        <span>{opt.label}</span>
+                                    </Label>
+                                ))}
+                            </RadioGroup>
+                            {state.errors?.mobileLocation && <p className="text-sm text-destructive mt-2">{state.errors.mobileLocation[0]}</p>}
+                        </div>
+                    )}
+
 
                     <Separator />
                     
