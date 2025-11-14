@@ -9,32 +9,23 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      // Check for a custom claim 'admin' on the user's token
       return isSignedIn() && request.auth.token.admin == true;
     }
-    
-    function isOwnerByEmail(email) {
-        return isSignedIn() && request.auth.token.email == email;
+
+    function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
     }
 
     // Rules for bookings
     match /bookings/{bookingId} {
-      // Anyone who is signed in can create a booking for themselves.
-      allow create: if isSignedIn() && request.resource.data.contact.email == request.auth.token.email;
+      // Any signed-in user can create a booking, but they must be the owner.
+      allow create: if isSignedIn() && isOwner(request.resource.data.uid);
       
-      // Only the owner (by email) or an admin can read or update a single booking.
-      allow read, update: if isOwnerByEmail(resource.data.contact.email) || isAdmin();
-
-      // Only admins can delete a booking.
-      allow delete: if isAdmin();
+      // Only the owner or an admin can read, update, or delete a booking.
+      allow read, update, delete: if isSignedIn() && (isOwner(resource.data.uid) || isAdmin());
       
-      // Only admins can list all bookings. This is crucial for the admin dashboard.
+      // Only admins can list all bookings for the dashboard.
       allow list: if isAdmin();
-    }
-
-    // Default deny all other reads/writes
-    match /{path=**}/documents/{document} {
-      allow read, write: if false;
     }
   }
 }

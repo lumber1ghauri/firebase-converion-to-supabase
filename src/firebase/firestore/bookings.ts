@@ -15,6 +15,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 export type BookingDocument = {
     id: string;
+    uid: string; // User ID of the owner
     finalQuote: FinalQuote;
     createdAt: Date;
     updatedAt?: Date;
@@ -27,6 +28,8 @@ export async function saveBooking(
     booking: Omit<BookingDocument, 'updatedAt' | 'createdAt'> & { createdAt?: Date }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
+    
+    // Ensure uid is part of the data to be saved
     const dataToSave = {
         ...booking,
         updatedAt: serverTimestamp(),

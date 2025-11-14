@@ -12,7 +12,7 @@ import { updateBookingStatusAction } from '@/app/actions';
 import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { saveBooking } from '@/firebase/firestore/bookings';
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
@@ -96,6 +96,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
   const [isUpdating, setIsUpdating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
+  const { user } = useUser();
 
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
@@ -106,6 +107,10 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       depositStatus?: PaymentStatus;
       finalStatus?: PaymentStatus;
   }) => {
+      if (!user || !firestore) {
+          toast({ variant: "destructive", title: "Error", description: "User or database not available." });
+          return;
+      }
       setIsUpdating(true);
       
       let updatedQuote = { ...quote };
@@ -126,7 +131,7 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
       }
 
       try {
-          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",

@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Plus, Trash2, Loader2, Minus, AlertTriangle, Users, ArrowLeft, ArrowRight, Send, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { saveBooking } from '@/firebase/firestore/bookings';
 import { generateQuoteAction } from '@/app/actions';
 import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices, ServiceType } from '@/lib/types';
@@ -109,6 +109,7 @@ export default function BookingFlow() {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const firestore = useFirestore();
+  const { user } = useUser();
   
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -148,9 +149,19 @@ export default function BookingFlow() {
           description: state.message,
       });
     } else if (state.status === 'success' && state.quote) {
+        if (!user || !firestore) {
+            toast({
+                variant: 'destructive',
+                title: 'Could not save booking',
+                description: 'User not authenticated or database not available.',
+            });
+            return;
+        }
+
         setIsSubmittingClient(true);
         const dataToSave = {
             id: state.quote.id,
+            uid: user.uid, // Add the user's ID
             finalQuote: state.quote,
             contact: state.quote.contact,
             phone: state.quote.contact.phone,
@@ -169,7 +180,7 @@ export default function BookingFlow() {
                 setIsSubmittingClient(false);
             });
     }
-  }, [state, toast, STEPS, firestore]);
+  }, [state, toast, STEPS, firestore, user]);
 
 
   if (state.status === 'success' && state.quote) {

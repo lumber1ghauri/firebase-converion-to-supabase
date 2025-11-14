@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote } from "@/lib/types";
-import { useFirestore, useAuth } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { saveBooking } from '@/firebase/firestore/bookings';
 import { sendQuoteEmail } from '@/lib/email';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -81,6 +81,7 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
 export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user } = useUser();
 
   const [quote, setQuote] = useState(initialQuote);
   const [currentStep, setCurrentStep] = useState<ConfirmationStep>('select-tier');
@@ -135,11 +136,15 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           toast({ variant: 'destructive', title: 'Invalid Address', description: 'Please correct the errors and try again.' });
           return;
       }
+      if (!user || !firestore) {
+          toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
+          return;
+      }
       setIsSaving(true);
       setError(null);
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
       try {
-          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -153,6 +158,10 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const handleFinalizeBooking = async () => {
       if (!selectedTier) {
           toast({ variant: 'destructive', title: 'Tier not selected', description: 'Please select an artist tier.'});
+          return;
+      }
+      if (!user || !firestore) {
+          toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
           return;
       }
       setIsSaving(true);
@@ -172,7 +181,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       };
 
       try {
-          await saveBooking(firestore, { id: updatedQuote.id, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
+          await saveBooking(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, contact: updatedQuote.contact, phone: updatedQuote.contact.phone });
           await sendQuoteEmail(updatedQuote);
           setQuote(updatedQuote);
           setCurrentStep('confirmed');
