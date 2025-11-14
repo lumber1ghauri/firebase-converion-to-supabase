@@ -45,14 +45,23 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   const adminEmail = "sellayadigital@gmail.com";
   const fromEmail = 'booking@sellaya.ca';
     
-  // Send email to the client
   try {
-    const clientEmail = await resend.emails.send({
+    const clientEmailPromise = resend.emails.send({
       from: `Looks by Anum <${fromEmail}>`,
       to: [quote.contact.email],
       subject: clientSubject,
       react: QuoteEmailTemplate({ quote, baseUrl }),
     });
+
+    const adminEmailPromise = resend.emails.send({
+        from: `Looks by Anum Admin <${fromEmail}>`,
+        to: [adminEmail],
+        subject: adminSubject,
+        react: QuoteEmailTemplate({ quote, baseUrl }),
+    });
+    
+    const [clientEmail, adminEmailNotification] = await Promise.all([clientEmailPromise, adminEmailPromise]);
+
 
     if (clientEmail.error) {
       console.error('Client email sending error:', clientEmail.error);
@@ -60,20 +69,7 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     } else {
       console.log('Client email sent successfully for booking ID:', quote.id, 'to:', quote.contact.email);
     }
-  } catch (error: any) {
-    console.error('Error sending client email:', error.message);
-    throw error; // Re-throw to be caught by the caller
-  }
-
-  // Send email to the admin
-  try {
-    const adminEmailNotification = await resend.emails.send({
-        from: `Looks by Anum Admin <${fromEmail}>`,
-        to: [adminEmail],
-        subject: adminSubject,
-        react: QuoteEmailTemplate({ quote, baseUrl }),
-    });
-
+    
     if (adminEmailNotification.error) {
         console.error('Admin email sending error:', adminEmailNotification.error);
          throw new Error(`Failed to send admin notification: ${adminEmailNotification.error.message}`);
@@ -81,9 +77,8 @@ export async function sendQuoteEmail(quote: FinalQuote) {
         console.log('Admin notification email sent successfully for booking ID:', quote.id, 'to:', adminEmail);
     }
   } catch (error: any) {
-    console.error('Error sending admin email:', error.message);
-    // Now we re-throw the error so the caller is aware.
-    throw error;
+    console.error('Error sending emails:', error.message);
+    throw error; // Re-throw to be caught by the caller
   }
 }
 
