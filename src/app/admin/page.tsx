@@ -84,7 +84,7 @@ export default function AdminDashboard() {
                 const dateB = parse(b.finalQuote.booking.days[0].date, 'PPP', new Date());
                 if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
                 return dateA.getTime() - dateB.getTime();
-            } catch (e) => {
+            } catch (e) {
                 return 0;
             }
         });
