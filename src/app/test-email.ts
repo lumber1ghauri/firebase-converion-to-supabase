@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { FinalQuote } from '@/lib/types';
@@ -54,7 +55,7 @@ export async function sendTestEmailAction() {
   try {
     await sendQuoteEmail(testQuote);
     console.log('Test email action completed successfully.');
-    return { success: true, message: `Test email sent successfully! Please check the inboxes for ${testQuote.contact.email} and the admin email.` };
+    return { success: true, message: `Test email sent successfully! Please check the inboxes for 'booking@sellaya.ca' and the admin email.` };
   } catch (error: any) {
     console.error('Test email action failed:', error);
     return { success: false, message: `Failed to send test email: ${error.message}` };
