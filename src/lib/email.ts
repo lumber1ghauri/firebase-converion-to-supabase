@@ -82,7 +82,8 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     }
   } catch (error: any) {
     console.error('Error sending admin email:', error.message);
-    // Don't re-throw here, as the client email might have succeeded. The admin notification is secondary.
+    // Now we re-throw the error so the caller is aware.
+    throw error;
   }
 }
 

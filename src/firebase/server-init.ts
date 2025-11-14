@@ -1,3 +1,4 @@
+
 'use server';
 import { initializeApp, getApps, getApp, App } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -8,9 +9,7 @@ let app: App;
 export async function initializeServerFirebase() {
   if (!getApps().length) {
     // When no configuration is provided, the Admin SDK automatically looks for 
-    // Application Default Credentials, which is the correct way to authenticate in
-    // a managed Google Cloud environment like App Hosting.
-    // Explicitly initializing with the project config to ensure connection.
+    // Application Default Credentials. In the dev environment, we need to be explicit.
     app = initializeApp({
         projectId: firebaseConfig.projectId
     });
