@@ -5,7 +5,7 @@ import { STUDIO_ADDRESS } from '@/lib/services';
 import { Separator } from './ui/separator';
 import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react';
+import { User, Users, MapPin, DollarSign, CalendarClock, Link as LinkIcon, AlertTriangle, MessageSquare, Loader2, Mail } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
 import { Button } from './ui/button';
 import { useState } from 'react';
@@ -165,14 +165,22 @@ export function BookingDetails({ quote, onUpdate }: { quote: FinalQuote; onUpdat
             <p><strong>Name:</strong> {quote.contact.name}</p>
             <p><strong>Email:</strong> {quote.contact.email}</p>
             <p><strong>Phone:</strong> {quote.contact.phone || 'N/A'}</p>
-             {whatsappLink && (
-                  <Button asChild variant="outline" size="sm" className="mt-2">
-                      <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                          <MessageSquare className="mr-2 h-4 w-4" />
-                          Contact on WhatsApp
-                      </a>
-                  </Button>
-              )}
+             <div className="flex flex-wrap gap-2 mt-2">
+                <Button asChild variant="outline" size="sm">
+                    <a href={`mailto:${quote.contact.email}`}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Contact by Email
+                    </a>
+                </Button>
+                {whatsappLink && (
+                    <Button asChild variant="outline" size="sm">
+                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Contact on WhatsApp
+                        </a>
+                    </Button>
+                )}
+            </div>
             {quote.booking.address && (
               <div className="pt-4 mt-4 border-t">
                 <p className="font-semibold">Service Address:</p>
