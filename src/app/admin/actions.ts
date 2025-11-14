@@ -60,7 +60,8 @@ export async function sendFollowUpEmailAction(bookingId: string): Promise<Action
 
     return { success: true, message: 'Follow-up email sent successfully.' };
 
-  } catch (error: any) {
+  } catch (error: any)
+{
     console.error('Failed to send follow-up email:', error);
     // Provide more specific feedback based on the error.
     if (error.message.includes('Resend is not configured')) {

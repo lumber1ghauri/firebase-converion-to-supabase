@@ -1,20 +1,23 @@
 
 'use server';
-import { initializeApp, getApps, getApp, App } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import admin from 'firebase-admin';
 
-let app: App;
-
-export async function initializeServerFirebase() {
-  // Check if the app is already initialized to prevent re-initialization on every call.
-  // This is a standard pattern for serverless environments.
-  if (!getApps().length) {
-    app = initializeApp();
-  } else {
-    app = getApp();
+// Check if the app is already initialized to prevent re-initialization on every call.
+// This is a standard pattern for serverless environments.
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp();
+  } catch (error: any) {
+    console.error('Firebase server initialization error', error.stack);
   }
+}
 
-  return {
-    firestore: getFirestore(app),
-  };
+const firestore = admin.firestore();
+
+// Export the initialized services
+export { firestore };
+
+// This function is kept for structural consistency, but the instances are now module-level.
+export async function initializeServerFirebase() {
+  return { firestore };
 }
