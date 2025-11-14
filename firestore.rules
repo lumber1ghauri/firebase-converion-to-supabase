@@ -7,43 +7,34 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
     
     function isAdmin() {
-      return request.auth.token.admin == true;
+      // Check for a custom claim 'admin' on the user's token
+      return isSignedIn() && request.auth.token.admin == true;
     }
     
     function isOwnerByEmail(email) {
         return isSignedIn() && request.auth.token.email == email;
     }
 
-    // Rules for user profiles
-    match /users/{userId} {
-      allow read, update: if isOwner(userId);
-      allow create: if isSignedIn();
-    }
-    
     // Rules for bookings
     match /bookings/{bookingId} {
-      allow create: if isSignedIn(); // Any authenticated user can create a booking
-      allow read: if isOwnerByEmail(resource.data.contact.email) || isAdmin(); // Owner or admin can read
-      allow update: if isOwnerByEmail(request.resource.data.contact.email) || isAdmin(); // Owner or admin can update
-      allow delete: if isAdmin(); // Only admin can delete
-      allow list: if isAdmin(); // Only admin can list all bookings
+      // Anyone who is signed in can create a booking for themselves.
+      allow create: if isSignedIn() && request.resource.data.contact.email == request.auth.token.email;
+      
+      // Only the owner (by email) or an admin can read or update a single booking.
+      allow read, update: if isOwnerByEmail(resource.data.contact.email) || isAdmin();
+
+      // Only admins can delete a booking.
+      allow delete: if isAdmin();
+      
+      // Only admins can list all bookings. This is crucial for the admin dashboard.
+      allow list: if isAdmin();
     }
 
-    match /makeup_services/{makeupServiceId} {
-      // Read rules
-      allow get: if true;
-      allow list: if true;
-
-      // Write rules - Restrict all write operations
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+    // Default deny all other reads/writes
+    match /{path=**}/documents/{document} {
+      allow read, write: if false;
     }
   }
 }
