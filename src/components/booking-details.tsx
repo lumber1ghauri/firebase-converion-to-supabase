@@ -1,0 +1,183 @@
+'use client';
+
+import type { FinalQuote, PriceTier } from '@/lib/types';
+import { STUDIO_ADDRESS } from '@/lib/services';
+import { Separator } from './ui/separator';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { User, Users, MapPin } from 'lucide-react';
+
+export function BookingDetails({ quote }: { quote: FinalQuote }) {
+  const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Client Information</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm space-y-2">
+            <p><strong>Name:</strong> {quote.contact.name}</p>
+            <p><strong>Email:</strong> {quote.contact.email}</p>
+            {quote.booking.address && (
+              <div className="pt-2">
+                <p className="font-semibold">Service Address:</p>
+                <p className="text-muted-foreground">
+                  {quote.booking.address.street}<br />
+                  {quote.booking.address.city}, {quote.booking.address.province} {quote.booking.address.postalCode}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Booking Status</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Badge variant={quote.status === 'confirmed' ? 'default' : quote.status === 'cancelled' ? 'destructive' : 'secondary'} className="capitalize text-base">
+              {quote.status}
+            </Badge>
+            {quote.selectedQuote && (
+                <div className="flex items-center gap-2 pt-2">
+                    {quote.selectedQuote === 'lead' ? <User className="h-5 w-5 text-primary" /> : <Users className="h-5 w-5 text-primary" />}
+                    <p className="font-semibold">
+                        {quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}
+                    </p>
+                </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Service Details</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {quote.booking.days.map((day, index) => (
+            <div key={index} className="p-3 border rounded-md bg-muted/50">
+              <div className="font-semibold flex justify-between">
+                <span>{day.serviceName}</span>
+                <span>{day.date} at {day.getReadyTime}</span>
+              </div>
+              <ul className="mt-2 ml-4 list-disc text-sm text-muted-foreground space-y-1">
+                <li>Service: {day.serviceOption}</li>
+                <li>Location: {day.location}</li>
+                {day.location === 'Studio' && 
+                    <li>
+                         <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:underline text-primary">
+                            <MapPin className='w-3 h-3'/>{STUDIO_ADDRESS.street}, {STUDIO_ADDRESS.city}
+                        </a>
+                    </li>
+                }
+                {day.addOns.length > 0 && (
+                  <li>
+                    Add-ons:
+                    <ul className="ml-4 list-['-_']">
+                      {day.addOns.map((addon, i) => <li key={i}>{addon}</li>)}
+                    </ul>
+                  </li>
+                )}
+              </ul>
+            </div>
+          ))}
+
+          {quote.booking.trial && (
+             <div className="p-3 border rounded-md bg-muted/50">
+                <div className="font-semibold flex justify-between">
+                    <span>Bridal Trial</span>
+                    <span>{quote.booking.trial.date} at {quote.booking.trial.time}</span>
+                </div>
+             </div>
+          )}
+
+          {quote.booking.bridalParty && quote.booking.bridalParty.services.length > 0 && (
+            <div className="p-3 border rounded-md bg-muted/50">
+                <p className="font-semibold">Bridal Party Services</p>
+                <ul className="mt-2 ml-4 list-disc text-sm text-muted-foreground space-y-1">
+                    {quote.booking.bridalParty.services.map((s, i) => <li key={i}>{s.service} (x{s.quantity})</li>)}
+                    {quote.booking.bridalParty.airbrush > 0 && <li>Airbrush Service (x{quote.booking.bridalParty.airbrush})</li>}
+                </ul>
+            </div>
+         )}
+        </CardContent>
+      </Card>
+      
+      {selectedQuoteData && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Pricing</CardTitle>
+          </CardHeader>
+          <CardContent>
+             <ul className="space-y-1 text-sm">
+                {selectedQuoteData.lineItems.map((item, index) => (
+                <li key={index} className="flex justify-between">
+                    <span className={item.description.startsWith('  -') || item.description.startsWith('Party:') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
+                    <span className="font-mono">${item.price.toFixed(2)}</span>
+                </li>
+                ))}
+            </ul>
+            <Separator className="my-2" />
+            <ul className="space-y-1 text-sm">
+                <li className="flex justify-between font-medium">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span className='font-mono'>${selectedQuoteData.subtotal.toFixed(2)}</span>
+                </li>
+                <li className="flex justify-between font-medium">
+                    <span className="text-muted-foreground">GST (13%)</span>
+                    <span className='font-mono'>${selectedQuoteData.tax.toFixed(2)}</span>
+                </li>
+            </ul>
+            <Separator className="my-2" />
+            <div className="flex justify-between items-baseline">
+                <span className="text-lg font-bold">Total</span>
+                <span className="text-2xl font-bold text-primary font-mono">${selectedQuoteData.total.toFixed(2)}</span>
+            </div>
+            <Separator className="my-2" />
+             <div className="flex justify-between items-baseline pt-2">
+                <span className="text-base font-bold">50% Deposit</span>
+                <span className="text-xl font-bold text-primary/80 font-mono">${(selectedQuoteData.total * 0.5).toFixed(2)}</span>
+            </div>
+             <div className="flex justify-between items-baseline pt-1">
+                <span className="text-base font-bold">Remaining Balance</span>
+                <span className="text-xl font-bold text-primary/80 font-mono">${(selectedQuoteData.total * 0.5).toFixed(2)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+       {!selectedQuoteData && (
+         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            {(['lead', 'team'] as PriceTier[]).map(tier => (
+                <Card key={tier}>
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center gap-2">
+                             {tier === 'lead' ? <User className="h-5 w-5 text-primary" /> : <Users className="h-5 w-5 text-primary" />}
+                            Quote: <span className='capitalize'>{tier}</span>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ul className="space-y-1 text-sm">
+                            {quote.quotes[tier].lineItems.map((item, index) => (
+                                <li key={index} className="flex justify-between">
+                                    <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
+                                    <span>${item.price.toFixed(2)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                         <Separator className="my-2" />
+                         <div className="flex justify-between items-baseline">
+                            <span className="font-bold">Total</span>
+                            <span className="font-bold text-primary">${quote.quotes[tier].total.toFixed(2)}</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
+         </div>
+      )}
+
+    </div>
+  );
+}

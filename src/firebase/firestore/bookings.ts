@@ -1,6 +1,6 @@
 'use server';
 
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
 import type { FinalQuote } from '@/lib/types';
 import { getFirestore } from '@/firebase';
 
@@ -40,10 +40,31 @@ export async function getBooking(bookingId: string): Promise<BookingDocument | n
         // Convert Firestore Timestamps to JS Dates
         return {
             ...data,
+            id: docSnap.id,
             createdAt: data.createdAt.toDate(),
             updatedAt: data.updatedAt?.toDate(),
         } as BookingDocument;
     } else {
         return null;
     }
+}
+
+export async function getAllBookings(): Promise<BookingDocument[]> {
+    const db = getFirestore();
+    if (!db) {
+        console.error("Firestore is not initialized. Skipping getAllBookings.");
+        return [];
+    }
+    const bookingsCol = collection(db, 'bookings');
+    const bookingSnapshot = await getDocs(bookingsCol);
+    const bookingList = bookingSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            ...data,
+            id: doc.id,
+            createdAt: data.createdAt.toDate(),
+            updatedAt: data.updatedAt?.toDate(),
+        } as BookingDocument
+    });
+    return bookingList;
 }
