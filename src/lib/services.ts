@@ -57,12 +57,12 @@ export const SERVICE_TYPE_OPTIONS = {
 }
 
 export const STUDIO_ADDRESS: {street: string, city: string, province: string, postalCode: string, country: string, googleMapsUrl: string} = {
-    street: "123 Glamour Lane",
-    city: "Toronto",
+    street: "30 McCormack Rd",
+    city: "Caledon",
     province: "ON",
-    postalCode: "M5V 2T6",
+    postalCode: "L7C 4J6",
     country: "Canada",
-    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=123+Glamour+Lane+Toronto+ON"
+    googleMapsUrl: "https://www.google.com/maps/search/?api=1&query=30+McCormack+Rd+Caledon+ON+L7C+4J6"
 }
 
 export const MOBILE_LOCATION_OPTIONS: Record<string, { id: string; label: string; surcharge: DualPrice }> = {
