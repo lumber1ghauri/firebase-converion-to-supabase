@@ -25,7 +25,7 @@ export type BookingDocument = {
 // Client-side saveBooking for UI interactions like the admin panel or user-side updates
 export async function saveBookingClient(
     firestore: Firestore,
-    booking: Partial<BookingDocument> & { id: string }
+    booking: Partial<BookingDocument> & { id: string; uid: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
@@ -39,17 +39,20 @@ export async function saveBookingClient(
     };
 
     try {
+        // Await the operation and let the calling function handle the UI response.
         await setDoc(bookingRef, dataToSave, { merge: true });
     } catch (error: any) {
+        console.error("Error saving booking client-side:", error);
+        // We throw the error here so the calling UI component can catch it
+        // and display a specific message to the user.
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
                 path: bookingRef.path,
-                operation: 'write',
+                operation: 'update',
                 requestResourceData: dataToSave,
             })
         );
-        // We throw the error here so the calling UI can handle it (e.g., show a toast)
         throw error;
     }
 }
@@ -80,7 +83,7 @@ export async function saveBookingAndSendEmail(
             'permission-error',
             new FirestorePermissionError({
                 path: bookingRef.path,
-                operation: 'write',
+                operation: 'create',
                 requestResourceData: dataToSave,
             })
         );
