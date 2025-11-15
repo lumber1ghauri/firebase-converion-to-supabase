@@ -1,19 +1,22 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import { getBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { useFirestore, useDoc } from '@/firebase';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 
-export default function BookPage({ params }: { params: { bookingId: string } }) {
+export default function BookPage() {
+  const params = useParams();
+  const bookingId = Array.isArray(params.bookingId) ? params.bookingId[0] : params.bookingId;
   const firestore = useFirestore();
   const [error, setError] = useState<string | null>(null);
 
   const docRef = useMemo(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'bookings', params.bookingId);
-  }, [firestore, params.bookingId]);
+    if (!firestore || !bookingId) return null;
+    return doc(firestore, 'bookings', bookingId);
+  }, [firestore, bookingId]);
 
   const { data: booking, isLoading, error: docError } = useDoc<BookingDocument>(docRef);
 
@@ -41,7 +44,7 @@ export default function BookPage({ params }: { params: { bookingId: string } }) 
         <AlertTriangle className="w-12 h-12 text-destructive mt-4" />
         <h1 className="text-2xl font-bold text-destructive mt-4">Error Loading Booking</h1>
         <p className="mt-2 text-muted-foreground">Could not load the requested booking. It may have been removed or you may not have permission to view it.</p>
-        <p className="mt-1 text-xs text-muted-foreground">ID: {params.bookingId}</p>
+        <p className="mt-1 text-xs text-muted-foreground">ID: {bookingId}</p>
       </div>
     );
   }

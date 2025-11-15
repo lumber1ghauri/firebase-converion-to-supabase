@@ -8,13 +8,15 @@ service firebase.storage {
       return request.auth.token.admin == true;
     }
 
-    // Allow users to upload payment screenshots only into their own user-specific folder.
-    // The path ensures that a user can only write to a directory that matches their UID.
+    // This rule allows any signed-in user (including anonymous users)
+    // to upload a file to the payment_screenshots directory.
+    // We add a size validation to prevent abuse.
     match /payment_screenshots/{userId}/{bookingId}/{allPaths=**} {
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.resource.size < 5 * 1024 * 1024; // Allow uploads up to 5MB
     }
     
-    // Allow authenticated users (the owner) or an admin to read screenshots.
+    // Allow an authenticated user (the one who uploaded) or an admin to read screenshots.
+    // This allows the user to potentially see their own uploaded screenshot and the admin to review it.
     match /payment_screenshots/{userId}/{allPaths=**} {
         allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
