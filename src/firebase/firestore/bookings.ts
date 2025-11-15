@@ -152,14 +152,21 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string, use
     const storage = getStorage();
     const filePath = `payment_screenshots/${userId}/${bookingId}/${file.name}`;
     const storageRef = ref(storage, filePath);
+    
+    const metadata = {
+        contentType: file.type,
+    };
 
     try {
-        const snapshot = await uploadBytes(storageRef, file);
+        const snapshot = await uploadBytes(storageRef, file, metadata);
         const downloadURL = await getDownloadURL(snapshot.ref);
         return downloadURL;
     } catch (error: any) {
-        console.error("Error uploading screenshot:", error);
-        // You could potentially emit a specific storage permission error here
-        throw new Error("Failed to upload screenshot. Please check your network and permissions.");
+        console.error("Firebase Storage Upload Error:", error);
+        console.error("Error Code:", error.code);
+        console.error("Error Message:", error.message);
+        // This will be a specific Firebase Storage error, which is useful for debugging.
+        // For example, 'storage/unauthorized' for permission issues.
+        throw new Error(`Failed to upload screenshot: ${error.message} (Code: ${error.code})`);
     }
 }

@@ -11,7 +11,9 @@ import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-emai
 
 const getBaseUrl = () => {
     // This is the correct, publicly accessible URL for your development environment.
-    return 'https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
+    return process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:3001' 
+        : 'https://6000-firebase-sellaya-lba-02-1763106036425.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
 }
 
 const getResend = () => {

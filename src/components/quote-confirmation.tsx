@@ -176,17 +176,28 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     setError(null);
 
     try {
-        let paymentDetails: PaymentDetails = {
+        let screenshotUrl = '';
+        if (paymentMethod === 'interac' && screenshotFile) {
+            try {
+                screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
+            } catch (uploadError: any) {
+                console.error("Screenshot upload failed:", uploadError);
+                toast({
+                    variant: 'destructive',
+                    title: 'Upload Failed',
+                    description: `Could not upload screenshot. ${uploadError.message}`,
+                });
+                setIsSaving(false);
+                return; // Stop the process if upload fails
+            }
+        }
+
+        const paymentDetails: PaymentDetails = {
             method: paymentMethod,
             status: paymentMethod === 'stripe' ? 'deposit-paid' : 'deposit-pending',
             depositAmount: depositAmount,
-            screenshotUrl: '',
+            screenshotUrl: screenshotUrl,
         };
-
-        if (paymentMethod === 'interac' && screenshotFile) {
-            const screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
-            paymentDetails.screenshotUrl = screenshotUrl;
-        }
 
         const updatedQuote: FinalQuote = {
             ...quote,
@@ -194,8 +205,10 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             status: 'confirmed', // Booking is confirmed, payment is pending
             paymentDetails: paymentDetails,
         };
+        
+        // Use the existing booking document if it exists, otherwise create new
+        await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, createdAt: initialQuote.createdAt || new Date() });
 
-        await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote });
         setQuote(updatedQuote);
         setCurrentStep('confirmed');
 
@@ -206,11 +219,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                 : 'Your booking is confirmed! You will receive a confirmation email shortly.',
         });
 
-        // If Stripe was used, it's auto-confirmed, so we can try to send the email.
         if (paymentMethod === 'stripe') {
             await sendConfirmationEmailAction(updatedQuote.id);
         } else if (paymentMethod === 'interac') {
-            // Send a notification to the admin
             await sendAdminScreenshotNotificationAction(updatedQuote.id);
         }
 
