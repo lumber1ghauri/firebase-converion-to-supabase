@@ -127,28 +127,50 @@ const priceTitle = {
   color: 'hsl(345, 80%, 50%)', // --primary
 };
 
-const priceItem = {
-  display: 'flex',
-  justifyContent: 'space-between',
+const priceTable = {
+  width: '100%',
+  borderCollapse: 'collapse' as const,
+};
+
+const priceItemCell = {
+  padding: '8px 0',
   fontSize: '15px',
-  color: 'hsl(240, 10%, 3.9%)', // --foreground
-  marginBottom: '12px',
+  color: 'hsl(240, 10%, 3.9%)',
+};
+
+const priceValueCell = {
+  ...priceItemCell,
+  textAlign: 'right' as const,
+  fontWeight: 600,
+  fontFamily: 'monospace',
 };
 
 const totalRow = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginTop: '16px',
-  paddingTop: '16px',
-  borderTop: '1px solid hsl(345, 20%, 90%)', // --border
+  borderTop: '1px solid hsl(345, 20%, 90%)',
+};
+
+const totalCell = {
+  padding: '16px 0 8px 0',
+  fontSize: '15px',
 };
 
 const grandTotalRow = {
-  ...totalRow,
-  marginTop: '12px',
-  paddingTop: '12px',
-  borderTop: '2px solid hsl(240, 10%, 3.9%)', // --foreground
+  borderTop: '2px solid hsl(240, 10%, 3.9%)',
 };
+
+const grandTotalLabelCell = {
+  ...totalCell,
+  fontSize: '18px',
+  fontWeight: 700,
+};
+
+const grandTotalPriceCell = {
+  ...grandTotalLabelCell,
+  textAlign: 'right' as const,
+  color: 'hsl(345, 80%, 50%)',
+  fontSize: '24px',
+};
+
 
 const footer = {
   padding: '30px 0 0 0',
@@ -161,24 +183,30 @@ const footer = {
 const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
   <div style={priceBox}>
     <h3 style={priceTitle}>{title}</h3>
-    {quote.lineItems.map((lineItem, index) => (
-      <div key={index} style={{...priceItem, paddingLeft: lineItem.description.startsWith('  -') || lineItem.description.startsWith('Party:') ? '20px' : '0' }}>
-        <span>{lineItem.description.replace(/  - /g, '')}</span>
-        <span style={{ fontWeight: 600 }}>${lineItem.price.toFixed(2)}</span>
-      </div>
-    ))}
-    <div style={totalRow}>
-      <span>Subtotal</span>
-      <span>${quote.subtotal.toFixed(2)}</span>
-    </div>
-    <div style={{ ...priceItem, paddingTop: '8px' }}>
-      <span>GST ({(GST_RATE * 100).toFixed(0)}%)</span>
-      <span>${quote.tax.toFixed(2)}</span>
-    </div>
-    <div style={grandTotalRow}>
-      <span style={{ fontSize: '18px', fontWeight: 700 }}>Grand Total</span>
-      <span style={{ fontSize: '24px', fontWeight: 700, color: 'hsl(345, 80%, 50%)' }}>${quote.total.toFixed(2)}</span>
-    </div>
+    <table style={priceTable}>
+      <tbody>
+        {quote.lineItems.map((lineItem, index) => (
+          <tr key={index}>
+            <td style={{...priceItemCell, paddingLeft: lineItem.description.startsWith('  -') || lineItem.description.startsWith('Party:') ? '20px' : '0' }}>
+              {lineItem.description.replace(/  - /g, '')}
+            </td>
+            <td style={priceValueCell}>: ${lineItem.price.toFixed(2)}</td>
+          </tr>
+        ))}
+        <tr style={totalRow}>
+          <td style={totalCell}>Subtotal</td>
+          <td style={{...priceValueCell, ...totalCell}}>: ${quote.subtotal.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td style={priceItemCell}>GST ({(GST_RATE * 100).toFixed(0)}%)</td>
+          <td style={priceValueCell}>: ${quote.tax.toFixed(2)}</td>
+        </tr>
+        <tr style={grandTotalRow}>
+          <td style={grandTotalLabelCell}>Grand Total</td>
+          <td style={grandTotalPriceCell}>: ${quote.total.toFixed(2)}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 );
 
