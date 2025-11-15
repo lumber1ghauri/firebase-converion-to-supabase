@@ -31,8 +31,6 @@ export async function sendQuoteEmail(quote: FinalQuote) {
   const resend = getResend();
   
   if (!resend) {
-    // If Resend isn't configured, we can't send emails.
-    // We throw an error here so the calling function knows about the failure.
     throw new Error('Resend is not configured. Cannot send quote email.');
   }
     
@@ -40,13 +38,10 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     ? `Booking Confirmed! - Looks by Anum (ID: ${quote.id})`
     : `Your Makeup Quote from Looks by Anum (ID: ${quote.id})`;
 
-  const adminSubject = quote.status === 'confirmed'
-    ? `[ADMIN] Booking Confirmed - ${quote.contact.name} (ID: ${quote.id})`
-    : `[ADMIN] New Quote Generated - ${quote.contact.name} (ID: ${quote.id})`;
-
   const adminEmail = "sellayadigital@gmail.com";
   const fromEmail = 'booking@sellaya.ca';
     
+  // Always send the email to the client
   const clientEmailPromise = resend.emails.send({
     from: `Looks by Anum <${fromEmail}>`,
     to: [quote.contact.email],
@@ -54,27 +49,33 @@ export async function sendQuoteEmail(quote: FinalQuote) {
     react: QuoteEmailTemplate({ quote, baseUrl }),
   });
 
-  const adminEmailPromise = resend.emails.send({
-      from: `Looks by Anum Admin <${fromEmail}>`,
-      to: [adminEmail],
-      subject: adminSubject,
-      react: QuoteEmailTemplate({ quote, baseUrl }),
-  });
+  const emailPromises = [clientEmailPromise];
+
+  // Only send the email to the admin if the booking is confirmed
+  if (quote.status === 'confirmed') {
+    const adminSubject = `[ADMIN] Booking Confirmed - ${quote.contact.name} (ID: ${quote.id})`;
+    const adminEmailPromise = resend.emails.send({
+        from: `Looks by Anum Admin <${fromEmail}>`,
+        to: [adminEmail],
+        subject: adminSubject,
+        react: QuoteEmailTemplate({ quote, baseUrl }),
+    });
+    emailPromises.push(adminEmailPromise);
+  }
   
-  const [clientEmail, adminEmailNotification] = await Promise.all([clientEmailPromise, adminEmailPromise]);
+  const [clientEmailResult, adminEmailResult] = await Promise.all(emailPromises);
 
-
-  if (clientEmail.error) {
-    console.error('Client email sending error:', clientEmail.error);
-    throw new Error(`Failed to send client email: ${clientEmail.error.message}`);
+  if (clientEmailResult.error) {
+    console.error('Client email sending error:', clientEmailResult.error);
+    throw new Error(`Failed to send client email: ${clientEmailResult.error.message}`);
   } else {
     console.log('Client email sent successfully for booking ID:', quote.id, 'to:', quote.contact.email);
   }
   
-  if (adminEmailNotification.error) {
-      console.error('Admin email sending error:', adminEmailNotification.error);
-      throw new Error(`Failed to send admin notification: ${adminEmailNotification.error.message}`);
-  } else {
+  if (adminEmailResult && adminEmailResult.error) {
+      console.error('Admin email sending error:', adminEmailResult.error);
+      throw new Error(`Failed to send admin notification: ${adminEmailResult.error.message}`);
+  } else if (adminEmailResult) {
       console.log('Admin notification email sent successfully for booking ID:', quote.id, 'to:', adminEmail);
   }
 }
