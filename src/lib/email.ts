@@ -12,7 +12,7 @@ import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-emai
 const getBaseUrl = () => {
     return process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3001' 
-        : 'https://6000-firebase-sellaya-lba-02-1763106036425.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
+        : `https://studio--${process.env.FIREBASE_PROJECT_ID}.us-central1.hosted.app`;
 }
 
 const getResend = () => {
@@ -145,5 +145,3 @@ export async function sendAdminScreenshotNotification(quote: FinalQuote) {
     throw error;
   }
 }
-
-    

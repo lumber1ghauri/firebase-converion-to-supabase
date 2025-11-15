@@ -30,16 +30,15 @@ export async function saveBookingClient(
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
-    // Create a deep clone to avoid modifying the original object
+    // Use JSON stringify/parse to deep-clone and remove any undefined values
     const bookingData = JSON.parse(JSON.stringify(booking));
 
     const dataToSave: any = {
         ...bookingData,
         updatedAt: serverTimestamp(),
     };
-
-    // If the booking doesn't have a createdAt field yet, add it.
-    // This is crucial for new bookings being finalized.
+    
+     // If the booking doesn't have a createdAt field yet, add it.
     if (!booking.createdAt) {
         dataToSave.createdAt = serverTimestamp();
     }
@@ -48,7 +47,6 @@ export async function saveBookingClient(
     try {
         await setDoc(bookingRef, dataToSave, { merge: true });
     } catch (error: any) {
-        console.error("Error saving booking client-side:", error);
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -57,6 +55,7 @@ export async function saveBookingClient(
                 requestResourceData: dataToSave,
             })
         );
+        // We throw the error here so the calling UI can handle it (e.g., show a toast)
         throw error;
     }
 }
@@ -162,8 +161,6 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string, use
         console.error("Firebase Storage Upload Error:", error);
         // This will be a specific Firebase Storage error, which is useful for debugging.
         // For example, 'storage/unauthorized' for permission issues.
-        throw new Error(`Failed to upload screenshot: ${error.message} (Code: ${error.code})`);
+        throw new Error(`Upload failed: ${error.code} - ${error.message}`);
     }
 }
-
-    
