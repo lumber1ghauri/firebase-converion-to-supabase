@@ -19,9 +19,12 @@ import { Separator } from './ui/separator';
 import { ContractDisplay } from './contract-display';
 import { Checkbox } from './ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { sendConfirmationEmailAction, sendAdminScreenshotNotificationAction } from '@/app/admin/actions';
+import { sendAdminScreenshotNotificationAction } from '@/app/admin/actions';
+import { loadStripe } from '@stripe/stripe-js';
 
 type ConfirmationStep = 'select-tier' | 'address' | 'sign-contract' | 'payment' | 'confirmed';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: { 
   title: string; 
@@ -37,13 +40,13 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
       "block border rounded-lg cursor-pointer transition-all",
       isSelected ? "border-primary ring-2 ring-primary shadow-lg" : "border-border hover:border-primary/50"
     )}>
-        <Card className="shadow-none border-none">
+        <RadioGroupItem value={tier} id={`tier-${tier}`} className="sr-only" />
+        <Card className="shadow-none border-none bg-transparent">
             <CardHeader className="flex-row items-center gap-4 space-y-0">
                 {icon}
                 <div>
                   <CardTitle className="font-headline text-2xl">{title}</CardTitle>
                 </div>
-                <RadioGroupItem value={tier} id={`tier-${tier}`} className="ml-auto w-6 h-6" />
             </CardHeader>
             <CardContent>
                 <ul className="space-y-1 text-sm">
@@ -83,7 +86,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const { user } = useUser();
 
   const [quote, setQuote] = useState(initialQuote);
-  const [currentStep, setCurrentStep] = useState<ConfirmationStep>('select-tier');
+  const [currentStep, setCurrentStep] = useState<ConfirmationStep>(() => quote.status === 'confirmed' ? 'confirmed' : 'select-tier');
   const [contractSigned, setContractSigned] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +94,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const [address, setAddress] = useState({ street: '', city: '', province: 'ON', postalCode: '' });
   const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
   
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>();
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | undefined>(quote.paymentDetails?.method);
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
 
   const containsStudioService = useMemo(() => quote.booking.days.some(d => d.serviceType === 'studio'), [quote.booking.days]);
@@ -101,8 +104,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const showTeamOption = useMemo(() => containsMobileService, [containsMobileService]);
   
   const [selectedTier, setSelectedTier] = useState<PriceTier | undefined>(() => {
+    if (quote.selectedQuote) return quote.selectedQuote;
     if (!showTeamOption && showLeadArtistOption) return 'lead';
-    return quote.selectedQuote;
+    return undefined;
   });
   
   const depositAmount = useMemo(() => {
@@ -115,6 +119,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const bookingConfirmed = useMemo(() => quote.status === 'confirmed', [quote.status]);
   
   React.useEffect(() => {
+    // If the booking is already confirmed, jump to the last step.
     if (bookingConfirmed && currentStep !== 'confirmed') {
       setCurrentStep('confirmed');
     }
@@ -125,7 +130,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     if (!address.street) errors.street = "Street address is required.";
     if (!address.city) errors.city = "City is required.";
     if (!address.postalCode) errors.postalCode = "Postal code is required.";
-    // Basic postal code regex
     else if (!/^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/.test(address.postalCode)) {
         errors.postalCode = "Invalid postal code format.";
     }
@@ -145,16 +149,17 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       }
       setIsSaving(true);
       setError(null);
+      
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
       
-      const bookingDoc: BookingDocument = {
+      const bookingDoc: Partial<BookingDocument> = {
           id: updatedQuote.id,
           uid: user.uid,
           finalQuote: updatedQuote,
       };
 
       try {
-          await saveBookingClient(firestore, bookingDoc);
+          await saveBookingClient(firestore, bookingDoc as BookingDocument);
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -183,25 +188,39 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     setError(null);
 
     try {
+        if (paymentMethod === 'stripe') {
+            const res = await fetch('/api/stripe/create-checkout-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: quote.id, tier: selectedTier }),
+            });
+
+            if (!res.ok) {
+                const { error } = await res.json();
+                throw new Error(error || 'Failed to create Stripe session.');
+            }
+
+            const { sessionId } = await res.json();
+            const stripe = await stripePromise;
+            if (stripe) {
+                const { error } = await stripe.redirectToCheckout({ sessionId });
+                if (error) {
+                    throw new Error(error.message);
+                }
+            }
+            // User is redirected to Stripe, no further action here.
+            return;
+        }
+
+        // --- Handle Interac e-Transfer ---
         let screenshotUrl = '';
         if (paymentMethod === 'interac' && screenshotFile) {
-            try {
-                screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
-            } catch (uploadError: any) {
-                console.error("Screenshot upload failed:", uploadError);
-                toast({
-                    variant: 'destructive',
-                    title: 'Upload Failed',
-                    description: `Could not upload screenshot. ${uploadError.message}`,
-                });
-                setIsSaving(false);
-                return; // Stop the process if upload fails
-            }
+            screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
         }
 
         const paymentDetails: PaymentDetails = {
             method: paymentMethod,
-            status: paymentMethod === 'stripe' ? 'deposit-paid' : 'deposit-pending',
+            status: 'deposit-pending',
             depositAmount: depositAmount,
             screenshotUrl: screenshotUrl,
         };
@@ -209,7 +228,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         const updatedQuote: FinalQuote = {
             ...quote,
             selectedQuote: selectedTier,
-            status: 'confirmed', // Booking is confirmed, payment is pending
             paymentDetails: paymentDetails,
         };
         
@@ -217,26 +235,19 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             id: updatedQuote.id,
             uid: user.uid,
             finalQuote: updatedQuote,
-            createdAt: new Date() // Set createdAt on final confirmation
+            createdAt: quote.createdAt || new Date()
         };
 
         await saveBookingClient(firestore, bookingDoc);
+        await sendAdminScreenshotNotificationAction(updatedQuote.id);
 
+        // For Interac, we just show a pending message, not the full confirmed state yet
         setQuote(updatedQuote);
-        setCurrentStep('confirmed');
-
         toast({
             title: 'Booking Submitted!',
-            description: paymentMethod === 'interac'
-                ? 'Your booking is pending approval. You will receive a confirmation email once your payment is verified.'
-                : 'Your booking is confirmed! You will receive a confirmation email shortly.',
+            description: 'Your booking is pending approval. You will receive a final confirmation email once your payment is verified.',
         });
-
-        if (paymentMethod === 'stripe') {
-            await sendConfirmationEmailAction(updatedQuote.id);
-        } else if (paymentMethod === 'interac') {
-            await sendAdminScreenshotNotificationAction(updatedQuote.id);
-        }
+        setCurrentStep('confirmed');
 
     } catch (err: any) {
         console.error("Failed to finalize booking:", err);
@@ -271,9 +282,12 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
   const currentStepIndex = STEPS.findIndex(s => s.id === currentStep);
 
   const getFooterButton = () => {
+      if (currentStep === 'confirmed') return null;
+
       let text = 'Proceed';
       let action: () => void = handleProceed;
       let disabled = false;
+      let icon = <ArrowRight className="ml-2 h-5 w-5" />;
 
       switch(currentStep) {
           case 'select-tier':
@@ -290,9 +304,10 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
               disabled = !contractSigned;
               break;
           case 'payment':
-              text = `Confirm & Pay $${depositAmount.toFixed(2)}`;
+              text = paymentMethod === 'stripe' ? `Pay $${depositAmount.toFixed(2)} with Card` : 'Submit for Approval';
               action = handleFinalizeBooking;
               disabled = isSaving || !paymentMethod || (paymentMethod === 'interac' && !screenshotFile);
+              icon = paymentMethod === 'stripe' ? <CreditCard className="ml-2 h-5 w-5" /> : <ShieldCheck className="ml-2 h-5 w-5" />;
               break;
       }
       
@@ -300,7 +315,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={disabled || isSaving} onClick={action}>
               {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
               {text}
-              {!isSaving && text !== `Confirm & Pay $${depositAmount.toFixed(2)}` && <ArrowRight className="ml-2 h-5 w-5" />}
+              {!isSaving && icon}
           </Button>
       );
   }
@@ -321,7 +336,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             {bookingConfirmed 
               ? quote.paymentDetails?.method === 'interac'
                   ? `Thank you, ${quote.contact.name}. Your booking is submitted and awaits payment approval. You will receive a final confirmation email once your e-Transfer is verified.`
-                  : `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. A confirmation email has been sent to you.`
+                  : `Thank you, ${quote.contact.name}. Your booking with ${quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'the Team'} is confirmed. A confirmation email will be sent to you shortly.`
               : `Thank you, ${quote.contact.name}. Please review your quotes and follow the steps below to confirm your booking.`
             }
           </CardDescription>
@@ -335,7 +350,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         </CardHeader>
         <CardContent className="space-y-6 px-4 sm:px-6">
 
-          {/* Step Indicator */}
           {!bookingConfirmed && (
             <div className="flex justify-center items-center gap-2 sm:gap-6 my-4">
               {STEPS.map((step, index) => (
@@ -361,85 +375,32 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           )}
 
           <div className={cn(currentStep !== 'select-tier' && 'hidden')}>
-            <div className="p-4 border rounded-lg bg-background/50">
-                  <h3 className="font-headline text-xl mb-3">Booking Summary</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Booking ID: {quote.id}</p>
-                  <ul className="space-y-3">
-                      {quote.booking.days.map((day, index) => (
-                      <li key={index} className="text-sm">
-                          <div className="flex justify-between font-medium">
-                          <span>{day.date} at {day.getReadyTime}</span>
-                          <span>{day.serviceName}</span>
-                          </div>
-                          <div className="text-muted-foreground ml-2">- {day.serviceOption}</div>
-                          <div className="text-muted-foreground ml-2">- {day.location}</div>
-                          {day.addOns.length > 0 && day.addOns.map((addon, i) => (
-                          <div key={i} className="text-muted-foreground ml-2">- {addon}</div>
-                          ))}
-                      </li>
-                      ))}
-                      {quote.booking.trial && (
-                      <li className="text-sm">
-                          <div className="flex justify-between font-medium">
-                          <span>Bridal Trial: {quote.booking.trial!.date} at {quote.booking.trial!.time}</span>
-                          </div>
-                      </li>
-                      )}
-                      {quote.booking.bridalParty && quote.booking.bridalParty.services.length > 0 && (
-                          <li className="text-sm">
-                              <div className="font-medium pt-2">Bridal Party Services:</div>
-                              {quote.booking.bridalParty.services.map((partySvc, i) => (
-                                  <div key={i} className="text-muted-foreground ml-2">- {partySvc.service} (x{partySvc.quantity})</div>
-                              ))}
-                              {quote.booking.bridalParty.airbrush > 0 && <div className="text-muted-foreground ml-2">- Airbrush Service (x{quote.booking.bridalParty.airbrush})</div>}
-                          </li>
-                      )}
-                  </ul>
-              </div>
-
-              {containsStudioService && (
-                  <div className="mt-6 p-4 border rounded-lg bg-background/50">
-                      <h3 className="font-headline text-xl mb-4">Studio Address</h3>
-                      <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group hover:bg-accent p-2 rounded-md transition-colors inline-block">
-                          <p className='font-medium group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
-                          <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
-                          <div className='flex items-center gap-2 pt-1'>
-                              <MapPin className='w-4 h-4 text-primary'/>
-                              <span className='text-primary font-medium'>View on Google Maps</span>
-                          </div>
-                      </a>
-                  </div>
-              )}
-              
-              <div className="p-4 mt-6">
-                   <h3 className={cn("font-headline text-2xl text-center mb-4", !showLeadArtistOption || !showTeamOption ? "hidden" : "")}>Select Your Artist Tier</h3>
-                   <RadioGroup 
-                      value={selectedTier} 
-                      onValueChange={(val) => setSelectedTier(val as PriceTier)} 
-                      className={cn("grid grid-cols-1 gap-6", showLeadArtistOption && showTeamOption ? "md:grid-cols-2" : "max-w-md mx-auto")}
-                  >
-                      {showLeadArtistOption && (
-                          <QuoteTierCard 
-                          title="Anum - Lead Artist"
-                          icon={<User className="w-8 h-8 text-primary" />}
-                          quote={quote.quotes.lead}
-                          tier="lead"
-                          selectedTier={selectedTier}
-                          onSelect={setSelectedTier}
-                          />
-                      )}
-                      {showTeamOption && (
-                          <QuoteTierCard 
-                          title="Team"
-                          icon={<Users className="w-8 h-8 text-primary" />}
-                          quote={quote.quotes.team}
-                          tier="team"
-                          selectedTier={selectedTier}
-                          onSelect={setSelectedTier}
-                          />
-                      )}
-                  </RadioGroup>
-              </div>
+              <RadioGroup 
+                  value={selectedTier} 
+                  onValueChange={(val) => setSelectedTier(val as PriceTier)} 
+                  className={cn("grid grid-cols-1 gap-6 p-4", showLeadArtistOption && showTeamOption ? "md:grid-cols-2" : "max-w-md mx-auto")}
+              >
+                  {showLeadArtistOption && (
+                      <QuoteTierCard 
+                      title="Anum - Lead Artist"
+                      icon={<User className="w-8 h-8 text-primary" />}
+                      quote={quote.quotes.lead}
+                      tier="lead"
+                      selectedTier={selectedTier}
+                      onSelect={setSelectedTier}
+                      />
+                  )}
+                  {showTeamOption && (
+                      <QuoteTierCard 
+                      title="Team"
+                      icon={<Users className="w-8 h-8 text-primary" />}
+                      quote={quote.quotes.team}
+                      tier="team"
+                      selectedTier={selectedTier}
+                      onSelect={setSelectedTier}
+                      />
+                  )}
+              </RadioGroup>
           </div>
           
           <div className={cn(currentStep !== 'address' && 'hidden')}>
@@ -478,7 +439,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             </div>
           </div>
 
-           {/* Step 3: Contract */}
           <div className={cn('space-y-6 px-6', currentStep !== 'sign-contract' && 'hidden')}>
             <h3 className="font-headline text-2xl text-center">Service Agreement</h3>
             {selectedTier && <ContractDisplay quote={quote} selectedTier={selectedTier} />}
@@ -490,7 +450,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             </div>
           </div>
           
-           {/* Step 4: Payment */}
            <div className={cn('space-y-6 px-6', currentStep !== 'payment' && 'hidden')}>
               <div className="text-center">
                   <h3 className="font-headline text-2xl">Secure Your Booking</h3>
@@ -537,64 +496,52 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           </div>
 
 
-          {/* Final Confirmed State */}
           {bookingConfirmed && (
             <div className="p-6">
-              <div className="p-6 border rounded-lg bg-background/50">
-                <h3 className="font-headline text-2xl text-center mb-4">Your Confirmed Package</h3>
-                <Card className="max-w-md mx-auto">
-                    <CardHeader>
-                      <CardTitle className='text-center'>{quote.selectedQuote === 'lead' ? 'Anum - Lead Artist' : 'Team'}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-1 text-sm">
-                        {(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).lineItems.map((item, index) => (
-                          <li key={index} className="flex justify-between">
-                            <span className={item.description.startsWith('  -') ? 'pl-4 text-muted-foreground' : ''}>{item.description}</span>
-                            <span className="font-medium">${item.price.toFixed(2)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <Separator className="my-2" />
-                        <ul className="space-y-1 text-sm font-medium">
-                          <li className="flex justify-between">
-                              <span className="text-muted-foreground">Subtotal</span>
-                              <span>${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).subtotal.toFixed(2)}</span>
-                          </li>
-                          <li className="flex justify-between">
-                              <span className="text-muted-foreground">GST (13%)</span>
-                              <span>${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).tax.toFixed(2)}</span>
-                          </li>
-                      </ul>
-                    </CardContent>
-                    <CardFooter className="bg-secondary/30 p-4 rounded-b-lg">
-                      <div className="w-full flex justify-between items-baseline">
-                        <span className="text-lg font-bold font-headline">Total</span>
-                        <span className="text-2xl font-bold text-primary">${(quote.selectedQuote ? quote.quotes[quote.selectedQuote] : quote.quotes.lead).total.toFixed(2)}</span>
-                      </div>
-                    </CardFooter>
-                </Card>
-                  {quote.booking.address && (
-                      <div className="mt-6 text-center">
-                        <h4 className="font-headline text-lg mb-2">Service Address</h4>
-                        <div className='text-sm space-y-1 text-muted-foreground'>
-                            <p>{quote.booking.address.street}</p>
-                            <p>{quote.booking.address.city}, {quote.booking.address.province} {quote.booking.address.postalCode}</p>
+                <div className="p-6 border rounded-lg bg-background/50 max-w-md mx-auto">
+                    <h3 className="font-headline text-2xl text-center mb-4">Payment Summary</h3>
+                    {quote.selectedQuote && quote.paymentDetails && (
+                        <div className="space-y-3 text-sm">
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Total Booking Cost:</span>
+                                <span className="font-medium">${quote.quotes[quote.selectedQuote].total.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-green-600">
+                                <span className="text-muted-foreground">50% Deposit Paid:</span>
+                                <span className="font-bold text-green-600">${quote.paymentDetails.depositAmount.toFixed(2)}</span>
+                            </div>
+                            <Separator />
+                            <div className="flex justify-between items-center font-bold text-lg">
+                                <span>Remaining Balance:</span>
+                                <span>${(quote.quotes[quote.selectedQuote].total - quote.paymentDetails.depositAmount).toFixed(2)}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground text-center pt-2">
+                                The remaining balance is due on or before the day of your first service.
+                            </p>
                         </div>
-                    </div>
-                )}
-                  {containsStudioService && (
-                      <div className="mt-6 text-center">
-                        <h4 className="font-headline text-lg mb-2">Studio Address</h4>
-                          <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group">
-                            <p className='font-medium text-foreground group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
-                            <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
-                        </a>
-                    </div>
-                  )}
-              </div>
+                    )}
+
+                    {quote.booking.address && (
+                        <div className="mt-6 pt-4 border-t">
+                            <h4 className="font-headline text-lg mb-2 text-center">Service Address</h4>
+                            <div className='text-sm space-y-1 text-muted-foreground text-center'>
+                                <p>{quote.booking.address.street}</p>
+                                <p>{quote.booking.address.city}, {quote.booking.address.province} {quote.booking.address.postalCode}</p>
+                            </div>
+                        </div>
+                    )}
+                    {containsStudioService && !quote.booking.address && (
+                         <div className="mt-6 pt-4 border-t">
+                            <h4 className="font-headline text-lg mb-2 text-center">Studio Address</h4>
+                            <a href={STUDIO_ADDRESS.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-sm space-y-1 group text-center block">
+                                <p className='font-medium text-foreground group-hover:text-primary transition-colors'>{STUDIO_ADDRESS.street}</p>
+                                <p className='text-muted-foreground'>{STUDIO_ADDRESS.city}, {STUDIO_ADDRESS.province} {STUDIO_ADDRESS.postalCode}</p>
+                            </a>
+                        </div>
+                    )}
+                </div>
             </div>
-          )}
+        )}
         </CardContent>
 
         {!bookingConfirmed && (
