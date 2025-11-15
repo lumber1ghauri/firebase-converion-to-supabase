@@ -8,9 +8,9 @@ interface QuoteEmailTemplateProps {
   baseUrl: string;
 }
 
-// --- Inline CSS Styles for New Design ---
+// --- Inline CSS Styles using the App's Theme Colors ---
 const main = {
-  backgroundColor: '#f5f5f5',
+  backgroundColor: 'hsl(345, 60%, 98%)', // Light Gray/Off-white from --background
   fontFamily: "'Alegreya', 'Helvetica Neue', Helvetica, Arial, sans-serif",
   padding: '20px',
 };
@@ -22,20 +22,21 @@ const container = {
   width: '100%',
   maxWidth: '680px',
   borderRadius: '12px',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+  border: '1px solid hsl(345, 20%, 90%)', // --border
 };
 
 const header = {
   textAlign: 'center' as const,
   paddingBottom: '20px',
-  borderBottom: '1px solid #eeeeee',
+  borderBottom: '1px solid hsl(345, 20%, 90%)', // --border
 };
 
 const heading = {
   fontSize: '42px',
   lineHeight: '1.2',
   fontWeight: 'bold',
-  color: '#673ab7', // Deep Purple
+  color: 'hsl(345, 80%, 50%)', // Deep Purple-Pink from --primary
   margin: '0 0 12px 0',
   fontFamily: "'Belleza', sans-serif",
 };
@@ -43,7 +44,7 @@ const heading = {
 const paragraph = {
   fontSize: '16px',
   lineHeight: '1.7',
-  color: '#5f5f5f',
+  color: 'hsl(240, 10%, 3.9%)', // --foreground
   margin: '0 0 24px 0',
 };
 
@@ -54,14 +55,14 @@ const section = {
 const sectionTitle = {
   fontSize: '28px',
   fontWeight: 'bold',
-  color: '#333333',
+  color: 'hsl(240, 10%, 3.9%)', // --foreground
   marginBottom: '24px',
   fontFamily: "'Belleza', sans-serif",
   textAlign: 'center' as const,
 };
 
 const button = {
-  backgroundColor: '#e91e63', // Rose Pink
+  backgroundColor: 'hsl(345, 80%, 50%)', // --primary
   borderRadius: '8px',
   color: '#ffffff',
   fontSize: '16px',
@@ -70,21 +71,21 @@ const button = {
   textAlign: 'center' as const,
   padding: '18px 32px',
   display: 'inline-block',
-  boxShadow: '0 4px 14px rgba(233, 30, 99, 0.3)',
+  boxShadow: '0 4px 14px rgba(225, 29, 72, 0.25)',
 };
 
 const bookingSummaryCard = {
     padding: '24px',
-    border: '1px solid #e0e0e0',
+    border: '1px solid hsl(345, 20%, 90%)', // --border
     borderRadius: '12px',
-    backgroundColor: '#fafafa',
+    backgroundColor: 'hsl(345, 60%, 98%)', // --background
     marginBottom: '20px',
 }
 
 const bookingSummaryTitle = {
     fontSize: '20px',
     fontWeight: 'bold',
-    color: '#673ab7',
+    color: 'hsl(345, 80%, 50%)', // --primary
     margin: '0 0 4px 0',
     fontFamily: "'Belleza', sans-serif",
 };
@@ -96,7 +97,7 @@ const bookingSummarySubtitle = {
 
 const bookingSummaryDetail = {
     fontSize: '15px',
-    color: '#555',
+    color: 'hsl(240, 10%, 3.9%)', // --foreground
     margin: '12px 0 0 0',
     paddingLeft: '20px',
     position: 'relative' as const,
@@ -105,13 +106,13 @@ const bulletPoint = {
     position: 'absolute' as const,
     left: '0px',
     top: '2px',
-    color: '#e91e63',
+    color: 'hsl(345, 80%, 50%)', // --primary
     fontSize: '12px',
 }
 
 const priceBox = { 
   padding: '24px', 
-  border: '1px solid #e0e0e0', 
+  border: '1px solid hsl(345, 20%, 90%)', // --border
   borderRadius: '12px', 
   marginBottom: '24px', 
   backgroundColor: '#ffffff' 
@@ -123,14 +124,14 @@ const priceTitle = {
   textAlign: 'center' as const,
   marginTop: 0, 
   marginBottom: '24px',
-  color: '#673ab7',
+  color: 'hsl(345, 80%, 50%)', // --primary
 };
 
 const priceItem = {
   display: 'flex',
   justifyContent: 'space-between',
   fontSize: '15px',
-  color: '#495057',
+  color: 'hsl(240, 10%, 3.9%)', // --foreground
   marginBottom: '12px',
 };
 
@@ -139,14 +140,14 @@ const totalRow = {
   justifyContent: 'space-between',
   marginTop: '16px',
   paddingTop: '16px',
-  borderTop: '1px solid #eeeeee',
+  borderTop: '1px solid hsl(345, 20%, 90%)', // --border
 };
 
 const grandTotalRow = {
   ...totalRow,
   marginTop: '12px',
   paddingTop: '12px',
-  borderTop: '2px solid #333333',
+  borderTop: '2px solid hsl(240, 10%, 3.9%)', // --foreground
 };
 
 const footer = {
@@ -176,7 +177,7 @@ const PriceBreakdown = ({ quote, title }: { quote: Quote; title: string }) => (
     </div>
     <div style={grandTotalRow}>
       <span style={{ fontSize: '18px', fontWeight: 700 }}>Grand Total</span>
-      <span style={{ fontSize: '24px', fontWeight: 700, color: '#e91e63' }}>${quote.total.toFixed(2)}</span>
+      <span style={{ fontSize: '24px', fontWeight: 700, color: 'hsl(345, 80%, 50%)' }}>${quote.total.toFixed(2)}</span>
     </div>
   </div>
 );
@@ -211,7 +212,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
                     Complete Your Booking
                 </a>
                 <p style={{ fontSize: '14px', color: '#777', marginTop: '16px' }}>
-                    Use Booking ID: <strong style={{color: '#333'}}>{quote.id}</strong>
+                    Use Booking ID: <strong style={{color: 'hsl(240, 10%, 3.9%)'}}>{quote.id}</strong>
                 </p>
             </div>
           )}
@@ -224,12 +225,12 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
             <div key={index} style={bookingSummaryCard}>
               <p style={bookingSummaryTitle}>Day {index + 1}: {day.serviceName}</p>
               <p style={bookingSummarySubtitle}>{day.date} at {day.getReadyTime}</p>
-              <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '16px 0' }} />
+              <hr style={{ border: 'none', borderTop: '1px solid hsl(345, 20%, 92%)', margin: '16px 0' }} />
               <p style={bookingSummaryDetail}><span style={bulletPoint}>&#9679;</span> Style: {day.serviceOption}</p>
               <p style={bookingSummaryDetail}><span style={bulletPoint}>&#9679;</span> Location: {day.location}</p>
               {day.addOns.length > 0 && 
                   <div style={{ ...bookingSummaryDetail, marginTop: '16px' }}>
-                      <p style={{ margin: 0, fontWeight: 'bold', color: '#333' }}>Add-ons:</p>
+                      <p style={{ margin: 0, fontWeight: 'bold', color: 'hsl(240, 10%, 3.9%)' }}>Add-ons:</p>
                       <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px', listStyleType: "'— '" }}>
                            {day.addOns.map((addon, i) => <li key={i} style={{ marginBottom: '4px' }}>{addon}</li>)}
                       </ul>
@@ -248,7 +249,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
           {quote.booking.bridalParty && quote.booking.bridalParty.services.length > 0 && (
             <div style={bookingSummaryCard}>
               <p style={bookingSummaryTitle}>Bridal Party Services</p>
-               <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '16px 0' }} />
+               <hr style={{ border: 'none', borderTop: '1px solid hsl(345, 20%, 92%)', margin: '16px 0' }} />
               {quote.booking.bridalParty.services.map((partySvc, i) => (
                 <p key={i} style={bookingSummaryDetail}><span style={bulletPoint}>&#9679;</span> {partySvc.service} (x{partySvc.quantity})</p>
               ))}
@@ -259,7 +260,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
           {quote.booking.address && (
             <div style={bookingSummaryCard}>
               <p style={bookingSummaryTitle}>Service Address</p>
-               <hr style={{ border: 'none', borderTop: '1px solid #eee', margin: '16px 0' }} />
+               <hr style={{ border: 'none', borderTop: '1px solid hsl(345, 20%, 92%)', margin: '16px 0' }} />
               <p style={{...paragraph, margin: 0, fontStyle: 'italic' }}>
                 {quote.booking.address.street},<br/>
                 {quote.booking.address.city}, {quote.booking.address.province}, {quote.booking.address.postalCode}
@@ -297,5 +298,3 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
 }
 
 export default QuoteEmailTemplate;
-
-    

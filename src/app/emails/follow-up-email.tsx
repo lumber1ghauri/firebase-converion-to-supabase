@@ -7,9 +7,9 @@ interface FollowUpEmailProps {
   baseUrl: string;
 }
 
-// --- Inline CSS Styles for New Design ---
+// --- Inline CSS Styles using App's Theme Colors ---
 const main = {
-  backgroundColor: '#f5f5f5',
+  backgroundColor: 'hsl(345, 60%, 98%)', // --background
   fontFamily: "'Alegreya', 'Helvetica Neue', Helvetica, Arial, sans-serif",
   padding: '20px',
 };
@@ -21,20 +21,21 @@ const container = {
   width: '100%',
   maxWidth: '680px',
   borderRadius: '12px',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+  border: '1px solid hsl(345, 20%, 90%)', // --border
 };
 
 const header = {
   textAlign: 'center' as const,
   paddingBottom: '20px',
-  borderBottom: '1px solid #eeeeee',
+  borderBottom: '1px solid hsl(345, 20%, 90%)', // --border
 };
 
 const heading = {
   fontSize: '42px',
   lineHeight: '1.2',
   fontWeight: 'bold',
-  color: '#673ab7', // Deep Purple
+  color: 'hsl(345, 80%, 50%)', // --primary
   margin: '0 0 12px 0',
   fontFamily: "'Belleza', sans-serif",
 };
@@ -42,7 +43,7 @@ const heading = {
 const paragraph = {
   fontSize: '16px',
   lineHeight: '1.7',
-  color: '#5f5f5f',
+  color: 'hsl(240, 10%, 3.9%)', // --foreground
   margin: '0 0 24px 0',
 };
 
@@ -53,15 +54,15 @@ const section = {
 const sectionTitle = {
   fontSize: '28px',
   fontWeight: 'bold',
-  color: '#333333',
+  color: 'hsl(240, 10%, 3.9%)', // --foreground
   marginBottom: '24px',
   fontFamily: "'Belleza', sans-serif",
   textAlign: 'center' as const,
 };
 
 const instructionBox = {
-    background: '#fdf4f6',
-    border: '1px solid #fde1e5',
+    background: 'hsl(345, 60%, 94%)', // --accent
+    border: '1px solid hsl(345, 20%, 90%)', // --border
     borderRadius: '12px',
     padding: '30px',
     textAlign: 'center' as const,
@@ -69,7 +70,7 @@ const instructionBox = {
 };
 
 const button = {
-  backgroundColor: '#e91e63', // Rose Pink
+  backgroundColor: 'hsl(345, 80%, 50%)', // --primary
   borderRadius: '8px',
   color: '#ffffff',
   fontSize: '16px',
@@ -78,7 +79,7 @@ const button = {
   textAlign: 'center' as const,
   padding: '18px 32px',
   display: 'inline-block',
-  boxShadow: '0 4px 14px rgba(233, 30, 99, 0.3)',
+  boxShadow: '0 4px 14px rgba(225, 29, 72, 0.25)',
 };
 
 const footer = {
@@ -90,24 +91,19 @@ const footer = {
 
 const bookingSummaryCard = {
     padding: '24px',
-    border: '1px solid #e0e0e0',
+    border: '1px solid hsl(345, 20%, 90%)', // --border
     borderRadius: '12px',
-    backgroundColor: '#fafafa',
+    backgroundColor: '#ffffff',
     marginBottom: '20px',
 }
 
 const bookingSummaryTitle = {
     fontSize: '20px',
     fontWeight: 'bold',
-    color: '#673ab7',
+    color: 'hsl(345, 80%, 50%)', // --primary
     margin: '0 0 4px 0',
     fontFamily: "'Belleza', sans-serif",
 };
-const bookingSummarySubtitle = {
-    fontSize: '16px',
-    color: '#777',
-    margin: '0 0 16px 0',
-}
 
 const FollowUpEmailTemplate: React.FC<Readonly<FollowUpEmailProps>> = ({ quote, baseUrl }) => (
   <div style={main}>
@@ -124,19 +120,19 @@ const FollowUpEmailTemplate: React.FC<Readonly<FollowUpEmailProps>> = ({ quote, 
         <p style={paragraph}>
           We noticed you recently requested a quote for our makeup services but haven't confirmed your booking yet. We'd love to help you look and feel your absolute best for your event!
         </p>
-         <p style={{...paragraph, fontStyle: 'italic', color: '#333'}}>
+         <p style={{...paragraph, fontStyle: 'italic', color: 'hsl(240, 5.9%, 10%)' }}>
           Slots fill up quickly, especially around peak season. Confirming soon will ensure your preferred date and time are locked in.
         </p>
         
         <div style={instructionBox}>
-            <p style={{ ...paragraph, marginTop: 0, marginBottom: '24px', color: '#7c2d3a', fontSize: '18px' }}>
+            <p style={{ ...paragraph, marginTop: 0, marginBottom: '24px', color: 'hsl(240, 5.9%, 10%)', fontSize: '18px' }}>
               Ready to secure your spot?
             </p>
             <a href={baseUrl} target="_blank" rel="noopener noreferrer" style={button}>
                 Complete Your Booking
             </a>
             <p style={{ fontSize: '14px', color: '#777', marginTop: '16px' }}>
-                Use Booking ID: <strong style={{color: '#333'}}>{quote.id}</strong>
+                Use Booking ID: <strong style={{color: 'hsl(240, 10%, 3.9%)'}}>{quote.id}</strong>
             </p>
         </div>
       </div>
@@ -150,7 +146,7 @@ const FollowUpEmailTemplate: React.FC<Readonly<FollowUpEmailProps>> = ({ quote, 
             </h3>
             {quote.booking.days.map((day, index) => (
               <div key={index} style={{ marginBottom: '16px', borderTop: index > 0 ? '1px solid #eee' : 'none', paddingTop: index > 0 ? '16px' : '0' }}>
-                <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: '#333', fontSize: '16px' }}>
+                <p style={{ margin: '0 0 4px 0', fontWeight: 'bold', color: 'hsl(240, 10%, 3.9%)', fontSize: '16px' }}>
                   {day.serviceName} on {day.date}
                 </p>
                 <p style={{ margin: 0, paddingLeft: '15px', color: '#555' }}>
@@ -178,5 +174,3 @@ const FollowUpEmailTemplate: React.FC<Readonly<FollowUpEmailProps>> = ({ quote, 
 );
 
 export default FollowUpEmailTemplate;
-
-    
