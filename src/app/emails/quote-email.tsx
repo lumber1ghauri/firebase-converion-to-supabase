@@ -275,7 +275,7 @@ const QuoteEmailTemplate: React.FC<Readonly<QuoteEmailTemplateProps>> = ({ quote
            ) : (
             <>
               <p style={{...paragraph, textAlign: 'center', marginTop: '-20px', paddingBottom: '20px' }}>Below are the two pricing options available for your selected services. You can choose your preferred tier when confirming your booking.</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{display: 'block'}}>
                 <PriceBreakdown quote={quote.quotes.lead} title="Option 1: Anum - Lead Artist"/>
                 <PriceBreakdown quote={quote.quotes.team} title="Option 2: Team Artist"/>
               </div>
