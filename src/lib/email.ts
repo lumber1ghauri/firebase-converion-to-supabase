@@ -10,7 +10,6 @@ import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-emai
 
 
 const getBaseUrl = () => {
-    // This is the correct, publicly accessible URL for your development environment.
     return process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3001' 
         : 'https://6000-firebase-sellaya-lba-02-1763106036425.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev';
@@ -127,7 +126,7 @@ export async function sendAdminScreenshotNotification(quote: FinalQuote) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `Looks by Anum Admin <${fromEmail}>`,
+      from: `GlamBook Pro Admin <${fromEmail}>`,
       to: [adminEmail],
       subject: `[ACTION REQUIRED] E-Transfer Submitted for Booking #${quote.id}`,
       react: AdminNotificationEmailTemplate({ quote, baseUrl }),
@@ -146,3 +145,5 @@ export async function sendAdminScreenshotNotification(quote: FinalQuote) {
     throw error;
   }
 }
+
+    

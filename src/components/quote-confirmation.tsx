@@ -228,7 +228,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         toast({
             title: 'Booking Submitted!',
             description: paymentMethod === 'interac'
-                ? 'Your booking is pending approval. You will receive a confirmation email once the payment is verified.'
+                ? 'Your booking is pending approval. You will receive a confirmation email once your payment is verified.'
                 : 'Your booking is confirmed! You will receive a confirmation email shortly.',
         });
 
@@ -606,3 +606,5 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
+
+    

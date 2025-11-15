@@ -1,3 +1,4 @@
+
 'use client';
 import {
   doc,
@@ -29,7 +30,7 @@ export async function saveBookingClient(
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
-    // Use JSON stringify/parse to deep-clone and remove any undefined values
+    // Create a deep clone to avoid modifying the original object
     const bookingData = JSON.parse(JSON.stringify(booking));
 
     const dataToSave: any = {
@@ -38,18 +39,16 @@ export async function saveBookingClient(
     };
 
     // If the booking doesn't have a createdAt field yet, add it.
+    // This is crucial for new bookings being finalized.
     if (!booking.createdAt) {
         dataToSave.createdAt = serverTimestamp();
     }
 
 
     try {
-        // Await the operation and let the calling function handle the UI response.
         await setDoc(bookingRef, dataToSave, { merge: true });
     } catch (error: any) {
         console.error("Error saving booking client-side:", error);
-        // We throw the error here so the calling UI component can catch it
-        // and display a specific message to the user.
         errorEmitter.emit(
             'permission-error',
             new FirestorePermissionError({
@@ -166,3 +165,5 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string, use
         throw new Error(`Failed to upload screenshot: ${error.message} (Code: ${error.code})`);
     }
 }
+
+    
