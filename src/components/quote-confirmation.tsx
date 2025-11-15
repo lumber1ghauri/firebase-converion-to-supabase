@@ -156,6 +156,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           id: updatedQuote.id,
           uid: user.uid,
           finalQuote: updatedQuote,
+          createdAt: quote.createdAt,
       };
 
       try {
@@ -189,15 +190,20 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
     try {
         if (paymentMethod === 'stripe') {
-            const res = await fetch('/api/stripe/create-checkout-session', {
+            const res = await fetch('/api/stripe/create-checkout-session/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ bookingId: quote.id, tier: selectedTier }),
             });
 
             if (!res.ok) {
-                const { error } = await res.json();
-                throw new Error(error || 'Failed to create Stripe session.');
+                const errorText = await res.text();
+                try {
+                    const { error } = JSON.parse(errorText);
+                    throw new Error(error || 'Failed to create Stripe session.');
+                } catch (e) {
+                    throw new Error('Failed to create Stripe session. The server returned an invalid error format.');
+                }
             }
 
             const { sessionId } = await res.json();
@@ -208,11 +214,9 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                     throw new Error(error.message);
                 }
             }
-            // User is redirected to Stripe, no further action here.
             return;
         }
 
-        // --- Handle Interac e-Transfer ---
         let screenshotUrl = '';
         if (paymentMethod === 'interac' && screenshotFile) {
             screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
@@ -241,7 +245,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         await saveBookingClient(firestore, bookingDoc);
         await sendAdminScreenshotNotificationAction(updatedQuote.id);
 
-        // For Interac, we just show a pending message, not the full confirmed state yet
         setQuote(updatedQuote);
         toast({
             title: 'Booking Submitted!',
@@ -541,7 +544,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                     )}
                 </div>
             </div>
-        )}
+          )}
         </CardContent>
 
         {!bookingConfirmed && (
@@ -553,5 +556,3 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
-
-    
