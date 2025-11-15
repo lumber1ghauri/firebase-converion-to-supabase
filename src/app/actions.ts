@@ -70,6 +70,33 @@ function parseBridalPartyServicesFromFormData(formData: FormData): BridalPartySe
 
 type PriceTier = 'lead' | 'team';
 
+function getPrice(serviceId: string, option: ServiceOption, tier: PriceTier): number {
+    const service = SERVICES.find(s => s.id === serviceId);
+    if (!service) return 0;
+
+    let basePrice = service.basePrice[tier];
+    let price = basePrice; // Default to full price
+
+    const serviceOptionDetails = SERVICE_OPTION_DETAILS[option];
+
+    if (service.askServiceType) {
+        if (tier === 'team' && serviceOptionDetails.teamPriceModifier) {
+            price = basePrice * serviceOptionDetails.teamPriceModifier;
+        } else {
+            price = basePrice * serviceOptionDetails.priceModifier;
+        }
+
+        // Special override for party/photoshoot for team
+        if (tier === 'team' && (serviceId === 'party' || serviceId === 'photoshoot')) {
+            if (option === 'makeup-only') return 110;
+            if (option === 'hair-only') return 110;
+        }
+    }
+    
+    return Math.round(price);
+}
+
+
 const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalTrial: BridalTrial, bridalParty: BridalPartyServices): Quote => {
     const lineItems: { description: string; price: number }[] = [];
     let subtotal = 0;
@@ -77,17 +104,13 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
     days.forEach((day, index) => {
         const service = SERVICES.find((s) => s.id === day.serviceId);
         if (service && day.date && day.getReadyTime) {
-          const serviceOption = service.askServiceType && day.serviceOption ? SERVICE_OPTION_DETAILS[day.serviceOption] : SERVICE_OPTION_DETAILS['makeup-hair'];
+          const serviceOption = service.askServiceType && day.serviceOption ? day.serviceOption : 'makeup-hair';
+          const serviceOptionLabel = SERVICE_OPTION_DETAILS[serviceOption].label;
           
-          let priceModifier = serviceOption.priceModifier;
-          if (tier === 'team' && serviceOption.teamPriceModifier) {
-              priceModifier = serviceOption.teamPriceModifier;
-          }
-          
-          let price = service.basePrice[tier] * (service.askServiceType ? priceModifier : 1);
+          let price = getPrice(service.id, serviceOption, tier);
           
           lineItems.push({
-            description: `Day ${index + 1}: ${service.name} (${service.askServiceType ? serviceOption.label : 'Standard'})`,
+            description: `Day ${index + 1}: ${service.name} (${service.askServiceType ? serviceOptionLabel : 'Standard'})`,
             price: price,
           });
           subtotal += price;
@@ -122,11 +145,8 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
     });
 
     if (bridalTrial.addTrial) {
-        // Use a different price logic for bridal trial based on service options if needed
-        const trialServiceOption = bridalTrial.date ? SERVICE_OPTION_DETAILS['makeup-hair'] : undefined; // Example logic, adjust as needed
-        const trialPrice = ADDON_PRICES.bridalTrial[tier];
-        lineItems.push({ description: 'Bridal Trial', price: trialPrice });
-        subtotal += trialPrice;
+        lineItems.push({ description: 'Bridal Trial', price: ADDON_PRICES.bridalTrial[tier] });
+        subtotal += ADDON_PRICES.bridalTrial[tier];
     }
     
     if (bridalParty.addServices) {
