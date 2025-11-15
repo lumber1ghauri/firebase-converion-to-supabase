@@ -1,10 +1,12 @@
+
 [
   {
     "origin": [
       "http://localhost:3000",
       "http://localhost:3001",
-      "https://6000-firebase-studio-1762452668457.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev",
-      "https://6000-firebase-sellaya-lba-02-1763106036425.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev"
+      "https://studio.firebase.google.com",
+      "https://6000-firebase-sellaya-lba-02-1763106036425.cluster-fo5feun3fzf2etidpi3ckpp6te.cloudworkstations.dev",
+      "https://studio--sellaya-lba-02-52991340-1d0a3.us-central1.hosted.app"
     ],
     "method": [
       "GET",
