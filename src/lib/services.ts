@@ -27,7 +27,7 @@ export const SERVICES: Service[] = [
     id: "party",
     name: "Party Glam",
     description: "A glamorous look for any party or night out.",
-    basePrice: { lead: 200, team: 150 },
+    basePrice: { lead: 250, team: 150 },
     duration: 75,
     icon: PartyPopper,
     askServiceType: true,
@@ -39,7 +39,7 @@ export const SERVICES: Service[] = [
     basePrice: { lead: 250, team: 200 },
     duration: 90,
     icon: Camera,
-    askServiceType: false, // This service might be makeup only by default
+    askServiceType: true,
   },
 ];
 
@@ -92,19 +92,19 @@ export type MOBILE_LOCATION_IDS = keyof typeof MOBILE_LOCATION_OPTIONS;
 
 
 export const ADDON_PRICES = {
-    hairExtension: { lead: 25, team: 20 },
-    jewellerySetting: { lead: 20, team: 15 },
+    hairExtension: { lead: 30, team: 20 },
+    jewellerySetting: { lead: 50, team: 15 },
     sareeDraping: { lead: 30, team: 25 },
     hijabSetting: { lead: 30, team: 25 },
-    bridalTrial: { lead: 150, team: 100 },
+    bridalTrial: { lead: 250, team: 100 },
 };
 
 export const BRIDAL_PARTY_PRICES = {
     hairAndMakeup: { lead: 200, team: 180 },
-    makeupOnly: { lead: 120, team: 100 },
-    hairOnly: { lead: 120, team: 100 },
+    makeupOnly: { lead: 100, team: 100 },
+    hairOnly: { lead: 100, team: 100 },
     dupattaSetting: { lead: 20, team: 15 },
-    hairExtensionInstallation: { lead: 25, team: 20 },
+    hairExtensionInstallation: { lead: 20, team: 20 },
     partySareeDraping: { lead: 30, team: 25 },
     partyHijabSetting: { lead: 30, team: 25 },
     airbrush: { lead: 60, team: 50 },

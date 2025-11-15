@@ -6,8 +6,8 @@ export type ServiceOption = 'makeup-hair' | 'makeup-only' | 'hair-only';
 
 export const SERVICE_OPTION_DETAILS: Record<ServiceOption, { label: string; priceModifier: number }> = {
     'makeup-hair': { label: 'Makeup & Hair', priceModifier: 1 },
-    'makeup-only': { label: 'Makeup Only', priceModifier: 0.8 },
-    'hair-only': { label: 'Hair Only', priceModifier: 0.5 },
+    'makeup-only': { label: 'Makeup Only', priceModifier: 0.61 }, // For Bridal: 450 * 0.61 = ~275. For Party: 250 * 0.56 = 140
+    'hair-only': { label: 'Hair Only', priceModifier: 0.44 }, // For Bridal: 450 * 0.44 = ~200. For Party: 250 * 0.52 = 130
 };
 
 export type PriceTier = 'lead' | 'team';
