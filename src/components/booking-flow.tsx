@@ -162,8 +162,6 @@ export default function BookingFlow() {
           id: quote.id, 
           uid: user.uid, 
           finalQuote: quote,
-          contact: quote.contact,
-          phone: quote.contact.phone,
           createdAt: new Date(),
       }).then(() => {
           router.push(`/book/${quote.id}`);
@@ -737,3 +735,5 @@ function SubmitButton() {
         </Button>
     )
 }
+
+    
