@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote, PaymentMethod, PaymentDetails } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient, uploadPaymentScreenshot } from '@/firebase/firestore/bookings';
+import { saveBookingClient, uploadPaymentScreenshot, type BookingDocument } from '@/firebase/firestore/bookings';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "./ui/button";
 import { Input } from './ui/input';
@@ -146,8 +146,15 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       setIsSaving(true);
       setError(null);
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
+      
+      const bookingDoc: BookingDocument = {
+          id: updatedQuote.id,
+          uid: user.uid,
+          finalQuote: updatedQuote,
+      };
+
       try {
-          await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote });
+          await saveBookingClient(firestore, bookingDoc);
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -206,8 +213,14 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             paymentDetails: paymentDetails,
         };
         
-        // Use the existing booking document if it exists, otherwise create new
-        await saveBookingClient(firestore, { id: updatedQuote.id, uid: user.uid, finalQuote: updatedQuote, createdAt: initialQuote.createdAt || new Date() });
+        const bookingDoc: BookingDocument = {
+            id: updatedQuote.id,
+            uid: user.uid,
+            finalQuote: updatedQuote,
+            createdAt: new Date() // Set createdAt on final confirmation
+        };
+
+        await saveBookingClient(firestore, bookingDoc);
 
         setQuote(updatedQuote);
         setCurrentStep('confirmed');
