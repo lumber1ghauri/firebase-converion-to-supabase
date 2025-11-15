@@ -26,14 +26,14 @@ export type BookingDocument = {
 // Client-side saveBooking for UI interactions like the admin panel or user-side updates
 export async function saveBookingClient(
     firestore: Firestore,
-    booking: BookingDocument
+    booking: Partial<BookingDocument> & { id: string }
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
     // Use JSON stringify/parse to deep-clone and remove any undefined values
     const bookingData = JSON.parse(JSON.stringify(booking));
 
-    const dataToSave: any = {
+    const dataToSave = {
         ...bookingData,
         updatedAt: serverTimestamp(),
     };
@@ -164,3 +164,5 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string, use
         throw new Error(`Upload failed: ${error.code} - ${error.message}`);
     }
 }
+
+    

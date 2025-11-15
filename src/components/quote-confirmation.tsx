@@ -156,11 +156,11 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           id: updatedQuote.id,
           uid: user.uid,
           finalQuote: updatedQuote,
-          createdAt: quote.createdAt,
+          createdAt: initialQuote.createdAt, // Pass original createdAt timestamp
       };
 
       try {
-          await saveBookingClient(firestore, bookingDoc as BookingDocument);
+          await saveBookingClient(firestore, bookingDoc);
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -202,6 +202,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
                     const { error } = JSON.parse(errorText);
                     throw new Error(error || 'Failed to create Stripe session.');
                 } catch (e) {
+                     console.error("Stripe API route failed:", errorText);
                     throw new Error('Failed to create Stripe session. The server returned an invalid error format.');
                 }
             }
@@ -239,7 +240,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             id: updatedQuote.id,
             uid: user.uid,
             finalQuote: updatedQuote,
-            createdAt: quote.createdAt || new Date()
+            createdAt: initialQuote.createdAt || new Date()
         };
 
         await saveBookingClient(firestore, bookingDoc);
@@ -556,3 +557,5 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
+
+    
