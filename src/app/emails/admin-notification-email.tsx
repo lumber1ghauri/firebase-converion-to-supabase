@@ -131,7 +131,7 @@ const AdminNotificationEmailTemplate: React.FC<Readonly<AdminNotificationEmailPr
       </p>
       
       <div style={footer}>
-        <p>This is an automated notification from the GlamBook Pro system.</p>
+        <p>This is an automated notification from the Looks by Anum system.</p>
         <p>Powered by <a href="https://www.instagram.com/sellayadigital" target="_blank" rel="noopener noreferrer" style={{color: '#999', textDecoration: 'underline'}}>Sellaya</a>.</p>
       </div>
     </div>

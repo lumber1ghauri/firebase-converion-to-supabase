@@ -125,7 +125,7 @@ export async function sendAdminScreenshotNotification(quote: FinalQuote) {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: `GlamBook Pro Admin <${fromEmail}>`,
+      from: `Looks by Anum Admin <${fromEmail}>`,
       to: [adminEmail],
       subject: `[ACTION REQUIRED] E-Transfer Submitted for Booking #${quote.id}`,
       react: AdminNotificationEmailTemplate({ quote, baseUrl }),
