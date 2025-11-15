@@ -32,11 +32,18 @@ export async function saveBookingClient(
     // Use JSON stringify/parse to deep-clone and remove any undefined values
     const bookingData = JSON.parse(JSON.stringify(booking.finalQuote));
 
-    const dataToSave = {
+    const dataToSave: any = {
         ...booking,
         finalQuote: bookingData,
         updatedAt: serverTimestamp(),
     };
+
+    // If the booking doesn't have a createdAt field yet, add it.
+    // This is crucial for the first time a client confirms, as it's a creation event.
+    if (!booking.createdAt) {
+        dataToSave.createdAt = serverTimestamp();
+    }
+
 
     try {
         // Await the operation and let the calling function handle the UI response.

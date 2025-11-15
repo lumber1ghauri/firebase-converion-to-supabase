@@ -215,6 +215,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         }
 
     } catch (err: any) {
+        console.error("Failed to finalize booking:", err);
         setError(err.message || 'Failed to finalize booking. Please check your connection or permissions.');
         toast({ variant: 'destructive', title: 'Finalization Failed', description: err.message });
     } finally {
@@ -273,7 +274,8 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       
       return (
           <Button type="button" size="lg" className="w-full font-bold text-lg" disabled={disabled || isSaving} onClick={action}>
-              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : text}
+              {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+              {text}
               {!isSaving && text !== `Confirm & Pay $${depositAmount.toFixed(2)}` && <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
       );
