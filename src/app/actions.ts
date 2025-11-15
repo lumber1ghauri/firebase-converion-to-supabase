@@ -1,3 +1,4 @@
+
 'use server';
 import 'dotenv/config';
 import { z } from 'zod';
@@ -77,7 +78,13 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
         const service = SERVICES.find((s) => s.id === day.serviceId);
         if (service && day.date && day.getReadyTime) {
           const serviceOption = service.askServiceType && day.serviceOption ? SERVICE_OPTION_DETAILS[day.serviceOption] : SERVICE_OPTION_DETAILS['makeup-hair'];
-          let price = service.basePrice[tier] * (service.askServiceType ? serviceOption.priceModifier : 1);
+          
+          let priceModifier = serviceOption.priceModifier;
+          if (tier === 'team' && serviceOption.teamPriceModifier) {
+              priceModifier = serviceOption.teamPriceModifier;
+          }
+          
+          let price = service.basePrice[tier] * (service.askServiceType ? priceModifier : 1);
           
           lineItems.push({
             description: `Day ${index + 1}: ${service.name} (${service.askServiceType ? serviceOption.label : 'Standard'})`,
@@ -115,8 +122,11 @@ const calculateQuoteForTier = (tier: PriceTier, days: Omit<Day, 'id'>[], bridalT
     });
 
     if (bridalTrial.addTrial) {
-        lineItems.push({ description: 'Bridal Trial', price: ADDON_PRICES.bridalTrial[tier] });
-        subtotal += ADDON_PRICES.bridalTrial[tier];
+        // Use a different price logic for bridal trial based on service options if needed
+        const trialServiceOption = bridalTrial.date ? SERVICE_OPTION_DETAILS['makeup-hair'] : undefined; // Example logic, adjust as needed
+        const trialPrice = ADDON_PRICES.bridalTrial[tier];
+        lineItems.push({ description: 'Bridal Trial', price: trialPrice });
+        subtotal += trialPrice;
     }
     
     if (bridalParty.addServices) {

@@ -4,10 +4,10 @@ import { MOBILE_LOCATION_OPTIONS } from "./services";
 
 export type ServiceOption = 'makeup-hair' | 'makeup-only' | 'hair-only';
 
-export const SERVICE_OPTION_DETAILS: Record<ServiceOption, { label: string; priceModifier: number }> = {
-    'makeup-hair': { label: 'Makeup & Hair', priceModifier: 1 },
-    'makeup-only': { label: 'Makeup Only', priceModifier: 0.61 }, // For Bridal: 450 * 0.61 = ~275. For Party: 250 * 0.56 = 140
-    'hair-only': { label: 'Hair Only', priceModifier: 0.44 }, // For Bridal: 450 * 0.44 = ~200. For Party: 250 * 0.52 = 130
+export const SERVICE_OPTION_DETAILS: Record<ServiceOption, { label: string; priceModifier: number; teamPriceModifier?: number }> = {
+    'makeup-hair': { label: 'Makeup & Hair', priceModifier: 1, teamPriceModifier: 1 },
+    'makeup-only': { label: 'Makeup Only', priceModifier: 0.61, teamPriceModifier: 0.611 }, // For Bridal Team: 360 * 0.611 = ~220
+    'hair-only': { label: 'Hair Only', priceModifier: 0.44, teamPriceModifier: 0.444 }, // For Bridal Team: 360 * 0.444 = ~160
 };
 
 export type PriceTier = 'lead' | 'team';

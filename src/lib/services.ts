@@ -9,7 +9,7 @@ export const SERVICES: Service[] = [
     id: "bridal",
     name: "Bridal Makeup",
     description: "Look your absolute best on your special day.",
-    basePrice: { lead: 450, team: 350 },
+    basePrice: { lead: 450, team: 360 },
     duration: 120,
     icon: Gem,
     askServiceType: true,
@@ -92,18 +92,18 @@ export type MOBILE_LOCATION_IDS = keyof typeof MOBILE_LOCATION_OPTIONS;
 
 
 export const ADDON_PRICES = {
-    hairExtension: { lead: 30, team: 20 },
-    jewellerySetting: { lead: 50, team: 15 },
+    hairExtension: { lead: 30, team: 30 },
+    jewellerySetting: { lead: 50, team: 50 },
     sareeDraping: { lead: 30, team: 25 },
     hijabSetting: { lead: 30, team: 25 },
-    bridalTrial: { lead: 250, team: 100 },
+    bridalTrial: { lead: 250, team: 200 },
 };
 
 export const BRIDAL_PARTY_PRICES = {
-    hairAndMakeup: { lead: 200, team: 180 },
+    hairAndMakeup: { lead: 200, team: 200 },
     makeupOnly: { lead: 100, team: 100 },
     hairOnly: { lead: 100, team: 100 },
-    dupattaSetting: { lead: 20, team: 15 },
+    dupattaSetting: { lead: 20, team: 20 },
     hairExtensionInstallation: { lead: 20, team: 20 },
     partySareeDraping: { lead: 30, team: 25 },
     partyHijabSetting: { lead: 30, team: 25 },
