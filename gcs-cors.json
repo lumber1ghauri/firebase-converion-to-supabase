@@ -16,12 +16,12 @@
       "HEAD",
       "OPTIONS"
     ],
-    "maxAgeSeconds": 3600,
     "responseHeader": [
       "Content-Type",
       "Authorization",
       "Content-Length",
       "x-goog-resumable"
-    ]
+    ],
+    "maxAgeSeconds": 3600
   }
 ]
