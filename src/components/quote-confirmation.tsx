@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -6,17 +7,17 @@ import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Bank
 import type { FinalQuote, PriceTier, Quote, PaymentMethod, PaymentDetails } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
 import { saveBookingClient, uploadPaymentScreenshot, type BookingDocument } from '@/firebase/firestore/bookings';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "./ui/button";
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { STUDIO_ADDRESS } from '@/lib/services';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { Separator } from './ui/separator';
-import { ContractDisplay } from './contract-display';
-import { Checkbox } from './ui/checkbox';
+import { Separator } from '@/ui/separator';
+import { ContractDisplay } from '@/components/contract-display';
+import { Checkbox } from '@/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { sendAdminScreenshotNotificationAction } from '@/app/admin/actions';
 import { loadStripe } from '@stripe/stripe-js';

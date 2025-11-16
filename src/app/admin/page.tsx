@@ -1,18 +1,19 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useCollection } from '@/firebase';
 import type { BookingDocument } from '@/firebase/firestore/bookings';
 import type { PaymentStatus } from '@/lib/types';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/ui/badge';
+import { Button } from '@/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/dialog';
 import { Loader2, AlertTriangle, Eye, Search, CalendarClock, User, Users } from 'lucide-react';
 import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/ui/input';
 import type { FinalQuote } from '@/lib/types';
 
 function getPaymentStatus(status: PaymentStatus | undefined): { text: string; variant: 'secondary' | 'destructive' | 'success' } {

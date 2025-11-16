@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -7,7 +8,7 @@ import { saveBookingClient, getBookingClient } from '@/firebase/firestore/bookin
 import { Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/ui/button';
 import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
 export default function StripeSuccessPage() {

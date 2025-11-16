@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 export default function StripeCancelPage() {

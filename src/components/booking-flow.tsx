@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect, useRef } from 'react';
@@ -15,19 +16,19 @@ import type { MOBILE_LOCATION_IDS } from '@/lib/services';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBookingAndSendEmail } from '@/firebase/firestore/bookings';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
+import { Calendar } from '@/ui/calendar';
+import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Switch } from '@/ui/switch';
+import { Separator } from '@/ui/separator';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Progress } from './ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import { Progress } from '@/ui/progress';
 
 
 const initialState: ActionState = {

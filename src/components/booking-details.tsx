@@ -1,20 +1,21 @@
+
 'use client';
 
 import type { FinalQuote, PriceTier, PaymentDetails } from '@/lib/types';
 import { STUDIO_ADDRESS } from '@/lib/services';
-import { Separator } from './ui/separator';
-import { Badge } from './ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Separator } from '@/ui/separator';
+import { Badge } from '@/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { User, Users, MapPin, CalendarClock, Link as LinkIcon, MessageSquare, Loader2, Mail, Trash2, Send } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
-import { Button } from './ui/button';
+import { Button } from '@/ui/button';
 import { useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser } from '@/firebase';
 import { saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
 import { sendConfirmationEmailAction, sendFollowUpEmailAction } from '@/app/admin/actions';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/ui/alert-dialog"
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
