@@ -9,13 +9,17 @@ import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-emai
 
 
 const getBaseUrl = () => {
+    // Use environment variable if set, otherwise fallback to localhost
+    if (process.env.NEXT_PUBLIC_APP_URL) {
+        return process.env.NEXT_PUBLIC_APP_URL;
+    }
     return process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3001' 
+        ? 'http://localhost:3000' 
         : `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.web.app`;
 }
 
 const getResend = () => {
-    const apiKey = "re_X5Wi633i_BLckUhMy5CEeeR5crnfga97H";
+    const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey || apiKey.startsWith('re_') === false || apiKey.length < 20) {
         console.error('A valid Resend API key is not configured. Email functionality is disabled.');
         // Return null to indicate that Resend is not configured.
