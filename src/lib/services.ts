@@ -1,5 +1,4 @@
-
-import { Camera, Gem, PartyPopper, Sparkles, MapPin } from "lucide-react";
+import { Camera, Gem, PartyPopper, Sparkles } from "lucide-react";
 import type { Service, DualPrice } from "./types";
 
 export const GST_RATE = 0.13;

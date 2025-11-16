@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getServerFirestore } from '@/firebase/server-init';

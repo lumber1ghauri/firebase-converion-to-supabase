@@ -1,4 +1,3 @@
-
 'use server';
 import 'dotenv/config';
 
@@ -12,7 +11,7 @@ import AdminNotificationEmailTemplate from '@/app/emails/admin-notification-emai
 const getBaseUrl = () => {
     return process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3001' 
-        : `https://studio--${process.env.FIREBASE_PROJECT_ID}.us-central1.hosted.app`;
+        : `https://${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.web.app`;
 }
 
 const getResend = () => {

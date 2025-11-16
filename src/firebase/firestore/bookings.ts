@@ -1,4 +1,3 @@
-
 'use client';
 import {
   doc,
@@ -19,7 +18,7 @@ export type BookingDocument = {
     id: string;
     uid: string; // User ID of the owner
     finalQuote: FinalQuote;
-    createdAt?: Timestamp | Date;
+    createdAt: Timestamp | Date;
     updatedAt?: Timestamp;
 }
 
@@ -33,12 +32,12 @@ export async function saveBookingClient(
     // Use JSON stringify/parse to deep-clone and remove any undefined values
     const bookingData = JSON.parse(JSON.stringify(booking));
 
-    const dataToSave = {
+    const dataToSave: any = {
         ...bookingData,
         updatedAt: serverTimestamp(),
     };
     
-     // If the booking doesn't have a createdAt field yet, add it.
+    // If the booking doesn't have a createdAt field yet, add it.
     if (!booking.createdAt) {
         dataToSave.createdAt = serverTimestamp();
     }
@@ -68,10 +67,10 @@ export async function saveBookingAndSendEmail(
 ) {
     const bookingRef = doc(firestore, 'bookings', booking.id);
     
-    const dataToSave = {
+    const dataToSave: BookingDocument = {
         ...booking,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp() as Timestamp,
+        createdAt: booking.createdAt || serverTimestamp(),
     };
 
     try {
@@ -164,5 +163,3 @@ export async function uploadPaymentScreenshot(file: File, bookingId: string, use
         throw new Error(`Upload failed: ${error.code} - ${error.message}`);
     }
 }
-
-    

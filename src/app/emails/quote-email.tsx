@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import type { FinalQuote, Quote } from '@/lib/types';
 import { GST_RATE } from '@/lib/services';

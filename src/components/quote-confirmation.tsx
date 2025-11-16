@@ -1,9 +1,8 @@
-
 'use client';
 
 import * as React from 'react';
 import { useMemo, useState } from 'react';
-import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, LinkIcon, AlertTriangle } from "lucide-react";
+import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, Link as LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote, PaymentMethod, PaymentDetails } from "@/lib/types";
 import { useFirestore, useUser } from '@/firebase';
 import { saveBookingClient, uploadPaymentScreenshot, type BookingDocument } from '@/firebase/firestore/bookings';
@@ -152,11 +151,11 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       
       const updatedQuote: FinalQuote = { ...quote, booking: { ...quote.booking, address } };
       
-      const bookingDoc: Partial<BookingDocument> = {
+      const bookingDoc: Partial<BookingDocument> & {id: string} = {
           id: updatedQuote.id,
           uid: user.uid,
           finalQuote: updatedQuote,
-          createdAt: initialQuote.createdAt, // Pass original createdAt timestamp
+          createdAt: (initialQuote as any).createdAt, // Pass original createdAt timestamp
       };
 
       try {
@@ -190,7 +189,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
     try {
         if (paymentMethod === 'stripe') {
-            const res = await fetch('/api/stripe/create-checkout-session/', {
+            const res = await fetch('/api/stripe/create-checkout-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ bookingId: quote.id, tier: selectedTier }),
@@ -240,7 +239,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
             id: updatedQuote.id,
             uid: user.uid,
             finalQuote: updatedQuote,
-            createdAt: initialQuote.createdAt || new Date()
+            createdAt: (initialQuote as any).createdAt || new Date()
         };
 
         await saveBookingClient(firestore, bookingDoc);
@@ -557,5 +556,3 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     </div>
   );
 }
-
-    

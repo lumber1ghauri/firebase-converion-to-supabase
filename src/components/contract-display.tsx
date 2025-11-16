@@ -1,4 +1,3 @@
-
 import type { FinalQuote, PriceTier } from '@/lib/types';
 
 export function ContractDisplay({ quote, selectedTier }: { quote: FinalQuote; selectedTier?: PriceTier }) {

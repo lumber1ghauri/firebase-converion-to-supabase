@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import type { FinalQuote } from '@/lib/types';
 

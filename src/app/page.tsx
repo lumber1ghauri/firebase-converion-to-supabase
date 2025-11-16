@@ -16,7 +16,7 @@ export default function Home() {
 
   const handleSearch = () => {
     if (bookingId && bookingId.trim() !== '') {
-      router.push(`/book/${bookingId.trim()}/`);
+      router.push(`/book/${bookingId.trim()}`);
     } else {
       toast({
         variant: 'destructive',
