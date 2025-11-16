@@ -1,16 +1,14 @@
 # Sellaya LBA-02 - Looks by Anum Booking System
 
-A modern, AI-powered booking and quote system for makeup artist services, built with Next.js 15, Firebase, and Stripe.
+A modern, AI-powered booking and quote system for makeup artist services, built with Next.js 15, Prisma, and Stripe.
 
 ## 🚀 Quick Start (Local Development)
 
-**Want to get running in 5 minutes?** See [SETUP-QUICK-START.md](./SETUP-QUICK-START.md)
+**New to this project?** See [FIREBASE-REMOVAL-COMPLETE.md](./FIREBASE-REMOVAL-COMPLETE.md)
 
 ### Prerequisites
 - Node.js 18 or higher
-- Firebase project (already configured)
-- Stripe account
-- Resend account (for emails)
+- PostgreSQL (optional - can use SQLite)
 
 ### Installation
 
@@ -19,29 +17,40 @@ A modern, AI-powered booking and quote system for makeup artist services, built 
    npm install
    ```
 
-2. **Set Up Environment Variables**
-   - Update `.env.local` with your credentials
-   - See [SETUP-QUICK-START.md](./SETUP-QUICK-START.md) for where to get each credential
-
-3. **Verify Setup**
-   ```powershell
-   .\verify-setup.ps1
+2. **Set Up Database**
+   
+   **Option A: SQLite (Easiest)**
+   ```bash
+   # Update .env.local
+   DATABASE_URL="file:./dev.db"
+   
+   # Initialize database
+   npx prisma db push
+   ```
+   
+   **Option B: PostgreSQL**
+   ```bash
+   # Update .env.local
+   DATABASE_URL="postgresql://username:password@localhost:5432/sellaya_lba"
+   
+   # Initialize database
+   npx prisma db push
    ```
 
-4. **Run Development Server**
+3. **Run Development Server**
    ```bash
    npm run dev
    ```
 
-5. **Open Browser**
+4. **Open Browser**
    - Visit [http://localhost:3000](http://localhost:3000)
 
 ## 📚 Documentation
 
-- **[SETUP-QUICK-START.md](./SETUP-QUICK-START.md)** - Get running locally in 3 steps
+- **[FIREBASE-REMOVAL-COMPLETE.md](./FIREBASE-REMOVAL-COMPLETE.md)** - Migration summary & quick start
+- **[FIREBASE-TO-LOCAL-MIGRATION.md](./FIREBASE-TO-LOCAL-MIGRATION.md)** - Complete migration guide
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** - Deploy to Hostinger, VPS, or Docker
 - **[SETUP-CHECKLIST.md](./SETUP-CHECKLIST.md)** - Track your setup progress
-- **[MIGRATION-SUMMARY.md](./MIGRATION-SUMMARY.md)** - What changed from Firebase hosting
 
 ## ✨ Features
 
@@ -49,15 +58,15 @@ A modern, AI-powered booking and quote system for makeup artist services, built 
 - 📅 **Booking Management** - Complete booking flow with confirmation
 - 💳 **Stripe Integration** - Secure 50% deposit collection
 - 📧 **Email Notifications** - Automated emails via Resend
-- 🔥 **Firebase Backend** - Firestore database + Authentication
+- 🗄️ **Prisma ORM** - Type-safe database access
+- 💾 **PostgreSQL/SQLite** - Your choice of database
 - 🎨 **Modern UI** - Tailwind CSS + Radix UI components
 - 📱 **Responsive Design** - Works on all devices
 
 ## 🛠️ Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
-- **Database**: Firebase Firestore
-- **Authentication**: Firebase Auth
+- **Database**: Prisma + PostgreSQL/SQLite
 - **Payments**: Stripe
 - **Email**: Resend
 - **AI**: Google Genkit
@@ -76,13 +85,14 @@ src/
 ├── components/            # React components
 │   ├── ui/               # Reusable UI components
 │   └── ...               # Feature components
-├── firebase/             # Firebase configuration
-│   ├── config.ts         # Client config
-│   └── server-init.ts    # Server config
 ├── lib/                  # Utilities
-│   ├── email.ts         # Email service
-│   └── types.ts         # TypeScript types
-└── ai/                   # AI/Genkit flows
+│   ├── database.ts       # Database operations
+│   ├── prisma.ts         # Prisma client
+│   ├── email.ts          # Email service
+│   └── types.ts          # TypeScript types
+├── ai/                   # AI/Genkit flows
+prisma/
+└── schema.prisma         # Database schema
 ```
 
 ## 🚢 Deployment
@@ -93,25 +103,48 @@ This application can be deployed to:
 - ✅ VPS (DigitalOcean, AWS, Linode)
 - ✅ Docker containers
 - ✅ Any Node.js hosting provider
+- ✅ Vercel, Netlify, Railway
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment instructions.
 
 ## 🔐 Environment Variables
 
-Required environment variables (all documented in `.env.local.example`):
+Required environment variables (see `.env.local.example`):
 
-- Firebase credentials (client & server)
-- Stripe API keys
-- Resend API key
-- Application URL
+```env
+DATABASE_URL="file:./dev.db"  # or PostgreSQL connection string
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+RESEND_API_KEY=re_...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
 ## 📜 Available Scripts
 
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm start` - Start production server
+- `npm run db:studio` - Open Prisma Studio (database GUI)
+- `npm run db:push` - Push schema changes to database
+- `npm run db:migrate` - Create database migration
 - `npm run lint` - Run ESLint
 - `npm run typecheck` - Run TypeScript compiler check
+
+## 🗄️ Database Commands
+
+```bash
+# View database in browser
+npm run db:studio
+
+# Update database schema
+npm run db:push
+
+# Create migration (production)
+npm run db:migrate
+
+# Generate Prisma Client
+npx prisma generate
+```
 
 ## 🐳 Docker Support
 
@@ -127,12 +160,22 @@ docker run -p 3000:3000 --env-file .env.production sellaya-lba
 
 ## 🆘 Troubleshooting
 
-Having issues? Check the troubleshooting section in [DEPLOYMENT.md](./DEPLOYMENT.md)
+### Database Connection Issues
+```bash
+# Make sure Prisma Client is generated
+npx prisma generate
 
-Common issues:
-- Firebase Admin not connecting → Check service account key
-- Stripe not working → Verify API keys
-- Emails not sending → Check Resend configuration
+# Push schema to database
+npx prisma db push
+```
+
+### Import Errors
+```bash
+# Find files that need updating
+.\find-firebase-imports.ps1
+```
+
+See [FIREBASE-TO-LOCAL-MIGRATION.md](./FIREBASE-TO-LOCAL-MIGRATION.md) for more troubleshooting.
 
 ## 📝 License
 
@@ -141,11 +184,14 @@ Private project - All rights reserved
 ## 🙋 Support
 
 For questions or issues:
-1. Check [DEPLOYMENT.md](./DEPLOYMENT.md) troubleshooting section
-2. Review [SETUP-QUICK-START.md](./SETUP-QUICK-START.md)
+1. Check [FIREBASE-TO-LOCAL-MIGRATION.md](./FIREBASE-TO-LOCAL-MIGRATION.md)
+2. Review [DEPLOYMENT.md](./DEPLOYMENT.md) troubleshooting section
 3. Contact the development team
 
 ---
 
 **Built with ❤️ for Looks by Anum**
+
+**No Firebase, No Cloud Dependencies, 100% Self-Hosted** 🎉
+
 

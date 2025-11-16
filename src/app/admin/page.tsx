@@ -2,19 +2,19 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useCollection } from '@/firebase';
-import type { BookingDocument } from '@/firebase/firestore/bookings';
+import type { BookingDocument } from '@/lib/database';
 import type { PaymentStatus } from '@/lib/types';
-import { Badge } from '@/ui/badge';
-import { Button } from '@/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Loader2, AlertTriangle, Eye, Search, CalendarClock, User, Users } from 'lucide-react';
 import { format, differenceInDays, parse } from 'date-fns';
 import { BookingDetails } from '@/components/booking-details';
-import { Input } from '@/ui/input';
+import { Input } from '@/components/ui/input';
 import type { FinalQuote } from '@/lib/types';
+import { fetchAllBookings } from './server-actions';
 
 function getPaymentStatus(status: PaymentStatus | undefined): { text: string; variant: 'secondary' | 'destructive' | 'success' } {
     switch (status) {
@@ -55,16 +55,29 @@ function getTimeToEvent(eventDateStr: string): string {
 
 
 export default function AdminDashboard() {
-  const { data: bookings, isLoading, error } = useCollection<BookingDocument>('bookings');
+  const [bookings, setBookings] = useState<BookingDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBooking, setSelectedBooking] = useState<BookingDocument | null>(null);
+
+  useEffect(() => {
+    fetchAllBookings()
+      .then(data => {
+        setBookings(data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        setError(err);
+        setIsLoading(false);
+      });
+  }, []);
 
   const sortedBookings = useMemo(() => {
     if (!bookings) return [];
     return [...bookings].sort((a, b) => {
-        // Handle Firestore Timestamps by converting to JS Dates
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(0);
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(0);
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
         return dateB.getTime() - dateA.getTime(); // Sort descending (newest first)
     });
   }, [bookings]);
@@ -188,7 +201,7 @@ export default function AdminDashboard() {
                             </Badge>
                           </TableCell>
                            <TableCell className="hidden md:table-cell text-sm">
-                             {booking.createdAt?.toDate ? format(booking.createdAt.toDate(), 'PPp') : 'N/A'}
+                             {booking.createdAt ? format(new Date(booking.createdAt), 'PPp') : 'N/A'}
                           </TableCell>
                            <TableCell className="hidden md:table-cell">
                                 <div className="flex items-center gap-2">

@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BookingFlow from '@/components/booking-flow';
 import Link from 'next/link';
-import { Input } from '@/ui/input';
-import { Button } from '@/ui/button';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

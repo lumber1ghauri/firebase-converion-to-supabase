@@ -13,22 +13,22 @@ import type { ActionState, Day, ServiceOption, BridalTrial, BridalPartyServices,
 import { SERVICES, MOBILE_LOCATION_OPTIONS, SERVICE_TYPE_OPTIONS, STUDIO_ADDRESS } from '@/lib/services';
 import { SERVICE_OPTION_DETAILS } from '@/lib/types';
 import type { MOBILE_LOCATION_IDS } from '@/lib/services';
-import { useFirestore, useUser } from '@/firebase';
-import { saveBookingAndSendEmail } from '@/firebase/firestore/bookings';
+import { saveBooking } from '@/lib/database';
+import { sendQuoteEmail } from '@/lib/email';
 
-import { Button } from '@/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
-import { Input } from '@/ui/input';
-import { Label } from '@/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
-import { Calendar } from '@/ui/calendar';
-import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
-import { Switch } from '@/ui/switch';
-import { Separator } from '@/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
-import { Progress } from '@/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
 
 
 const initialState: ActionState = {
@@ -110,8 +110,6 @@ export default function BookingFlow() {
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
-  const firestore = useFirestore();
-  const { user } = useUser();
   
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -152,19 +150,15 @@ export default function BookingFlow() {
     }
 
     if (state.status === 'success' && state.quote) {
-      if (!firestore || !user) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Database connection not available.' });
-        return;
-      }
-      
       const quote = state.quote;
       // Save the booking and redirect
-      saveBookingAndSendEmail(firestore, { 
+      saveBooking({ 
           id: quote.id, 
-          uid: user.uid, 
+          uid: 'anonymous', 
           finalQuote: quote,
           createdAt: new Date(),
       }).then(() => {
+          sendQuoteEmail(quote);
           router.push(`/book/${quote.id}`);
       }).catch(err => {
           console.error("Failed to save booking or send email:", err);
@@ -172,7 +166,7 @@ export default function BookingFlow() {
       });
     }
 
-  }, [state, toast, STEPS, firestore, router, user]);
+  }, [state, toast, STEPS, router]);
 
 
   const nextStep = () => {

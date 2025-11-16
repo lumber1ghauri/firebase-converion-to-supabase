@@ -5,19 +5,18 @@ import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { CheckCircle2, User, Users, Loader2, MapPin, ShieldCheck, FileText, Banknote, CreditCard, ArrowRight, Upload, Link as LinkIcon, AlertTriangle } from "lucide-react";
 import type { FinalQuote, PriceTier, Quote, PaymentMethod, PaymentDetails } from "@/lib/types";
-import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient, uploadPaymentScreenshot, type BookingDocument } from '@/firebase/firestore/bookings';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/ui/card";
-import { Button } from "@/ui/button";
-import { Input } from '@/ui/input';
-import { Label } from '@/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import { saveBooking, uploadPaymentScreenshot, type BookingDocument } from '@/lib/database';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { STUDIO_ADDRESS } from '@/lib/services';
-import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/ui/separator';
+import { Separator } from '@/components/ui/separator';
 import { ContractDisplay } from '@/components/contract-display';
-import { Checkbox } from '@/ui/checkbox';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { sendAdminScreenshotNotificationAction } from '@/app/admin/actions';
 import { loadStripe } from '@stripe/stripe-js';
@@ -81,9 +80,7 @@ function QuoteTierCard({ title, icon, quote, tier, selectedTier, onSelect }: {
 }
 
 export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }) {
-  const firestore = useFirestore();
   const { toast } = useToast();
-  const { user } = useUser();
 
   const [quote, setQuote] = useState(initialQuote);
   const [currentStep, setCurrentStep] = useState<ConfirmationStep>(() => quote.status === 'confirmed' ? 'confirmed' : 'select-tier');
@@ -143,10 +140,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
           toast({ variant: 'destructive', title: 'Invalid Address', description: 'Please correct the errors and try again.' });
           return;
       }
-      if (!user || !firestore) {
-          toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
-          return;
-      }
       setIsSaving(true);
       setError(null);
       
@@ -154,13 +147,13 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
       
       const bookingDoc: Partial<BookingDocument> & {id: string} = {
           id: updatedQuote.id,
-          uid: user.uid,
+          uid: 'anonymous',
           finalQuote: updatedQuote,
           createdAt: (initialQuote as any).createdAt, // Pass original createdAt timestamp
       };
 
       try {
-          await saveBookingClient(firestore, bookingDoc);
+          await saveBooking(bookingDoc);
           setQuote(updatedQuote);
           setCurrentStep('sign-contract');
       } catch (err: any) {
@@ -178,10 +171,6 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
     }
     if (paymentMethod === 'interac' && !screenshotFile) {
         toast({ variant: 'destructive', title: 'Screenshot Required', description: 'Please upload a payment screenshot for Interac transfers.' });
-        return;
-    }
-    if (!user || !firestore) {
-        toast({ variant: 'destructive', title: 'Error', description: 'User or database not available.' });
         return;
     }
 
@@ -220,7 +209,7 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
 
         let screenshotUrl = '';
         if (paymentMethod === 'interac' && screenshotFile) {
-            screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, user.uid);
+            screenshotUrl = await uploadPaymentScreenshot(screenshotFile, quote.id, 'anonymous');
         }
 
         const paymentDetails: PaymentDetails = {
@@ -238,12 +227,12 @@ export function QuoteConfirmation({ quote: initialQuote }: { quote: FinalQuote }
         
         const bookingDoc: BookingDocument = {
             id: updatedQuote.id,
-            uid: user.uid,
+            uid: 'anonymous',
             finalQuote: updatedQuote,
             createdAt: (initialQuote as any).createdAt || new Date()
         };
 
-        await saveBookingClient(firestore, bookingDoc);
+        await saveBooking(bookingDoc);
         await sendAdminScreenshotNotificationAction(updatedQuote.id);
 
         setQuote(updatedQuote);

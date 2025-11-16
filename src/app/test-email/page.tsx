@@ -3,9 +3,9 @@
 
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { Button } from '@/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { sendTestEmailAction } from '@/app/test-email';
 import { Loader2, MailCheck, MailWarning } from 'lucide-react';
 

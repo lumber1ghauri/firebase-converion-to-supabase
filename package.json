@@ -7,9 +7,13 @@
     "dev:turbo": "next dev --turbopack",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "start:prod": "NODE_ENV=production next start",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:migrate": "prisma migrate dev",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -44,8 +48,7 @@
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
-    "firebase": "^10.12.2",
-    "firebase-admin": "^12.1.1",
+    "@prisma/client": "^6.1.0",
     "genkit": "^1.20.0",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
@@ -67,6 +70,7 @@
     "@types/react-dom": "^18",
     "genkit-cli": "^1.20.0",
     "postcss": "^8",
+    "prisma": "^6.1.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

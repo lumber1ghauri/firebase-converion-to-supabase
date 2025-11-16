@@ -3,19 +3,18 @@
 
 import type { FinalQuote, PriceTier, PaymentDetails } from '@/lib/types';
 import { STUDIO_ADDRESS } from '@/lib/services';
-import { Separator } from '@/ui/separator';
-import { Badge } from '@/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, Users, MapPin, CalendarClock, Link as LinkIcon, MessageSquare, Loader2, Mail, Trash2, Send } from 'lucide-react';
 import { differenceInDays, parse } from 'date-fns';
-import { Button } from '@/ui/button';
+import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient, deleteBooking as deleteBookingClient, type BookingDocument } from '@/firebase/firestore/bookings';
+import { saveBooking, deleteBooking, type BookingDocument } from '@/lib/database';
 import { sendConfirmationEmailAction, sendFollowUpEmailAction } from '@/app/admin/actions';
-import { Label } from '@/ui/label';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/ui/alert-dialog"
+} from "@/components/ui/alert-dialog"
 
 function getTimeToEvent(eventDateStr: string): { text: string; isPast: boolean } {
     const eventDate = parse(eventDateStr, 'PPP', new Date());
@@ -62,16 +61,14 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
   const [isSendingFollowUp, setIsSendingFollowUp] = useState(false);
   const [isSendingConfirmation, setIsSendingConfirmation] = useState(false);
   const { toast } = useToast();
-  const firestore = useFirestore();
-  const { user } = useUser();
 
   const selectedQuoteData = quote.selectedQuote ? quote.quotes[quote.selectedQuote] : null;
   const eventTimeInfo = getTimeToEvent(quote.booking.days[0].date);
   const whatsappLink = generateWhatsAppLink(quote.contact.phone);
   
   const handleStatusChange = async (newStatus: FinalQuote['status']) => {
-      if (!user || !firestore || !bookingDoc) {
-          toast({ variant: "destructive", title: "Error", description: "User, database, or booking data not available." });
+      if (!bookingDoc) {
+          toast({ variant: "destructive", title: "Error", description: "Booking data not available." });
           return;
       }
       setIsUpdating(true);
@@ -79,7 +76,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
       const updatedQuote = { ...quote, status: newStatus };
 
       try {
-          await saveBookingClient(firestore, { ...bookingDoc, finalQuote: updatedQuote });
+          await saveBooking({ ...bookingDoc, finalQuote: updatedQuote });
           onUpdate(updatedQuote);
           toast({
               title: "Status Updated",
@@ -97,7 +94,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
   };
 
   const handlePaymentStatusChange = async (newPaymentStatus: PaymentDetails['status']) => {
-    if (!user || !firestore || !bookingDoc || !quote.paymentDetails) {
+    if (!bookingDoc || !quote.paymentDetails) {
         toast({ variant: "destructive", title: "Error", description: "Booking or payment data not available." });
         return;
     }
@@ -112,7 +109,7 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
     };
 
     try {
-        await saveBookingClient(firestore, { ...bookingDoc, finalQuote: updatedQuote });
+        await saveBooking({ ...bookingDoc, finalQuote: updatedQuote });
         onUpdate(updatedQuote);
         toast({
             title: "Payment Status Updated",
@@ -148,13 +145,13 @@ export function BookingDetails({ quote, onUpdate, bookingDoc, onBookingDeleted }
   };
 
   const handleDelete = async () => {
-    if (!firestore || !bookingDoc) {
-        toast({ variant: "destructive", title: "Error", description: "Database or booking data not available." });
+    if (!bookingDoc) {
+        toast({ variant: "destructive", title: "Error", description: "Booking data not available." });
         return;
     }
     setIsUpdating(true);
     try {
-        await deleteBookingClient(firestore, bookingDoc.id);
+        await deleteBooking(bookingDoc.id);
         toast({
             title: "Booking Deleted",
             description: `Booking ID ${bookingDoc.id} has been permanently removed.`,

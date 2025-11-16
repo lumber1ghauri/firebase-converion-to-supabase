@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"  // Using SQLite for local development
+  url      = env("DATABASE_URL")
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  uid       String   // User ID of the owner (for future multi-user support)
+  
+  // Store the entire quote as JSON for flexibility
+  finalQuote Json
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Optional: Add indexes for better query performance
+  @@index([uid])
+  @@index([createdAt])
+  
+  // Optional: Add full-text search if needed
+  @@map("bookings")
+}

@@ -1,34 +1,36 @@
 
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { type BookingDocument } from '@/firebase/firestore/bookings';
-import { useFirestore, useDoc } from '@/firebase';
+import { type BookingDocument } from '@/lib/database';
 import { QuoteConfirmation } from '@/components/quote-confirmation';
 import { Loader2, AlertTriangle } from 'lucide-react';
-import { doc } from 'firebase/firestore';
+import { getBooking } from '@/lib/database';
 
 export default function BookPage() {
   const params = useParams();
   const bookingId = Array.isArray(params.bookingId) ? params.bookingId[0] : params.bookingId;
-  const firestore = useFirestore();
+  const [booking, setBooking] = useState<BookingDocument | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const docRef = useMemo(() => {
-    if (!firestore || !bookingId) return null;
-    return doc(firestore, 'bookings', bookingId);
-  }, [firestore, bookingId]);
-
-  const { data: booking, isLoading, error: docError } = useDoc<BookingDocument>(docRef);
-
   useEffect(() => {
-    if (!isLoading && !booking) {
-      setError('Booking not found. It may have expired or been removed.');
+    if (bookingId) {
+      getBooking(bookingId as string)
+        .then(data => {
+          if (!data) {
+            setError('Booking not found. It may have expired or been removed.');
+          } else {
+            setBooking(data);
+          }
+          setIsLoading(false);
+        })
+        .catch(err => {
+          setError(err.message);
+          setIsLoading(false);
+        });
     }
-     if (docError) {
-      setError(docError.message);
-    }
-  }, [isLoading, booking, docError]);
+  }, [bookingId]);
 
   if (isLoading) {
     return (

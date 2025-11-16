@@ -3,42 +3,39 @@
 
 import { useEffect } from 'react';
 import { useSearchParams, useParams } from 'next/navigation';
-import { useFirestore, useUser } from '@/firebase';
-import { saveBookingClient, getBookingClient } from '@/firebase/firestore/bookings';
+import { saveBooking, getBooking } from '@/lib/database';
 import { Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Button } from '@/ui/button';
+import { Button } from '@/components/ui/button';
 import { sendConfirmationEmailAction } from '@/app/admin/actions';
 
 export default function StripeSuccessPage() {
   const params = useParams();
   const searchParams = useSearchParams();
-  const firestore = useFirestore();
-  const { user } = useUser();
   const { toast } = useToast();
   const bookingId = Array.isArray(params.bookingId) ? params.bookingId[0] : params.bookingId;
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    if (firestore && user && bookingId && sessionId) {
+    if (bookingId && sessionId) {
       const updateBooking = async () => {
         try {
-          const bookingDoc = await getBookingClient(firestore, bookingId);
+          const bookingDoc = await getBooking(bookingId);
           if (bookingDoc && bookingDoc.finalQuote.paymentDetails?.status !== 'deposit-paid') {
             
             const updatedQuote = {
               ...bookingDoc.finalQuote,
-              status: 'confirmed',
+              status: 'confirmed' as const,
               paymentDetails: {
                 ...bookingDoc.finalQuote.paymentDetails,
-                method: 'stripe',
-                status: 'deposit-paid',
+                method: 'stripe' as const,
+                status: 'deposit-paid' as const,
                 depositAmount: bookingDoc.finalQuote.selectedQuote ? bookingDoc.finalQuote.quotes[bookingDoc.finalQuote.selectedQuote].total * 0.5 : 0,
               },
             };
 
-            await saveBookingClient(firestore, { ...bookingDoc, finalQuote: updatedQuote });
+            await saveBooking({ ...bookingDoc, finalQuote: updatedQuote });
             
             toast({
               title: "Payment Successful!",
@@ -59,7 +56,7 @@ export default function StripeSuccessPage() {
 
       updateBooking();
     }
-  }, [firestore, user, bookingId, sessionId, toast]);
+  }, [bookingId, sessionId, toast]);
 
   if (!bookingId || !sessionId) {
     return (

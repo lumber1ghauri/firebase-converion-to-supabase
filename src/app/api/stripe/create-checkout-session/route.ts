@@ -1,6 +1,6 @@
 
 import { NextResponse } from 'next/server';
-import { getBooking } from '@/firebase/server-actions';
+import { getBooking } from '@/lib/database';
 import Stripe from 'stripe';
 import type { PriceTier } from '@/lib/types';
 

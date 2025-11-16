@@ -1,7 +1,7 @@
 'use server';
 
 import 'dotenv/config';
-import { getBooking } from '@/firebase/server-actions';
+import { getBooking } from '@/lib/database';
 import { sendQuoteEmail, sendFollowUpEmail, sendAdminScreenshotNotification } from '@/lib/email';
 
 
